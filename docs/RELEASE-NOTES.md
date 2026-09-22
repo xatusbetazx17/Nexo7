@@ -1,11 +1,9 @@
-# Nexo 7 0.6.0 — reviewed local learning
+# Nexo 7 0.6.1 — available-memory planning on Windows
 
-- Learning workshop: save reviewed corrections and procedures, retrieve them as cited reference text, disable their use or delete them.
-- Versioned learning packs: preview, approve, deduplicate, selected export and atomic bounded import. Existing data stays in the same local application directory.
-- Community contributions: prepare a public GitHub issue draft after separate explicit consent, with common sensitive-data checks. No automatic upload or credential collection.
-- Bundled community examples can be reviewed and imported; contributions require maintainer review before inclusion in a release.
-- Optional local aggregate performance totals exclude private chats and prompt text.
-- Plain-language explanation style and editable response language codes.
-- Added learning regression gate and packaged learning import/export checks.
+Native Windows now reserves additional headroom from measured available RAM: at least 1 GB, 25% of available RAM up to 2 GB. With 8 GB installed and 4 GB available, the model budget is 3 GB, admitting the 0.8B profile. Windows already reports RAM available after OS/app usage. The previous extra 2 GB margin rejected this case.
 
-No weight training, automatic code modification, unlimited learning, universal language/task support, or demonstrated superiority to other models. Native Windows/Linux execution and existing memory guards remain. GPU support remains experimental and no physical 8 GB device was validated in this development session. See LEARNING.md for data limits and consent details.
+The 2.5 GB smallest-profile minimum, OS process memory guard, 65% total-RAM cap, 12 GB default ceiling and pre-load resource recheck remain. Docker and Linux retain their prior reserve policy. Below 3.5 decimal GB available, this Windows configuration still declines to start. Diagnostics now show available RAM, headroom and resulting budget.
+
+Windows CI also runs actual source-mode inference while simulating 8 GB total / at most 4 GB available and enforcing a real model-worker job limit of at most 3 GB. This is not a physical Dell/Pentium N5030 compatibility or performance test. Both packaged builds retain their native-model smoke tests.
+
+Includes all 0.6 reviewed-learning features. No need to disable Windows services or remove memory guards.

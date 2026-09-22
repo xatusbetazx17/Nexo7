@@ -39,3 +39,7 @@ On Windows pass dist/Nexo7.exe. The real smoke test downloads a pinned engine an
 - JSDOM interaction checks cover the workshop, public draft preparation, consent reset on editing, community pack preview/import and literal HTML handling. This is not a rendered-browser visual inspection.
 - Release gates run Windows/Linux native builds, packaged learning import/export and actual model generation with a reviewed reference admitted into context. Consult the 0.6 release Actions run for platform results; local tests alone do not establish Windows execution.
 - No GPU benchmark, physical 8 GB device test, continuous training or broad multilingual quality benchmark was performed.
+
+## 0.6.1 Windows available-memory fix
+
+Local suite: 103 tests, 102 passed and one optional PyTorch skip. New cases cover 8 GB total / 4 GB available, the 3.5 GB availability boundary, unchanged Docker/Linux reserves and budgets within remaining physical RAM. Release CI additionally gates publishing on real Windows source-mode inference with simulated 8/4 GB detection and a real job committed-memory limit at or below 3 GB. See Actions for execution results. This does not emulate Pentium instructions or establish speed on an actual 8 GB laptop.

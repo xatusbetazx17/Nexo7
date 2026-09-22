@@ -18,10 +18,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--binary')
+    parser.add_argument('--simulate-8gb',action='store_true',help='Source-only test: cap detected total/available RAM to 8/4 decimal GB; OS memory guards remain real')
     parser.add_argument('--cache',type=Path,help='Optional previously downloaded catalog files; normal hashes are still checked')
     parser.add_argument('--output',default='reports/native-smoke.json')
     args=parser.parse_args()
-    result={'scope':'Desktop API with actual native model, OS guard and no Docker', 'platform':sys.platform,'packaged':bool(args.binary),'answers':[]}
+    if args.simulate_8gb and args.binary:parser.error('--simulate-8gb is source-only')
+    result={'simulated_memory':args.simulate_8gb,'scope':'Desktop API with actual native model, OS guard and no Docker', 'platform':sys.platform,'packaged':bool(args.binary),'answers':[]}
     with tempfile.TemporaryDirectory(prefix='nexo-real-') as tmp:
         root=Path(tmp)
         if args.cache:
@@ -31,6 +33,12 @@ def main():
                     try:os.link(source,target)
                     except OSError:shutil.copy2(source,target)
         command=[str(Path(args.binary).resolve())] if args.binary else [sys.executable,'-m','nexo7.desktop']
+        if args.simulate_8gb:
+            command=[sys.executable,'-c',
+                "from dataclasses import replace; import nexo7.native_runtime as runtime; "
+                "original=runtime.detect_hardware; "
+                "runtime.detect_hardware=lambda: (lambda hw: replace(hw,total_bytes=min(hw.total_bytes,8_000_000_000),available_bytes=min(hw.available_bytes,4_000_000_000)))(original()); "
+                "from nexo7.desktop import main; main()"]
         process=subprocess.Popen(command+['--no-open','--data-dir',str(root)],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         try:
             deadline=time.monotonic()+45
@@ -58,6 +66,9 @@ def main():
                 time.sleep(1)
             result['plan']=state['report']['plan']
             assert result['plan']['ram_limit_bytes']<=16_000_000_000
+            if args.simulate_8gb:
+                assert result['plan']['ram_limit_bytes']<=3_000_000_000
+                assert result['plan']['enforced_limit_bytes']<=3_000_000_000
             status=request('/api/status');assert status['provider']=='native'
             for prompt,language in [('Di hola en español y explica en una frase qué puedes hacer.','es'),('Write a Python function square(n) that returns n*n.','en')]:
                 response=request('/api/chat',{'message':prompt,'language':language,'private':True})

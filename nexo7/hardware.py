@@ -132,12 +132,17 @@ def detect_hardware(probe_gpu=True):
     return Hardware(system, platform.machine(), total, min(total, available), threads, gpu, source, gpu_free, gpu_total, gpu_index)
 
 
-def plan_local(hardware, daemon_memory=None, cpu_only=False, performance="balanced"):
+def plan_local(hardware, daemon_memory=None, cpu_only=False, performance="balanced", *, native=False):
     if performance not in {"fast", "balanced", "quality"}:
         raise ValueError("Unknown performance preference")
     if hardware.total_bytes <= 0 or hardware.available_bytes <= 0:
         raise ValueError("Available RAM could not be measured; a model will not start without a verifiable budget.")
-    reserve = max(2 * GB, hardware.total_bytes // 5)
+    # Available RAM already excludes memory occupied by the OS and other apps.
+    # Native Windows needs extra headroom, not a second allowance for the whole OS.
+    # Keep the larger legacy allowance for Docker VM overhead and Linux VA budgets.
+    reserve = (max(GB, min(2 * GB, hardware.available_bytes // 4))
+               if native and hardware.system == "Windows" and daemon_memory is None
+               else max(2 * GB, hardware.total_bytes // 5))
     budget = min(OPERATING_RAM_LIMIT, hardware.total_bytes * 65 // 100,
                  max(0, hardware.available_bytes - reserve))
     if daemon_memory is not None:
@@ -159,7 +164,10 @@ def plan_local(hardware, daemon_memory=None, cpu_only=False, performance="balanc
     elif performance == "balanced" and gpu == "cpu" and hardware.total_bytes <= 8_600_000_000:
         candidates = [p for p in candidates if p in PROFILES[:2]]
     if not candidates:
-        raise ValueError("Not enough free RAM for the smallest profile and system reserve. Close applications or use demo mode.")
+        raise ValueError(f"Not enough available RAM: {hardware.available_bytes/GB:.2f} GB available, "
+                         f"{reserve/GB:.2f} GB additional headroom, {budget/GB:.2f} GB model budget. "
+                         f"The smallest profile needs {PROFILES[0].minimum_budget/GB:.2f} GB. "
+                         "Close applications and check again, or use demo mode.")
     return {"hardware": asdict(hardware), "ram_limit_bytes": budget,
             "absolute_ram_ceiling_bytes": ABSOLUTE_RAM_LIMIT,
             "reserved_host_bytes": reserve, "backend": gpu,

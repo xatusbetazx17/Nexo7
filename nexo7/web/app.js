@@ -128,7 +128,7 @@ function displayReport(report) {
   const hw=report.hardware, plan=report.plan;
   $("hardware-summary").textContent = `${hw.system} ${hw.machine} · ${hw.cpu_threads} CPU threads · ${(hw.available_bytes/1e9).toFixed(1)} GB available of ${(hw.total_bytes/1e9).toFixed(1)} GB RAM${hw.gpu_total_bytes ? ` · ${(hw.gpu_free_bytes/1e9).toFixed(1)} GB free NVIDIA VRAM` : ""}`;
   $("setup-requirements").textContent = report.requirements_ok ? "Requirements checked. Ready for setup." : report.error;
-  $("model-summary").textContent = plan ? `${plan.selected_model || plan.profiles[0].model} · ${plan.backend.toUpperCase()} · ${(plan.ram_limit_bytes/1e9).toFixed(1)} GB memory budget. ${plan.guard_scope}. Actual loading is checked during setup.` : "No suitable model profile is currently available.";
+  $("model-summary").textContent = plan ? `${plan.selected_model || plan.profiles[0].model} · ${plan.backend.toUpperCase()} · ${(plan.ram_limit_bytes/1e9).toFixed(1)} GB memory budget · ${(plan.reserved_host_bytes/1e9).toFixed(1)} GB additional free headroom. ${plan.guard_scope}. Actual loading is checked during setup.` : "No suitable model profile is currently available.";
   $("start-local").disabled = !report.requirements_ok || setupBusy || previousPhase==="ready";
 }
 async function pollSetup() {

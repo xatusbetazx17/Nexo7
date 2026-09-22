@@ -33,6 +33,9 @@ jobs:
         run: python scripts/build_desktop.py
       - name: Real native model smoke test
         run: python scripts/smoke_native.py --binary dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
+      - name: Real Windows inference with simulated 8 GB total and 4 GB available
+        if: runner.os == 'Windows'
+        run: python scripts/smoke_native.py --simulate-8gb --output reports/native-8gb-smoke.json
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
@@ -54,7 +57,7 @@ jobs:
       - name: Publish preview release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.6.0' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.6.1' }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; native builds remain available as workflow artifacts."

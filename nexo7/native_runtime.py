@@ -117,7 +117,7 @@ def native_plan(cpu_only=False, performance='balanced'):
     # Vulkan drivers can reserve large virtual address ranges on Linux. Strict RLIMIT_AS
     # is retained there by using CPU; Windows can attempt Vulkan with committed-memory limits.
     use_cpu = cpu_only or hw.system == 'Linux' or hw.gpu_hint != 'nvidia' or hw.gpu_index != 0
-    plan = plan_local(hw, cpu_only=use_cpu, performance=performance)
+    plan = plan_local(hw, cpu_only=use_cpu, performance=performance, native=True)
     if performance == 'fast': plan['profiles'] = [p for p in plan['profiles'] if p['model'] == 'qwen3.5:0.8b']
     plan['runtime'] = 'native'
     plan['backend'] = 'vulkan' if plan['backend'] == 'nvidia' and not use_cpu else 'cpu'
