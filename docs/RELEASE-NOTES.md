@@ -1,10 +1,10 @@
-# Nexo 7 0.4.0 — adaptive assistant preview
+# Nexo 7 0.5.0 — native local assistant
 
-- Measured free NVIDIA VRAM guides profile selection and GPU choice; low VRAM falls back to CPU.
-- Fast, Balanced and Larger-model preferences; language, reply style and optional automatic startup persist locally.
-- User-approved examples become searchable documents. Incorrect feedback clears cached answers. Neither feature retrains model weights.
-- My workspace saves, downloads and deletes reviewed documents and code without executing them.
-- 70 core tests completed (69 passed, one optional PyTorch skip), expanded UI integration and Linux packaged smoke test.
-- Four standalone real-model CPU cases, including an arithmetic failure, are documented in VALIDATION.md.
+- Runs directly on Windows/Linux; the desktop no longer requires Docker or WSL.
+- Pinned SHA-256-verified native engine and GGUF downloads, reusable offline after initial setup.
+- OS-specific memory guards, automatic CPU/model fallback and cleanup when Nexo closes.
+- PDF/DOCX/text import with a limited extraction worker and review before saving.
+- Local workspace read tools, CSV statistics, JSON validation, Python syntax inspection and calendar arithmetic.
+- Native Windows/Linux executable builds and real-model desktop smoke tests gate publication.
 
-Extract the native release archive and run Nexo7 on Linux or Nexo7.exe on Windows. Python is bundled; Docker and model downloads are separate prerequisites. GitHub Actions builds and smoke-tests each native executable on its target OS. The separately distributed cross-compiled Windows preview remains an untested alternative. Binaries are unsigned. Native release packages are published only after both GitHub Actions build jobs pass. No universal model superiority or clinical capability is claimed.
+Windows Vulkan/NVIDIA is experimental; native Linux uses CPU to retain the strict virtual-address-space limit. No universal compatibility, model superiority or autonomous learning claim. Output can be wrong. The memory budget excludes app/browser, OS, dedicated VRAM and disk storage; Windows committed memory and Linux address space are different measures. Binaries are unsigned previews. Download models once before offline use.

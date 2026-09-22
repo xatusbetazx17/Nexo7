@@ -103,6 +103,13 @@ class Store:
     def seed(self, path):
         with self.lock:
             if self.db.execute("SELECT 1 FROM meta WHERE key='seeded'").fetchone():
+                # Upgrade only the exact bundled old guide; never alter user-edited notes.
+                old_hash = "617931b14c3c5ab27b917f556569efbb62c2522ca8cfd2029a249791cdc9295e"
+                rows = self.db.execute("SELECT id,content FROM documents WHERE title='Nexo starter guide' AND source='knowledge/technology.md'").fetchall()
+                for row in rows:
+                    if hashlib.sha256(row['content'].encode()).hexdigest() == old_hash and Path(path).exists():
+                        self.delete_document(row['id'])
+                        self.add_document('Nexo starter guide',Path(path).read_text(encoding='utf-8'),'knowledge/technology.md')
                 return
             p = Path(path)
             if p.exists():

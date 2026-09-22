@@ -11,7 +11,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 
 
 def main():
@@ -44,6 +44,9 @@ def main():
     for entry in package.files or []:
         if str(entry).endswith("licenses/COPYING.txt"):
             shutil.copy2(package.locate_file(entry), licenses / "PYINSTALLER-COPYING.txt")
+    for entry in distribution("pypdf").files or []:
+        if str(entry).endswith("licenses/LICENSE"):
+            shutil.copy2(distribution("pypdf").locate_file(entry), licenses / "PYPDF-LICENSE.txt")
     for candidate in (Path(sysconfig.get_path("stdlib")) / "LICENSE.txt", Path(sys.base_prefix) / "LICENSE.txt"):
         if candidate.exists():
             shutil.copy2(candidate, licenses / "PYTHON-LICENSE.txt")

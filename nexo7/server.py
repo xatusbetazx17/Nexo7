@@ -13,13 +13,15 @@ from .net import TransportError
 
 def make_server(config, store, port=8787, token=None, engine=None, controller=None):
     token = token or secrets.token_urlsafe(32)
-    engine = engine or Engine(config, store)
     slots = threading.BoundedSemaphore(1 if config.provider == "ollama" else 2)
     requests = deque()
     request_lock = threading.Lock()
     web = Path(__file__).parent / "web"
     from .workspace import Workspace
     workspace = Workspace(Path(config.database).resolve().parent / "workspace") if controller else None
+
+    engine = engine or Engine(config, store, workspace=workspace)
+    import_slots = threading.BoundedSemaphore(1)
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "Nexo7"
@@ -66,13 +68,13 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.4.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.5.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
                     "research_network": active.research_network, "response_language": active.response_language,
-                    "local_ram_limit_bytes": active.local_ram_limit_bytes if active.provider == "ollama" else None,
-                    "local_backend": active.local_backend if active.provider == "ollama" else None,
+                    "local_ram_limit_bytes": active.local_ram_limit_bytes if active.provider in {"native", "ollama"} else None,
+                    "local_backend": active.local_backend if active.provider in {"native", "ollama"} else None,
                     "desktop": controller is not None})
             if path == "/api/setup" and controller:
                 return self._send(200, controller.snapshot())
@@ -104,7 +106,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 requests.append(now)
             try:
                 size = int(self.headers.get("Content-Length", "-1"))
-                if not 0 <= size <= 500000:
+                if not 0 <= size <= (6_800_000 if urlsplit(self.path).path == "/api/import" else 500000):
                     return self._send(413, {"error": "Request too large or missing Content-Length"})
                 if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
                     return self._send(415, {"error": "application/json is required"})
@@ -112,6 +114,17 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == "/api/import":
+                    if not import_slots.acquire(blocking=False):
+                        return self._send(429,{"error":"Another document import is running"})
+                    try:
+                        from .documents import import_document
+                        result = import_document(body.get("name"),body.get("data"))
+                    finally: import_slots.release()
+                    return self._send(200,result)
+                if path == "/api/inspect" and workspace:
+                    from .local_tools import inspect_file
+                    return self._send(200,inspect_file(workspace,body.get("filename")))
                 if path == "/api/preferences":
                     values = store.set_preferences(body)
                     if controller:
@@ -142,7 +155,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     if not chat_lock.acquire(blocking=False):
                         return self._send(429, {"error": "The assistant is busy; wait for the current operation"})
                     try:
-                        active_engine = Engine(controller.config, store) if controller else engine
+                        active_engine = Engine(controller.config, store, workspace=workspace) if controller else engine
                         result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"))
                     finally:
                         chat_lock.release()

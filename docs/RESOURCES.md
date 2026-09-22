@@ -1,22 +1,15 @@
-# Resource policy
+# Native resource policy — 0.5
 
-All GB figures in this project are decimal bytes. Sixteen GB is 16,000,000,000 bytes, not 16 GiB.
+All GB figures use decimal bytes. The planner reserves max(2 GB, 20% of host RAM), then budgets min(12 GB, 65% of host RAM, currently available RAM minus reserve). Free memory is checked again after downloads. Configuration rejects values above 16 GB. Insufficient or unknown free memory blocks setup.
 
-The planner reserves the greater of 2 GB or 20% of host RAM. It selects a model-container budget no larger than 12 GB, 65% of host RAM, available RAM minus that reserve, and 65% of Docker VM memory when applicable. Unknown memory or inadequate free RAM blocks local setup. Config accepts no limit above 16 GB.
+Profiles keep minimum budgets of 2.5/4.8/6/10 GB for 0.8B/2B/4B/9B Qwen3.5. Pinned Q4_K_M downloads are approximately 0.58/1.40/3.01/6.17 GB. CPU selects at most 4B; Fast always chooses 0.8B. Context is capped at 6144. One model/request is active at a time. Initial load failure can try a smaller model without increasing the budget. Downloads may accumulate on disk; there is no 16 GB total-installation cap.
 
-| Model profile | Minimum container budget | Model download admission cap |
-| --- | ---: | ---: |
-| qwen3.5:0.8b | 2.5 GB | 1.5 GB |
-| qwen3.5:2b | 4.8 GB | 3.2 GB |
-| qwen3.5:4b | 6.0 GB | 4.2 GB |
-| qwen3.5:9b | 10.0 GB | 7.5 GB |
+Linux: a separate supervisor sets and verifies hard/soft RLIMIT_AS before spawning the native model. The address-space ceiling is inherited; the runtime cannot increase it. Linux GPU drivers may reserve huge virtual address ranges, so this native edition uses CPU. The limit includes mapped addresses, not just resident RAM; allocation can fail with free physical RAM remaining. The Python supervisor has the same per-process bound, not a shared aggregate bound.
 
-These are conservative policy thresholds, not measured performance guarantees. CPU/AMD planning stops at 4B. NVIDIA planning can consider 9B if measured free VRAM, less a reserve of max(512 MB, 20% of total VRAM), exceeds the profile download cap plus 256 MB. The GPU with most free VRAM is selected. This is an estimate, not a hard VRAM limit; driver/runtime overhead may still force CPU fallback. Unsupported acceleration falls back to CPU. An unsuccessful initial model load can fall back to a smaller profile without increasing the limit.
+Windows: a separate supervisor creates a Job Object with JOB_OBJECT_LIMIT_JOB_MEMORY and JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, verifies it, joins it, then starts the model. Descendants inherit the job. The bound applies to aggregate committed memory, not every file-backed mapping. Model loading disables mmap to account for model buffers as allocations. Windows can attempt Vulkan on the first detected NVIDIA GPU when its free VRAM is measurable; setup falls back to CPU if loading fails. VRAM estimates are not kernel-enforced caps.
 
-Docker receives identical `--memory` and `--memory-swap` values. Before allocating the model, and before subsequent inference, Nexo validates the container identity, configured limits, local binding, concurrency settings, and actual `memory.max` / `memory.swap.max` values. The latter must equal the configured byte count and zero. The kernel can terminate the model under pressure; Nexo reports failure instead of raising its budget.
+The parent owns a pipe to the supervisor. EOF triggers shutdown even after an app crash; Windows job close also kills descendants. Native requests require an in-process ownership record and a live supervisor. The model server is loopback-only with a random API key, no Web UI, no agent/shell/MCP tools, one inference slot and no prompt cache. An inherited llama/GGML configuration is stripped from its environment.
 
-The bound covers the model-server container's charged RAM. It excludes host OS memory, the Python application, browser, Docker VM overhead and dedicated GPU VRAM. Shared/unified GPU allocations and driver behavior need platform-specific validation; no whole-system RAM guarantee is made. Container images and accumulated model downloads are not part of the per-model size cap.
+Native mode does not disable swapping and is not a security sandbox. Other processes, OS memory, browser, application, drivers and dedicated VRAM are outside the bound. Actual resource and GPU behavior still need validation on each target hardware class. Automated tests include a real rejected over-budget allocation on the OS, not only mocked decisions.
 
-Fast chooses at most 0.8B on hosts up to 8.6 GB or 2B above that. Balanced CPU selection on hosts up to 8.6 GB stops at 2B. Context is capped at 6144 tokens below a 6 GB container budget, otherwise 8192. Fast generation is capped at 256 tokens/call and 512 total; normal local settings use 512/call and 1536 total. Hardware is measured during setup and each automatic launch; there is no live model resizing during a response.
-
-Resource measurements and kernel enforcement must still be validated on actual target hardware. This development environment has no Docker daemon or GPU available. The unit suite checks policy and failure handling using fixtures; it is not an end-to-end inference test.
+Legacy Docker/Ollama code remains for existing advanced configurations. Its old cgroup/swap policy is separate; the desktop and `local` command no longer require it.

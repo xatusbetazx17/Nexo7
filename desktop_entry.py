@@ -8,7 +8,14 @@ if __name__ == '__main__':
         if sys.platform == 'win32' and getattr(sys, 'frozen', False):
             import ctypes
             ctypes.windll.kernel32.SetDllDirectoryW(None)
-        main()
+        if "--native-worker" in sys.argv:
+            from nexo7.native_worker import main as worker_main
+            worker_main()
+        elif "--document-worker" in sys.argv:
+            from nexo7.documents import worker_main
+            worker_main()
+        else:
+            main()
     except Exception:
         import traceback
         from nexo7.desktop import data_directory

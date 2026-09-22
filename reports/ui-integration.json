@@ -3,7 +3,7 @@
   "passed": true,
   "checks": [
     "English setup view",
-    "missing-Docker explanation",
+    "low-memory explanation",
     "download disabled without prerequisites",
     "demo navigation",
     "calculator response",
@@ -14,6 +14,8 @@
     "explicitly approved example",
     "authenticated artifact API",
     "workspace create/read/delete",
+    "bounded text import",
+    "CSV analysis",
     "no JavaScript errors"
   ]
 }

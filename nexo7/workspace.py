@@ -21,6 +21,12 @@ class Workspace:
                     for p in sorted(self.root.iterdir()) if p.is_file() and not p.is_symlink()
                     and re.fullmatch(r'[a-f0-9]{32}--[A-Za-z0-9][A-Za-z0-9_.-]{0,79}', p.name)]
 
+    def revision(self):
+        import hashlib
+        with self.lock:
+            signature = [(p.name,p.stat().st_size,p.stat().st_mtime_ns) for p in self.root.iterdir() if p.is_file() and not p.is_symlink()]
+        return hashlib.sha256(repr(sorted(signature)).encode()).hexdigest()
+
     def create(self, name, content):
         if not isinstance(name,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,79}',name):
             raise ValueError('Use a simple filename without folders (maximum 80 characters)')

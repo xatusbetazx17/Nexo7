@@ -1,0 +1,89 @@
+{
+  "scope": "Desktop API with actual native model, OS guard and no Docker",
+  "platform": "linux",
+  "packaged": false,
+  "answers": [
+    {
+      "prompt": "Di hola en español y explica en una frase qué puedes hacer.",
+      "answer": "Hola! Puedo ayudarte con cálculos numéricos y buscar información en documentos. ¿En qué puedo ayudarte?",
+      "stats": {
+        "provider": "native",
+        "model": "qwen3.5:0.8b",
+        "model_calls": 1,
+        "input_tokens": 870,
+        "output_tokens": 24,
+        "cached_input_tokens": 0,
+        "tool_calls": 0,
+        "prompt_characters_sent": 3026,
+        "cache_hit": false,
+        "estimated_cost_usd": null,
+        "usage_complete": true,
+        "elapsed_ms": 4882.22
+      }
+    },
+    {
+      "prompt": "Write a Python function square(n) that returns n*n.",
+      "answer": "Here is the Python function:\n\n```python\ndef square(n):\n    return n * n\n```",
+      "stats": {
+        "provider": "native",
+        "model": "qwen3.5:0.8b",
+        "model_calls": 1,
+        "input_tokens": 868,
+        "output_tokens": 23,
+        "cached_input_tokens": 0,
+        "tool_calls": 0,
+        "prompt_characters_sent": 3018,
+        "cache_hit": false,
+        "estimated_cost_usd": null,
+        "usage_complete": true,
+        "elapsed_ms": 4641.3
+      }
+    }
+  ],
+  "plan": {
+    "hardware": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "total_bytes": 21474836480,
+      "available_bytes": 16587202560,
+      "cpu_threads": 9,
+      "gpu_hint": "cpu",
+      "memory_source": "procfs + visible cgroup v2 limits",
+      "gpu_free_bytes": 0,
+      "gpu_total_bytes": 0,
+      "gpu_index": 0
+    },
+    "ram_limit_bytes": 12000000000,
+    "absolute_ram_ceiling_bytes": 16000000000,
+    "reserved_host_bytes": 4294967296,
+    "backend": "cpu",
+    "threads": 4,
+    "profiles": [
+      {
+        "model": "qwen3.5:0.8b",
+        "minimum_budget": 2500000000,
+        "max_download": 1500000000,
+        "context_tokens": 6144,
+        "download_bytes": 579615840
+      }
+    ],
+    "performance": "fast",
+    "gpu_index": 0,
+    "video_budget_bytes": null,
+    "video_budget_enforced": false,
+    "guard_scope": "Linux virtual address space per model process; excludes app/browser, OS, dedicated VRAM and disk storage",
+    "runtime": "native",
+    "selected_model": "qwen3.5:0.8b",
+    "guard": "linux_virtual_address_space"
+  },
+  "checks": [
+    "real multilingual text generation",
+    "real code generation (not executed)",
+    "guarded setup",
+    "zero-model-call arithmetic",
+    "CSV totals",
+    "isolated document import",
+    "clean shutdown"
+  ],
+  "passed": true
+}

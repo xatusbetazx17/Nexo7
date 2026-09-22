@@ -4,7 +4,7 @@ from pathlib import Path
 import threading
 from .config import Config
 from .hardware import detect_hardware, plan_local
-from .local_runtime import local_daemon, start_local, stop_local
+from .native_runtime import native_plan, start_native, stop_native
 
 
 class SetupController:
@@ -22,7 +22,7 @@ class SetupController:
     def snapshot(self):
         with self.lock:
             return {**self.state, "logs": list(self.state["logs"]),
-                    "ready": self.config.provider == "ollama"}
+                    "ready": self.config.provider in {"native", "ollama"}}
 
     def emit(self, text):
         with self.lock:
@@ -31,17 +31,12 @@ class SetupController:
 
     def check(self, cpu_only=False):
         hardware = detect_hardware()
-        report = {"hardware": asdict(hardware), "requirements_ok": False, "plan": None, "error": None}
+        report = {"hardware": asdict(hardware), "requirements_ok":False, "plan":None, "error":None}
         try:
-            daemon = local_daemon()
-            report["plan"] = plan_local(hardware, daemon["MemTotal"], cpu_only, self.preferences["performance"])
+            report["plan"] = native_plan(cpu_only, self.preferences["performance"])
             report["requirements_ok"] = True
-        except ValueError as exc:
+        except (ValueError, OSError) as exc:
             report["error"] = str(exc)
-            try:
-                report["plan"] = plan_local(hardware, cpu_only=cpu_only, performance=self.preferences["performance"])
-            except ValueError:
-                pass
         with self.lock:
             self.state["report"] = report
         return report
@@ -53,15 +48,15 @@ class SetupController:
         if not self.operation.acquire(blocking=False):
             raise ValueError("A setup or chat operation is already running")
         with self.lock:
-            if self.config.provider == "ollama":
+            if self.config.provider in {"native", "ollama"}:
                 self.operation.release()
                 raise ValueError("The local model is already ready. Restart Nexo to change hardware settings.")
             self.cancel.clear()
             self.state.update(phase="preparing", logs=[], error=None)
         def work():
             try:
-                self.emit("Checking Docker and the available memory budget…")
-                config, plan = start_local(self.config.database, cpu_only=cpu_only,
+                self.emit("Checking native runtime and available memory…")
+                config, plan = start_native(self.config.database, cpu_only=cpu_only,
                                           emit=self.emit, cancel=self.cancel, performance=self.preferences["performance"])
                 with self.lock:
                     self.config = replace(config, response_language=language)
@@ -86,5 +81,5 @@ class SetupController:
         if self.thread:
             self.thread.join()
         if self.owns_runtime:
-            stop_local()
+            stop_native(self.config)
             self.owns_runtime = False

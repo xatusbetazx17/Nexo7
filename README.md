@@ -1,52 +1,57 @@
 # Nexo 7
 
-An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a verified inference-container RAM limit.
+An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.4.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.5.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
-## Get started
+## Get started — no Docker
 
-Download the archive for your operating system from [Releases](https://github.com/xatusbetazx17/Nexo7/releases). The first v0.4.0 release appears after both native build jobs succeed; track progress in [Actions](https://github.com/xatusbetazx17/Nexo7/actions). Extract it and open **Nexo7.exe** on Windows or **Nexo7** on Linux. Python is bundled in portable builds.
+Download the Windows or Linux x86-64 archive from [Releases](https://github.com/xatusbetazx17/Nexo7/releases), extract it and open **Nexo7.exe** or **Nexo7**. Python and the document reader are bundled. The setup screen downloads a pinned native llama.cpp engine and Qwen3.5 GGUF model, checks SHA-256 hashes, applies an OS memory limit and starts local chat. Neither Docker nor WSL is required by the desktop application.
 
-The setup screen checks the computer, recommends a model and shows download progress. Local AI requires **Docker with Linux containers and cgroups v2**. Use the official installation links in the interface, start Docker, then choose **Check requirements → Download & start local AI**. Docker setup can require OS changes, permissions and a restart; the application does not silently install drivers or accept third-party terms.
+Select **Fast** for the 0.8B model (~580 MB). Balanced/Larger-model preferences choose among supported profiles according to free resources. Initial engine/model downloads require Internet; subsequent chat, document lookup, file inspection and calculations can run offline. PubMed and the explicitly configured optional cloud provider still require Internet.
 
-Choose **Explore demo without a model** to immediately try calculations and document lookup. Demo does not generate AI responses. See [START HERE](docs/QUICKSTART.md) for requirements and data locations.
+Windows can attempt NVIDIA/Vulkan acceleration when VRAM is measurable, with CPU fallback. **This Linux native release uses CPU** because GPU drivers may reserve more virtual address space than its strict address-space budget allows. AMD/Intel GPU acceleration and general native Linux GPU support are not promised in this release. See [START HERE](docs/QUICKSTART.md).
 
 ## What it does
 
-- Adapts a supported Qwen3.5 model profile to available host/Docker RAM and measured free NVIDIA VRAM. Offers Fast, Balanced and Larger-model preferences.
+- Adapts a supported Qwen3.5 model profile to available host RAM and measured free NVIDIA VRAM. Offers Fast, Balanced and Larger-model preferences.
 - Remembers language, answer style and optional automatic local startup; resources are checked again on launch.
 - Saves explicitly approved answers as searchable examples, with deletion through My knowledge. This does not retrain weights or verify answers.
 - Creates reviewed text, code, CSV and JSON files in My workspace, with download and deletion. Generated code is never automatically executed.
-- Uses CPU inference or attempts compatible NVIDIA/AMD acceleration, with CPU fallback during setup.
+- Uses native CPU inference; Windows can attempt compatible NVIDIA/Vulkan acceleration with CPU fallback.
 - Lets the user select a response language, including English and Spanish. Quality depends on the base model.
 - Runs arithmetic directly, with no model tokens, and retrieves relevant excerpts from saved text using SQLite FTS5.
 - Keeps optional chat history and a bounded exact-response cache on the computer.
 - Retrieves PubMed records for literature questions and displays sources, tool usage and elapsed time.
-- Restricts model tools to arithmetic, saved-document search and opt-in literature search. Models cannot run shell commands or install software.
+- Imports text-based PDFs, DOCX and UTF-8 text/code files for review before adding them to memory. Extraction runs in a separate limited process. Scanned PDFs need OCR, which is not included.
+- Reads explicitly saved workspace files, computes CSV statistics, checks JSON and Python syntax, and calculates date differences.
+- Restricts tools to a fixed read-only/calculation set and opt-in literature search. Models cannot run shell commands or install software.
 
 ## Resource limits
 
-| Resource | Policy |
+| Resource | Native policy |
 | --- | --- |
-| Inference-container RAM | Adaptive, normally at most 12 decimal GB; configuration rejects more than 16 GB |
-| Swap for the model container | Disabled; actual cgroup limits checked before inference |
-| Local models loaded | One, with one concurrent inference request |
-| Selected model file size | Checked against a profile maximum of 1.5–7.5 GB |
-| Context and output | Local context at most 8192 tokens; output at most 1024 per call |
-| Other memory and storage | OS, app/browser, Docker VM overhead, dedicated GPU VRAM, images and accumulated downloads are separate |
+| Planned memory budget | At most 12 decimal GB by default; configuration rejects more than 16 GB |
+| Linux enforcement | Per-process virtual address-space limit via RLIMIT_AS, inherited before model launch |
+| Windows enforcement | Aggregate worker/model committed-memory limit via a verified Job Object; model mmap disabled |
+| GPU memory | Admission estimate only; no hard VRAM cap |
+| Concurrency | One model and one model request at a time |
+| Context / output | Context at most 6144 tokens; Fast output 256/call, other desktop profiles 512/call |
+| Imports | 5 MB file, 100 PDF pages, 200000 extracted characters; worker memory budget 1 GB and timeout 25 seconds |
+| Workspace | 200 files, 20 MB total, 200 KB per file |
 
-VRAM measurements guide profile selection; they are not a hard VRAM cap. Resources are rechecked at startup, not continuously resized during a conversation. On a hypothetical 8 GB machine with 7 GB free, the planner selects 2B in Balanced or 0.8B in Fast; Docker memory may reduce that further.
+These OS limits measure different things. Windows committed memory does not cap every file-backed mapping or whole-machine RAM; Linux address space is stricter than resident RAM and can reject a process that has enough physical RAM. Neither includes the app/browser, OS, dedicated VRAM or accumulated downloads. Native swap is controlled by the OS; unlike legacy Docker mode, it is not disabled by Nexo. Free RAM is checked at startup, not continuously resized during a response. Unsupported/low-memory systems fail with an explanation.
 
-This does **not** guarantee that every PC can run every model, that the whole computer uses under 16 GB, or that total installation storage stays below 16 GB. Low-memory or unsupported systems receive an explanation and can use demo mode. Admission thresholds are engineering estimates, followed by a real load attempt within the enforced budget. See [resource policy](docs/RESOURCES.md).
+A nominal 8 GB PC still needs enough free memory, disk and a supported CPU/OS. Tests do not establish universal PC compatibility. See [resource policy](docs/RESOURCES.md).
 
-The root-level v0.3.0 binary archives and `Nexo7-Source.zip` are retained historical uploads. The current source is the expanded project in this repository; use Releases for new binaries.
+The root-level v0.3.0 archives and Nexo7-Source.zip are historical uploads. Use current Releases for binaries and the expanded repository for source.
 
 ## Run from source
 
-Python 3.11+ is required for source use. The core application has no third-party Python runtime dependencies.
+Python 3.11+ is required for source use. Install the document reader dependency first.
 
 ```bash
+python -m pip install -r requirements-runtime.txt
 python -m nexo7.desktop
 ```
 
@@ -61,7 +66,7 @@ python -m nexo7 chat "/calc 24.5 * 40"
 python -m nexo7 local --cpu --open --language es
 ```
 
-`serve` uses `config.toml` when present and defaults to demo. Copy `config.example.toml` for advanced settings. An optional OpenAI provider uses `OPENAI_API_KEY` from the environment and an explicit model identifier; those requests may incur charges. The desktop wizard uses local inference and never silently falls back to a paid API.
+`serve` uses `config.toml` when present and defaults to demo. Copy `config.example.toml` for advanced settings. An optional OpenAI provider uses `OPENAI_API_KEY` from the environment and an explicit model identifier; those requests may incur charges. The desktop wizard uses native local inference and never silently falls back to a paid API.
 
 ## Build Windows and Linux applications
 
@@ -76,7 +81,7 @@ python scripts/build_desktop.py
 
 This produces a portable archive and SHA-256 checksum in `release/`. Each build must pass an executable smoke test before packaging. The release workflow builds on Windows Server 2022 and Ubuntu 22.04 runners with x86-64 Python. Windows binaries are unsigned. Linux compatibility depends on glibc and system libraries; the local development build's host is recorded in the validation report.
 
-The first push to `main` builds and publishes the v0.4.0 prerelease after both platforms succeed. A `v*` tag can publish a later version; existing releases are preserved. Manual workflow runs produce downloadable Actions artifacts without publishing. See [release process](docs/RELEASING.md).
+A push to `main` builds and publishes the v0.5.0 prerelease after native builds and real-model smoke tests succeed on both platforms. A `v*` tag can publish a later version; existing releases are preserved. Manual workflow runs produce downloadable Actions artifacts without publishing. See [release process](docs/RELEASING.md).
 
 ### Windows portable preview assembled without a Windows runner
 
@@ -98,16 +103,16 @@ python scripts/evaluate.py --output reports/evaluation-demo.json
 
 A standalone CPU check with Qwen3.5-0.8B Q4_K_M ran four short prompts using two threads, with approximately 0.92 GB peak resident memory and 28.8–37.1 generated tokens/second on an AMD EPYC server. The model answered the arithmetic prompt incorrectly. This is not an end-to-end desktop test or a benchmark of a physical 8 GB PC; see the complete [validation record](docs/VALIDATION.md).
 
-Tests check memory-policy decisions, guard failures, tool boundaries, provider contracts, private history, citations and the web API. They do not establish model intelligence, medical efficacy or real GPU performance. `evals/multilingual.jsonl` and `scripts/measure_local.py` support subsequent real-model evaluation; fluent answers still need human review. See [validation](docs/VALIDATION.md).
+Tests check real memory-allocation rejection, native process cleanup, memory-policy decisions, archive/download integrity, tool boundaries, document imports, provider contracts, private history, citations and the web API. They do not establish model intelligence, medical efficacy or real GPU performance. `scripts/smoke_native.py --binary dist/Nexo7` exercises the actual native model through the packaged app; fluent answers still need human review. See [validation](docs/VALIDATION.md).
 
 The optional `experiments/tiny_transformer.py` is an educational byte-level Transformer requiring a separate PyTorch installation. It is unrelated to production inference and its weights are not included in the desktop application.
 
 ## Privacy and security
 
-The web server binds to loopback and requires a random access token for API requests. Host/origin checks, bounded requests and restrictive content policy are enabled. Model containers use a local-only published port and restricted privileges. Local processes with sufficient access can still reach local services; this is not protection from malware or a compromised OS.
+The web server binds to loopback and requires a random access token for API requests. Host/origin checks, bounded requests and restrictive content policy are enabled. The native model binds to loopback with a random API key. It runs as your user with memory limits; this is not a filesystem/network security sandbox. Built-in llama agent/shell/MCP tools are disabled. Local processes with sufficient access can still reach local services; this is not protection from malware or a compromised OS.
 
 Notes and chat history are not encrypted. Private mode avoids saving the current conversation and its answer cache. PubMed receives search topics. The optional cloud provider receives queries and relevant excerpts. The model does not grant itself new tools or permissions. Do not expose the local service to a network. See [SECURITY.md](SECURITY.md).
 
 ## License
 
-Original project code is MIT licensed. Docker, Ollama, model weights, bundled runtime dependencies and publications retain their own licenses; see [third-party components](THIRD-PARTY.md) and [official sources](docs/SOURCES.md).
+Original project code is MIT licensed. llama.cpp, model weights, bundled runtime dependencies and publications retain their own licenses; see [third-party components](THIRD-PARTY.md) and [official sources](docs/SOURCES.md).

@@ -1,45 +1,32 @@
-# Validation record — 0.4.0
+# Validation record — 0.5.0 native edition
 
-## Application checks
+## Completed locally
 
-- Core suite: 70 tests completed, 69 passed and one optional PyTorch test skipped. Added coverage for 8 GB planning, VRAM pressure fallback, preference persistence, approved examples and bounded workspace files, including traversal and symlink rejection.
-- Demo engineering evaluation: 6/6 fixed calculation/retrieval cases passed; no model tokens. This is not an intelligence benchmark.
-- JSDOM integration with a real local HTTP server: setup prerequisites, demo calculation, document import, literal HTML, saved preferences, explicit example approval, authenticated artifact API and workspace creation/read/deletion. No JavaScript errors. This is not rendered-browser visual QA.
-- Linux packaged executable: PyInstaller 6.22.0/Python 3.12, executed on x86-64 Linux with glibc 2.39. Smoke test covers startup, English assets, API authentication, calculator, bundled knowledge, preferences, workspace and clean shutdown. Compatibility with older system libraries is not established by this build.
-- Windows portable preview: x86-64 PE GUI launcher cross-compiled with Zig; official embeddable CPython 3.14.7 archive pinned by SHA-256. Structure and hashes checked. **Not executed on Windows.**
+- Core suite: 88 tests, 87 passed and one optional PyTorch test skipped. Coverage includes real OS memory-allocation rejection, native supervisor cleanup, hash mismatch/cancellation, archive traversal, low-memory planning, bounded imports, CSV/date/syntax tools and exact bundled-guide migration without changing personal notes.
+- Demo evaluation: six fixed arithmetic/retrieval cases; this is not an intelligence benchmark.
+- JSDOM integration: setup, low-memory feedback, preferences, explicit examples, authenticated workspace, file creation/deletion, bounded text import and CSV statistics. This is not rendered-browser layout QA.
+- Native Linux source and packaged executable both completed actual Qwen3.5-0.8B Q4_K_M inference through the application's HTTP API without Docker. Spanish greeting and English Python-function prompts generated visible answers; arithmetic, CSV totals, isolated text import and clean shutdown also passed. Reports: reports/native-source-linux.json and reports/native-packaged-linux.json.
+- Local development host: x86-64 Linux/glibc 2.39, visible container RAM 20 GiB. Native limit selected 12 decimal GB; this run is not a physical 8 GB PC test. Explicit 8 GB planning uses fixtures, while allocation rejection uses a real 1 GB OS limit in a separate test process.
 
-## Standalone real-model CPU check
+The workflow builds native Windows and Ubuntu 22.04 packages and requires scripts/smoke_native.py on each packaged executable before publishing. Consult Actions for results of the release commit; local results above do not assert Windows/GPU validation.
 
-Official llama.cpp b11093, Qwen3.5-0.8B Q4_K_M, two CPU threads, context 2048, output cap 192 tokens, reasoning disabled, seed 42. Model file: 579,615,840 bytes. Pinned revision and SHA-256 are in reports/real-cpu-provenance.json. Full answers and metrics are in reports/real-cpu.json.
+## Limits of evidence
 
-Host CPU: AMD EPYC 9V74. Host container limit: 20 GiB. Each inference process was additionally restricted to **8,000,000,000 bytes of virtual address space** using RLIMIT_AS. That is not a physical 8 GB PC test or the production Docker RAM guard.
+Short successful responses do not establish broad accuracy, intelligence, universal compatibility or performance superiority. The historical 0.4 standalone model check in reports/real-cpu.json includes an incorrect arithmetic answer. Deterministic tools reduce specific errors; the model still decides whether to call them for ordinary natural-language questions.
 
-| Case | Wall time including loading | Generation tokens/s | Peak RSS KiB | Observed answer |
-| --- | ---: | ---: | ---: | --- |
-| Spanish file tips | 4.734 s | 37.1 | 895508 | Two tips; second includes an awkward invented phrase |
-| English file tips | 3.457 s | 35.2 | 895484 | Two relevant tips |
-| Python square function | 3.815 s | 31.1 | 896484 | Returns n*n; inspected, not executed |
-| 24.5 * 40 | 1.921 s | 28.8 | 896320 | Incorrect: 100; expected 980 |
-
-The Nexo deterministic calculator returns 980.0 for `/calc 24.5 * 40` with zero model calls (separate application test). That illustrates one useful tool-routing improvement, not superiority to other models. No repetitions/statistical confidence, multilingual benchmark score or large-model comparison is claimed. The standalone llama.cpp runtime is a development check and is not bundled or used as an alternative that bypasses the desktop guard.
-
-## Outstanding validation
-
-- Full Docker/Ollama inference, GPU acceleration and a live stress test of the production RAM ceiling: Docker/GPU unavailable here.
-- Native Windows execution, rendered-browser layout review and physical low-spec PC performance.
-- Broad language/knowledge/reasoning benchmarks and any clinical evaluation.
-- Native GitHub Actions results for this imported source are reported by the repository workflow. Local validation above predates publication and does not establish a successful CI run.
+Native memory guards differ: Linux limits virtual address space; Windows limits committed memory across the worker/model job with model mmap disabled. Neither guarantees total-machine RAM, disk or dedicated VRAM. Allocation failure may stop the model. Native GPU paths, physical low-spec PCs, scanned-PDF OCR, rendered-browser visual review and clinical capability have not been validated locally. This is not a sandbox for untrusted executable code, which the assistant does not run automatically.
 
 ## Reproduce
 
 ```bash
+python -m pip install -r requirements-runtime.txt
 python -m unittest discover -s tests -v
 python scripts/evaluate.py --output reports/evaluation-demo.json
 npm install
 npm run test:ui
-python scripts/benchmark_cpu.py --runtime /path/to/llama --model /path/to/model.gguf
 python -m pip install -r requirements-build.txt
 python scripts/build_desktop.py
+python scripts/smoke_native.py --binary dist/Nexo7
 ```
 
-The standalone CPU script requires Linux/resource.RLIMIT_AS and separately obtained, license-compliant runtime/model files. Do not extrapolate server token rates to every PC. Training and knowledge remain those of the selected base model; saved examples provide retrieval, not autonomous weight updates.
+On Windows pass dist/Nexo7.exe. The real smoke test downloads a pinned engine and ~580 MB model unless cached, then runs actual inference. No paid API is used. The first-run download path needs Internet; subsequent local chat does not.

@@ -53,6 +53,8 @@ def main():
             assert preferences["performance"] == "fast"
             artifact = json.loads(request("/api/artifacts", {"name": "smoke.md", "content": "Local file"}))
             assert json.loads(request("/api/artifacts/" + artifact["id"]))["content"] == "Local file"
+            imported = json.loads(request("/api/import", {"name":"sample.txt", "data":"TG9jYWwgaW1wb3J0"}))
+            assert imported["content"] == "Local import"
             state = json.loads(request("/api/setup"))
             assert state["phase"] == "idle" and not state["ready"]
             request("/api/shutdown", {})

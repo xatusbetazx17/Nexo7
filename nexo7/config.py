@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 @dataclass(frozen=True)
 class Config:
     provider: str = "demo"
+    native_runtime_id: str = ""
     model: str = ""
     fast_model: str = ""
     deep_model: str = ""
@@ -33,8 +34,8 @@ class Config:
     output_price_per_million: float = -1.0
 
     def __post_init__(self):
-        if self.provider not in {"demo", "openai", "ollama"}:
-            raise ValueError("provider must be demo, openai or ollama")
+        if self.provider not in {"demo", "openai", "ollama", "native"}:
+            raise ValueError("provider must be demo, openai, ollama or native")
         if self.provider != "demo" and not self.model.strip():
             raise ValueError("Set a real model identifier")
         import re
@@ -42,13 +43,13 @@ class Config:
             raise ValueError("Local RAM limit must be between 1 and 16 decimal GB")
         if type(self.local_threads) is not int or not 1 <= self.local_threads <= 32:
             raise ValueError("local_threads must be between 1 and 32")
-        if self.local_backend not in {"cpu", "nvidia", "amd"}:
+        if self.local_backend not in {"cpu", "nvidia", "amd", "vulkan"}:
             raise ValueError("Unknown local backend")
         if self.local_container_id and not re.fullmatch(r"[a-f0-9]{64}", self.local_container_id):
             raise ValueError("Invalid local container identifier")
         if self.response_language != "auto" and not re.fullmatch(r"[a-z]{2,3}(?:-[A-Za-z]{2,8})?", self.response_language):
             raise ValueError("response_language must be auto or a language code such as en or es")
-        if self.provider == "ollama":
+        if self.provider in {"ollama", "native"}:
             from .hardware import PROFILES
             if self.model not in {p.model for p in PROFILES}:
                 raise ValueError("Bounded local mode only accepts the supported Qwen model profiles")

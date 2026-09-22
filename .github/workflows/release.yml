@@ -19,6 +19,8 @@ jobs:
         with:
           python-version: '3.12'
           architecture: x64
+      - name: Install document reader
+        run: python -m pip install -r requirements-runtime.txt
       - name: Validate application
         run: python -m unittest discover -s tests -v
       - name: Run engineering smoke tasks
@@ -27,6 +29,8 @@ jobs:
         run: python -m pip install pyinstaller==6.22.0
       - name: Build and test native executable
         run: python scripts/build_desktop.py
+      - name: Real native model smoke test
+        run: python scripts/smoke_native.py --binary dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
@@ -48,7 +52,7 @@ jobs:
       - name: Publish preview release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.4.0' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.5.0' }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; native builds remain available as workflow artifacts."

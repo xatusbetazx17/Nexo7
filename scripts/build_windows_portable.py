@@ -21,7 +21,7 @@ PYTHON_URL = f'https://www.python.org/ftp/python/{PYTHON_VERSION}/python-{PYTHON
 
 def main():
     build = ROOT / 'build/windows-portable'
-    stage = build / 'Nexo7-0.4.0-windows-x86_64-preview'
+    stage = build / 'Nexo7-0.5.0-windows-x86_64-preview'
     stage.mkdir(parents=True, exist_ok=True)
     archive = build / f'python-{PYTHON_VERSION}-embed-amd64.zip'
     if not archive.exists():
@@ -46,6 +46,9 @@ def main():
     shutil.copytree(ROOT / 'nexo7', app / 'nexo7', dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     shutil.copy2(ROOT / 'desktop_entry.py', app / 'desktop_entry.py')
+    import pypdf
+    shutil.copytree(Path(pypdf.__file__).parent, app/'pypdf', dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     subprocess.run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'x86_64-windows-gnu',
                     str(ROOT / 'packaging/windows_launcher.c'), '-o', str(stage / 'Nexo7.exe'),
                     '-municode', '-Wl,--subsystem,windows', '-O2', '-s', '-luser32'], check=True)
@@ -56,7 +59,7 @@ def main():
     assert struct.unpack_from('<H', data, pe+24+68)[0] == 2
     for source, target in [('LICENSE','LICENSE.txt'), ('docs/QUICKSTART.md','START-HERE.md'), ('THIRD-PARTY.md','THIRD-PARTY.md')]:
         shutil.copy2(ROOT / source, stage / target)
-    (stage / 'PREVIEW-NOTICE.txt').write_text('Windows preview assembled on Linux with an x86-64 PE launcher and official embeddable CPython.\nIt has NOT been executed on Windows in this environment. Native validation is still required.\nExtract every file, then open Nexo7.exe. Docker and model downloads are separate prerequisites.\n', encoding='utf-8')
+    (stage / 'PREVIEW-NOTICE.txt').write_text('Windows preview assembled on Linux with an x86-64 PE launcher and official embeddable CPython.\nIt has NOT been executed on Windows in this environment. Native validation is still required.\nExtract every file, then open Nexo7.exe. Native engine and model downloads are separate prerequisites; no Docker needed.\n', encoding='utf-8')
     import ziglang
     licenses = stage / 'licenses'
     licenses.mkdir(exist_ok=True)

@@ -33,23 +33,17 @@ def main():
     local.add_argument("--language", default="auto")
     local_plan = sub.add_parser("local-plan", help="Detect resources without downloading or starting models")
     local_plan.add_argument("--cpu", action="store_true")
-    sub.add_parser("local-stop", help="Stop only the dedicated Nexo runtime")
-    sub.add_parser("local-status", help="Verify the runtime in config.local.toml and report usage")
+    sub.add_parser("local-stop", help="Stop a legacy Docker runtime; native models stop with their app")
+    sub.add_parser("local-status", help="Inspect a legacy Docker runtime; native status is in the app")
     ingest = sub.add_parser("ingest")
     ingest.add_argument("file")
     ingest.add_argument("--title")
     args = parser.parse_args()
     if args.command == "local-plan":
-        from .hardware import detect_hardware, plan_local
-        from .local_runtime import local_daemon
-        daemon_memory, error = None, None
-        try:
-            daemon_memory = local_daemon()["MemTotal"]
-        except ValueError as exc:
-            error = str(exc)
-        report = plan_local(detect_hardware(), daemon_memory, args.cpu)
-        report.update(runtime_prerequisites_ok=error is None, guard_active=False, runtime_error=error)
-        print(json.dumps(report, ensure_ascii=False, indent=2))
+        from .native_runtime import native_plan
+        report = native_plan(args.cpu)
+        report.update(runtime_prerequisites_ok=True, guard_active=False)
+        print(json.dumps(report,ensure_ascii=False,indent=2))
         return
     if args.command == "local-stop":
         from .local_runtime import stop_local
@@ -63,13 +57,12 @@ def main():
         print(json.dumps(runtime_metrics(config), indent=2))
         return
     if args.command == "local":
-        from .local_runtime import start_local, write_local_config
+        from .native_runtime import start_native
         base = Path(args.config).resolve().parent
         # Validate response language before potentially downloading anything.
         language_config = Config(response_language=args.language)
-        config, plan = start_local(base / "data/nexo.sqlite3", cpu_only=args.cpu)
+        config, plan = start_native(base / "data/nexo.sqlite3", cpu_only=args.cpu)
         config = replace(config, response_language=language_config.response_language)
-        write_local_config(base / "config.local.toml", config)
     else:
         config = load_config(args.config)
     store = Store(config.database)
@@ -100,11 +93,8 @@ def main():
     finally:
         store.close()
         if args.command == "local":
-            from .local_runtime import stop_local
-            try:
-                stop_local()
-            except ValueError:
-                print("Could not stop the container; use python -m nexo7 local-stop.", file=sys.stderr)
+            from .native_runtime import stop_native
+            stop_native(config)
 
 
 if __name__ == "__main__":

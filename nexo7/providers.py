@@ -98,9 +98,42 @@ class OllamaProvider:
         return {"role": "tool", "tool_name": call["name"], "content": json.dumps(result, ensure_ascii=False)}
 
 
+class NativeProvider(OllamaProvider):
+    def _complete(self, instructions, conversation, tools, model, max_tokens):
+        from .native_runtime import verify_native
+        runtime, url = verify_native(self.config)
+        if model != self.config.model:
+            raise ValueError("A second model is not allowed")
+        body = {"model": model, "messages": [{"role":"system", "content":instructions}] + conversation,
+                "stream":False, "max_tokens":min(max_tokens,self.config.max_output_tokens),
+                "temperature":0.2, "chat_template_kwargs":{"enable_thinking":False}, "cache_prompt":False}
+        if tools:
+            body["tools"] = [{"type":"function", "function":{k:v for k,v in t.items() if k not in {"type","strict"}}} for t in tools]
+            body["parallel_tool_calls"] = False
+        data = fetch_json(url+'/v1/chat/completions', payload=body,
+                          headers={"Authorization":"Bearer "+runtime.key}, timeout=self.config.timeout_seconds)
+        choices = data.get('choices', [])
+        if not choices: raise TransportError('Native model returned no choices')
+        item = choices[0]; message = item.get('message', {})
+        calls = [{"id":c.get('id',str(i)),"name":c.get('function',{}).get('name',''),
+                  "arguments":c.get('function',{}).get('arguments','{}')} for i,c in enumerate(message.get('tool_calls') or [])]
+        carry = {"role":"assistant", "content":message.get('content') or ''}
+        if message.get('tool_calls'): carry['tool_calls']=message['tool_calls']
+        usage = data.get('usage',{})
+        return Completion(message.get('content') or '', calls, [carry],
+                          {"input_tokens":usage.get('prompt_tokens',0),"output_tokens":usage.get('completion_tokens',0),"cached_input_tokens":0},
+                          item.get('finish_reason') == 'length')
+
+    @staticmethod
+    def tool_result(call, result):
+        return {"role":"tool", "tool_call_id":call['id'], "content":json.dumps(result,ensure_ascii=False)}
+
+
 def provider_for(config):
     if config.provider == "openai":
         return OpenAIProvider(config)
+    if config.provider == "native":
+        return NativeProvider(config)
     if config.provider == "ollama":
         return OllamaProvider(config)
     return None

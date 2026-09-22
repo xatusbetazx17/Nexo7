@@ -1,0 +1,59 @@
+{
+  "release": "b11093",
+  "runtimes": {
+    "Linux-vulkan": {
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11093/llama-b11093-bin-ubuntu-vulkan-x64.tar.gz",
+      "sha256": "69e0a3a645bbdf8d6eb304bbac76a0e018babf4c158ac401cd37721491346cec",
+      "size": 30490066
+    },
+    "Linux-cpu": {
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11093/llama-b11093-bin-ubuntu-x64.tar.gz",
+      "sha256": "95c4a9f486b4cd690f29f560c9805c5fe6ba799f043186fd8f0a1bd55938ff73",
+      "size": 16983817
+    },
+    "Windows-cpu": {
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11093/llama-b11093-bin-win-cpu-x64.zip",
+      "sha256": "eb653e11efd2eb0c2247e9bde5dd9d21a3e7755c1ad321589944aa800615e50d",
+      "size": 18550781
+    },
+    "Windows-vulkan": {
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11093/llama-b11093-bin-win-vulkan-x64.zip",
+      "sha256": "c6de41d590f2d795cb224cfc92fb91db1f4f186357638d77f5e91f4c2575c7fb",
+      "size": 31938161
+    }
+  },
+  "models": {
+    "qwen3.5:0.8b": {
+      "url": "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/f36b1ea49a332ede8fe5f389bbf5b3575ef71f48/Qwen_Qwen3.5-0.8B-Q4_K_M.gguf",
+      "sha256": "fb044e93939a70469c905781334f5de1e6c8b608ced6cbc8c9249bd4127d9526",
+      "size": 579615840,
+      "filename": "Qwen_Qwen3.5-0.8B-Q4_K_M.gguf",
+      "repository": "bartowski/Qwen_Qwen3.5-0.8B-GGUF",
+      "revision": "f36b1ea49a332ede8fe5f389bbf5b3575ef71f48"
+    },
+    "qwen3.5:2b": {
+      "url": "https://huggingface.co/bartowski/Qwen_Qwen3.5-2B-GGUF/resolve/7d26695454df6de5fbcce2e58681e62dae06ce43/Qwen_Qwen3.5-2B-Q4_K_M.gguf",
+      "sha256": "57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8",
+      "size": 1396198496,
+      "filename": "Qwen_Qwen3.5-2B-Q4_K_M.gguf",
+      "repository": "bartowski/Qwen_Qwen3.5-2B-GGUF",
+      "revision": "7d26695454df6de5fbcce2e58681e62dae06ce43"
+    },
+    "qwen3.5:4b": {
+      "url": "https://huggingface.co/bartowski/Qwen_Qwen3.5-4B-GGUF/resolve/4168f45a16a1290d65a4ec0fa312ae917a4c15d6/Qwen_Qwen3.5-4B-Q4_K_M.gguf",
+      "sha256": "13c16f426047e2de38cd075bdade4a7bcbc8c774384876f677740cda65f8a983",
+      "size": 3013027808,
+      "filename": "Qwen_Qwen3.5-4B-Q4_K_M.gguf",
+      "repository": "bartowski/Qwen_Qwen3.5-4B-GGUF",
+      "revision": "4168f45a16a1290d65a4ec0fa312ae917a4c15d6"
+    },
+    "qwen3.5:9b": {
+      "url": "https://huggingface.co/bartowski/Qwen_Qwen3.5-9B-GGUF/resolve/182be2fd6c7bc44887d88a91cb03ff009cc9f549/Qwen_Qwen3.5-9B-Q4_K_M.gguf",
+      "sha256": "d784ce9eda1a5a7b51e8f705a9e6310844bf4f173654d115823c775fdea56d43",
+      "size": 6169341984,
+      "filename": "Qwen_Qwen3.5-9B-Q4_K_M.gguf",
+      "repository": "bartowski/Qwen_Qwen3.5-9B-GGUF",
+      "revision": "182be2fd6c7bc44887d88a91cb03ff009cc9f549"
+    }
+  }
+}

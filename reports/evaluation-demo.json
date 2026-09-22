@@ -6,7 +6,7 @@
     "optimized": true,
     "passed": 6,
     "total": 6,
-    "mean_ms": 0.15166666666666667,
+    "mean_ms": 0.395,
     "reported_tokens": 0,
     "results": [
       {
@@ -26,7 +26,7 @@
           "cache_hit": false,
           "estimated_cost_usd": 0.0,
           "usage_complete": true,
-          "elapsed_ms": 0.32
+          "elapsed_ms": 0.47
         }
       },
       {
@@ -66,7 +66,7 @@
           "cache_hit": false,
           "estimated_cost_usd": 0.0,
           "usage_complete": true,
-          "elapsed_ms": 0.05
+          "elapsed_ms": 0.08
         }
       },
       {
@@ -86,7 +86,7 @@
           "cache_hit": false,
           "estimated_cost_usd": 0.0,
           "usage_complete": true,
-          "elapsed_ms": 0.06
+          "elapsed_ms": 1.23
         }
       },
       {
@@ -106,7 +106,7 @@
           "cache_hit": false,
           "estimated_cost_usd": 0.0,
           "usage_complete": true,
-          "elapsed_ms": 0.26
+          "elapsed_ms": 0.36
         }
       },
       {
@@ -126,7 +126,7 @@
           "cache_hit": false,
           "estimated_cost_usd": 0.0,
           "usage_complete": true,
-          "elapsed_ms": 0.14
+          "elapsed_ms": 0.15
         }
       }
     ]

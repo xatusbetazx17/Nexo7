@@ -65,7 +65,7 @@ async function initialize(first=true) {
     $("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
     const language = preferences.response_language || config.response_language || "auto";
     if([...$("language").options].some(o=>o.value===language)) $("language").value=language;
-    $("resource-note").textContent = config.local_ram_limit_bytes ? `Runtime RAM: configured limit ${(config.local_ram_limit_bytes/1e9).toFixed(1)} GB · ${config.local_backend}` : "";
+    $("resource-note").textContent = config.local_ram_limit_bytes ? `Native memory budget: ${(config.local_ram_limit_bytes/1e9).toFixed(1)} GB · ${config.local_backend}` : "";
     $("privacy-note").textContent = config.provider === "openai" ? "Your queries and relevant excerpts will be sent to OpenAI. Local history is not encrypted." : "Memory and history stay on this computer, without encryption. PubMed needs an Internet connection.";
     if (!config.persist_history) { $("private").checked=true; $("private").disabled=true; }
     const data=await api("/api/history?session="+encodeURIComponent(session));
@@ -102,7 +102,16 @@ async function loadDocuments(){
   for(const doc of data.documents){const card=node("div","","document-card");const info=node("div","");info.append(node("h3",doc.title),node("p",`${doc.characters.toLocaleString()} characters · ${doc.source}`,"muted small"));const button=node("button","Remove","quiet");button.onclick=async()=>{if(!confirm("Remove this document and its cache entries?"))return;try{await api("/api/documents/"+encodeURIComponent(doc.id),"DELETE");await loadDocuments();}catch(exc){alert(exc.message);}};card.append(info,button);$("documents").append(card);}
 }
 $("memory-form").onsubmit=async event=>{event.preventDefault();try{await api("/api/documents","POST",{title:$("doc-title").value,content:$("doc-content").value,source:"Added by user"});$("memory-form").reset();await loadDocuments();}catch(exc){alert(exc.message);}};
-$("file").onchange=async()=>{const file=$("file").files[0];if(!file)return;if(file.size>500000){alert("The file must be at most 500 KB");return;}$("doc-title").value=file.name;$("doc-content").value=await file.text();};
+$("file").onchange=async()=>{
+ const file=$("file").files[0];if(!file)return;
+ if(file.size>5000000){$("import-status").textContent="Import limit: 5 MB";return;}
+ $("import-status").textContent="Extracting locally…";
+ try{
+  const encoded=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(",")[1]);r.onerror=reject;r.readAsDataURL(file);});
+  const doc=await api("/api/import","POST",{name:file.name,data:encoded});
+  $("doc-title").value=doc.title;$("doc-content").value=doc.content;$("import-status").textContent=doc.notice;
+ }catch(exc){$("import-status").textContent=exc.message;}
+};
 
 let desktopMode = false, setupTimer = null, previousPhase = "", setupBusy = false;
 function showSetup() {
@@ -117,7 +126,7 @@ function displayReport(report) {
   const hw=report.hardware, plan=report.plan;
   $("hardware-summary").textContent = `${hw.system} ${hw.machine} · ${hw.cpu_threads} CPU threads · ${(hw.available_bytes/1e9).toFixed(1)} GB available of ${(hw.total_bytes/1e9).toFixed(1)} GB RAM${hw.gpu_total_bytes ? ` · ${(hw.gpu_free_bytes/1e9).toFixed(1)} GB free NVIDIA VRAM` : ""}`;
   $("setup-requirements").textContent = report.requirements_ok ? "Requirements checked. Ready for setup." : report.error;
-  $("model-summary").textContent = plan ? `${plan.profiles[0].model} · ${plan.backend.toUpperCase()} · ${(plan.ram_limit_bytes/1e9).toFixed(1)} GB RAM limit. Recommendation; actual loading is checked during setup.` : "No suitable model profile is currently available.";
+  $("model-summary").textContent = plan ? `${plan.selected_model || plan.profiles[0].model} · ${plan.backend.toUpperCase()} · ${(plan.ram_limit_bytes/1e9).toFixed(1)} GB memory budget. ${plan.guard_scope}. Actual loading is checked during setup.` : "No suitable model profile is currently available.";
   $("start-local").disabled = !report.requirements_ok || setupBusy || previousPhase==="ready";
 }
 async function pollSetup() {
@@ -142,7 +151,7 @@ $("setup-tab").onclick=showSetup;
 $("try-demo").onclick=()=>{hideSetup();view(false);};
 $("cpu-only").onchange=()=>{$("start-local").disabled=true;$("setup-requirements").textContent="Check requirements again after changing acceleration.";};
 $("check-system").onclick=async()=>{
-  $("check-system").disabled=true;$("setup-error").textContent="";$("setup-requirements").textContent="Checking your computer and Docker…";
+  $("check-system").disabled=true;$("setup-error").textContent="";$("setup-requirements").textContent="Checking your computer and native memory budget…";
   try{await savePreferences();displayReport(await api("/api/setup/check","POST",{cpu_only:$("cpu-only").checked}));}
   catch(exc){$("setup-error").textContent=exc.message;}
   finally{$("check-system").disabled=setupBusy;}
@@ -171,8 +180,14 @@ async function loadArtifacts(){
   const card=node("div","","document-card"),label=node("div",`${item.name} · ${item.bytes.toLocaleString()} bytes`),download=node("button","Download","quiet"),remove=node("button","Delete","quiet");
   download.onclick=async()=>{try{const file=await api("/api/artifacts/"+item.id);const url=URL.createObjectURL(new Blob([file.content],{type:"application/octet-stream"}));const a=node("a","");a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(exc){$("artifact-status").textContent=exc.message;}};
   remove.onclick=async()=>{if(!confirm("Permanently delete this workspace file?"))return;try{await api("/api/artifacts/"+item.id,"DELETE");await loadArtifacts();}catch(exc){$("artifact-status").textContent=exc.message;}};
-  card.append(label,download,remove);$("artifacts").append(card);
+  const analyze=node("button","Analyze","quiet");
+  analyze.onclick=async()=>{try{const data=await api("/api/inspect","POST",{filename:item.id});$("analysis-result").textContent=JSON.stringify(data,null,2);}catch(exc){$("analysis-result").textContent=exc.message;}};
+  const discuss=node("button","Ask about file","quiet");
+  discuss.onclick=()=>{view(false);$("prompt").value=`Read the workspace file with ID ${item.id} (${item.name}) and explain its contents.`;$("prompt").focus();};
+  card.append(label,download,analyze,discuss,remove);$("artifacts").append(card);
  }
 }
 $("artifact-form").onsubmit=async event=>{event.preventDefault();try{await api("/api/artifacts","POST",{name:$("artifact-name").value,content:$("artifact-content").value});$("artifact-status").textContent="Saved locally. Review code before executing it.";await loadArtifacts();}catch(exc){$("artifact-status").textContent=exc.message;}};
 initialize();
+
+$("workspace-file").onchange=async()=>{const file=$("workspace-file").files[0];if(!file)return;if(file.size>200000){$("artifact-status").textContent="Workspace file limit: 200 KB";return;}$("artifact-name").value=file.name;$("artifact-content").value=await file.text();$("artifact-status").textContent="Loaded into editor. Review and save to make it available to Nexo.";};

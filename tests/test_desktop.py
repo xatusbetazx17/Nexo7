@@ -32,14 +32,14 @@ class DesktopTests(unittest.TestCase):
         with instance_lock(path) as acquired:
             self.assertTrue(acquired)
 
-    def test_missing_docker_does_not_enable_ai(self):
-        with patch('nexo7.setup.local_daemon', side_effect=ValueError('Docker missing')):
+    def test_unsupported_native_hardware_does_not_enable_ai(self):
+        with patch('nexo7.setup.native_plan', side_effect=ValueError('Unsupported hardware')):
             report = self.controller.check()
         self.assertFalse(report['requirements_ok'])
         self.assertEqual(self.controller.config.provider, 'demo')
 
     def test_setup_failure_releases_operation_and_keeps_demo(self):
-        with patch('nexo7.setup.start_local', side_effect=ValueError('guard failed')):
+        with patch('nexo7.setup.start_native', side_effect=ValueError('guard failed')):
             self.controller.start()
             self.controller.thread.join(timeout=2)
         self.assertEqual(self.controller.snapshot()['phase'], 'error')
@@ -51,12 +51,12 @@ class DesktopTests(unittest.TestCase):
         entered, release = threading.Event(), threading.Event()
         hw = Hardware('Linux', 'x86_64', 16*GB, 12*GB, 8)
         plan = plan_local(hw)
-        cfg = Config(provider='ollama', model='qwen3.5:4b', database=self.controller.config.database)
+        cfg = Config(provider='native', model='qwen3.5:4b', database=self.controller.config.database)
         def prepare(*args, **kwargs):
             entered.set()
             release.wait(3)
             return cfg, plan
-        with patch('nexo7.setup.start_local', side_effect=prepare):
+        with patch('nexo7.setup.start_native', side_effect=prepare):
             self.controller.start(language='es')
             self.assertTrue(entered.wait(2))
             self.assertEqual(self.controller.config.provider, 'demo')

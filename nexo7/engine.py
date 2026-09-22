@@ -32,8 +32,9 @@ MODES = {"eco", "balanced", "deep", "research"}
 
 
 class Engine:
-    def __init__(self, config, store, provider=None, pubmed=None):
+    def __init__(self, config, store, provider=None, pubmed=None, workspace=None):
         self.config, self.store = config, store
+        self.workspace = workspace
         self.provider = provider if provider is not None else provider_for(config)
         self.pubmed = pubmed or PubMed(store, min(config.timeout_seconds, 30))
 
@@ -50,7 +51,7 @@ class Engine:
             return False
         # Byte-based conservative admission for multilingual local input. This is not a tokenizer.
         # Reserve space for generation and provider chat templates; stop rather than silently truncate.
-        if self.config.provider == "ollama":
+        if self.config.provider in {"ollama", "native"}:
             return len(encoded.encode("utf-8")) + self.config.max_output_tokens + 1024 <= self.config.ollama_context_tokens
         return True
 
@@ -84,6 +85,9 @@ class Engine:
                 result[key] = result[key][:4]
                 for item in result[key]:
                     item["text"] = item.get("text", "")[:1100]
+        if "columns" in result and len(result["columns"]) > 8:
+            result["columns"] = result["columns"][:8]
+            result["columns_truncated"] = True
         return result
 
     @staticmethod
@@ -129,7 +133,7 @@ class Engine:
         sources, trace, warnings = [], [], []
         cacheable = not private and optimized and self.config.cache_seconds > 0 and mode != "research" and not re.search(
             r"\b(hoy|ahora|actual|actuales|precio|precios|today|latest|current|news|noticias)\b", message, re.I)
-        key = self.store.cache_key(["nexo7-v4", message, mode, language, history, self.store.revision(), asdict(self.config)])
+        key = self.store.cache_key(["nexo7-v5", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
 
         def finish(answer, status="completed", save_cache=False):
             answer, extra = self._check_citations(answer, sources, mode == "research")
@@ -151,6 +155,16 @@ class Engine:
                 self.store.put_cache(key, {"answer": answer, "sources": sources, "warnings": result["warnings"]}, self.config.cache_seconds)
             return result
 
+        if message.startswith(('/date ', '/inspect ')) and self.config.max_tool_calls < 1:
+            return finish('Local tools are disabled by the tool limit.', 'unavailable')
+        if message.startswith('/date '):
+            from .local_tools import dates
+            stats['tool_calls'] += 1
+            return finish(json.dumps(dates(message[6:]),ensure_ascii=False))
+        if message.startswith('/inspect '):
+            from .local_tools import inspect_file
+            stats['tool_calls'] += 1
+            return finish(json.dumps(inspect_file(self.workspace,message[9:].strip()),ensure_ascii=False,indent=2))
         if cacheable:
             cached = self.store.get_cache(key)
             if cached:
@@ -161,6 +175,10 @@ class Engine:
                 return finish(cached["answer"])
 
         calc = message[6:].strip() if message.lower().startswith("/calc ") else None
+        if calc is None and optimized:
+            natural_calc = re.fullmatch(r"(?:calculate|compute|what is|calcula|cu[aá]nto es)\s+([\d\s.+*/%()\-]+)\??", message, re.I)
+            if natural_calc and re.search(r"\d", natural_calc[1]):
+                calc = natural_calc[1].strip().rstrip('.')
         if calc is None and optimized and re.fullmatch(r"[\d\s.+*/%()\-]+", message) and re.search(r"\d", message):
             calc = message
         if calc is not None:
@@ -196,7 +214,7 @@ class Engine:
                 text = "Demo mode: no AI model is connected and no relevant excerpts were found. Try /calc 2+2, add documents or set up a local model to chat."
             return finish(text, save_cache=True)
 
-        box = ToolBox(self.store, self.pubmed, mode == "research" and self.config.research_network, private)
+        box = ToolBox(self.store, self.pubmed, mode == "research" and self.config.research_network, private, self.workspace)
         instructions = self._instructions(mode, language)
         schemas = box.schemas() if self.config.max_tool_calls else []
         conversation, admitted = self._context(message, history, sources, instructions, schemas)
