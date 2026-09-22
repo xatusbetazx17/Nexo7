@@ -64,14 +64,20 @@ def main():
                 assert response['status']=='completed',response
                 assert response['stats']['model_calls']>=1 and response['stats']['output_tokens']>0,response
                 result['answers'].append({'prompt':prompt,'answer':response['answer'],'stats':response['stats']})
-            calc=request('/api/chat',{'message':'/calc 24.5 * 40','private':True})
+            learning_pack={'format':'nexo-learning-v1','entries':[{'question':'What is the fictional Zorilo marker?', 'answer':'The fictional Zorilo marker is a violet triangle.', 'language':'en','kind':'correction'}]}
+            request('/api/learning/import',{'pack':learning_pack,'consent':True})
+            learned=request('/api/chat',{'message':'What is the fictional Zorilo marker?','language':'en','private':True})
+            assert learned['status']=='completed' and learned['stats']['model_calls']>=1,learned
+            assert any('violet triangle' in s['text'] for s in learned['sources']),learned
+            result['answers'].append({'prompt':'What is the fictional Zorilo marker?','answer':learned['answer'],'stats':learned['stats'],'source_admitted':True})
+            calc=request('/api/chat' ,{'message':'/calc 24.5 * 40','private':True})
             assert calc['answer']=='980.0' and calc['stats']['model_calls']==0
             request('/api/artifacts',{'name':'sales.csv','content':'amount\n10.25\n20.75\n'})
             analysis=request('/api/chat',{'message':'/inspect sales.csv','private':True})
             assert json.loads(analysis['answer'])['columns'][0]['sum']=='31.00'
             imported=request('/api/import',{'name':'note.txt','data':base64.b64encode(b'Local document').decode()})
             assert imported['content']=='Local document'
-            result['checks']=['real multilingual text generation','real code generation (not executed)','guarded setup','zero-model-call arithmetic','CSV totals','isolated document import','clean shutdown']
+            result['checks']=['real multilingual text generation','real code generation (not executed)','guarded setup','zero-model-call arithmetic','CSV totals','isolated document import','reviewed learning admitted to real model context','clean shutdown']
             request('/api/shutdown',{});process.wait(timeout=30);assert process.returncode==0
             result['passed']=True
         finally:

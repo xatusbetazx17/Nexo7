@@ -34,7 +34,7 @@ class Store:
 
     def preferences(self):
         defaults = {"performance": "balanced", "response_language": "auto", "style": "concise",
-                    "cpu_only": False, "auto_start": False}
+                    "cpu_only": False, "auto_start": False, "local_metrics": False, "use_learning": True}
         with self.lock:
             row = self.db.execute("SELECT value FROM meta WHERE key='preferences'").fetchone()
         if row:
@@ -47,9 +47,9 @@ class Store:
             if not isinstance(updates, dict) or set(updates) - set(self.preferences()):
                 raise ValueError("Unknown preference")
             values = {**self.preferences(), **updates}
-            if values["performance"] not in {"fast", "balanced", "quality"} or values["style"] not in {"concise", "detailed"}:
+            if values["performance"] not in {"fast", "balanced", "quality"} or values["style"] not in {"concise", "detailed", "accessible"}:
                 raise ValueError("Invalid preference value")
-            for key in ("cpu_only", "auto_start"):
+            for key in ("cpu_only", "auto_start", "local_metrics", "use_learning"):
                 if type(values[key]) is not bool:
                     raise ValueError(key + " must be a boolean")
             Config(response_language=values["response_language"])
@@ -123,6 +123,8 @@ class Store:
 
     def delete_document(self, doc_id):
         with self.lock, self.db:
+            if self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='learning'").fetchone():
+                self.db.execute("DELETE FROM learning WHERE document_id=?", (doc_id,))
             self.db.execute("DELETE FROM chunks WHERE doc_id=?", (doc_id,))
             count = self.db.execute("DELETE FROM documents WHERE id=?", (doc_id,)).rowcount
             if count:
@@ -138,7 +140,7 @@ class Store:
         with self.lock:
             rows = self.db.execute("""SELECT chunks.rowid, chunks.doc_id, chunks.title, chunks.content,
                     documents.source FROM chunks JOIN documents ON documents.id=chunks.doc_id
-                    WHERE chunks MATCH ? ORDER BY bm25(chunks) LIMIT ?""", (match, min(max(int(limit), 1), 8))).fetchall()
+                    WHERE chunks MATCH ? AND (? OR documents.source NOT LIKE 'local learning;%') ORDER BY bm25(chunks) LIMIT ?""", (match, self.preferences()["use_learning"], min(max(int(limit), 1), 8))).fetchall()
         return [{"id": f"D{r['rowid']}", "document_id": r["doc_id"], "title": r["title"],
                  "text": r["content"], "source": r["source"]} for r in rows]
 

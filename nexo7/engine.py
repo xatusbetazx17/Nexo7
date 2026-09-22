@@ -34,6 +34,8 @@ MODES = {"eco", "balanced", "deep", "research"}
 class Engine:
     def __init__(self, config, store, provider=None, pubmed=None, workspace=None):
         self.config, self.store = config, store
+        from .learning import Learning
+        self.learning = Learning(store)
         self.workspace = workspace
         self.provider = provider if provider is not None else provider_for(config)
         self.pubmed = pubmed or PubMed(store, min(config.timeout_seconds, 30))
@@ -43,7 +45,7 @@ class Engine:
         instruction = ("\nFollow the user's requested response language; otherwise match the latest user message. Preserve code and source identifiers."
                        if language == "auto" else "\nRequested response language (language code): " + language + ". Write your answer in this language; preserve code and source identifiers.")
         style = self.store.preferences()["style"]
-        return SYSTEM + (RESEARCH if mode == "research" else "") + ("\nPrefer a brief, direct answer." if mode == "eco" or (mode == "balanced" and style == "concise") else "") + ("\nProvide a detailed explanation with assumptions, available sources and useful checks." if mode == "deep" or (mode == "balanced" and style == "detailed") else "") + instruction
+        return SYSTEM + (RESEARCH if mode == "research" else "") + ("\nPrefer a brief, direct answer." if mode == "eco" or (mode == "balanced" and style == "concise") else "") + ("\nProvide a detailed explanation with assumptions, available sources and useful checks." if mode == "deep" or (mode == "balanced" and style == "detailed") else "") + ("\nUse everyday words, explain unfamiliar terms, and give a small example when useful. Match the requested language without assuming the user knows English." if style == "accessible" else "") + instruction
 
     def _fits_context(self, instructions, conversation, schemas):
         encoded = instructions + json.dumps(conversation, ensure_ascii=False) + json.dumps(schemas, ensure_ascii=False)
@@ -133,7 +135,7 @@ class Engine:
         sources, trace, warnings = [], [], []
         cacheable = not private and optimized and self.config.cache_seconds > 0 and mode != "research" and not re.search(
             r"\b(hoy|ahora|actual|actuales|precio|precios|today|latest|current|news|noticias)\b", message, re.I)
-        key = self.store.cache_key(["nexo7-v5", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
+        key = self.store.cache_key(["nexo7-v6", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
 
         def finish(answer, status="completed", save_cache=False):
             answer, extra = self._check_citations(answer, sources, mode == "research")
@@ -153,6 +155,7 @@ class Engine:
                 self.store.save_turn(session, message, answer)
             if save_cache and cacheable and status == "completed":
                 self.store.put_cache(key, {"answer": answer, "sources": sources, "warnings": result["warnings"]}, self.config.cache_seconds)
+            self.learning.record_metrics(stats, status, private)
             return result
 
         if message.startswith(('/date ', '/inspect ')) and self.config.max_tool_calls < 1:
@@ -204,7 +207,13 @@ class Engine:
                 return finish("PubMed returned no records. Try specific biomedical terms in English. This does not prove that research is absent.", "no_evidence")
             warnings.append("Literature support without clinical validation. Abstracts do not replace full papers or professional diagnosis and treatment.")
         else:
-            sources = self.store.search(message.removeprefix("/search ").removeprefix("/buscar "))
+            query = message.removeprefix("/search ").removeprefix("/buscar ")
+            learned = self.learning.matching(query) if self.store.preferences()["use_learning"] else []
+            sources = learned + [s for s in self.store.search(query, limit=8)
+                                 if s["document_id"] not in {r["document_id"] for r in learned}]
+            if not self.store.preferences()["use_learning"]:
+                sources = [s for s in sources if not s["source"].startswith("local learning;")]
+            sources = sources[:4]
 
         if self.config.provider == "demo" or message.lower().startswith(("/search ", "/buscar ")):
             if sources:

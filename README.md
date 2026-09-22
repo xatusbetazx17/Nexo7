@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.5.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.6.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -81,7 +81,7 @@ python scripts/build_desktop.py
 
 This produces a portable archive and SHA-256 checksum in `release/`. Each build must pass an executable smoke test before packaging. The release workflow builds on Windows Server 2022 and Ubuntu 22.04 runners with x86-64 Python. Windows binaries are unsigned. Linux compatibility depends on glibc and system libraries; the local development build's host is recorded in the validation report.
 
-A push to `main` builds and publishes the v0.5.0 prerelease after native builds and real-model smoke tests succeed on both platforms. A `v*` tag can publish a later version; existing releases are preserved. Manual workflow runs produce downloadable Actions artifacts without publishing. See [release process](docs/RELEASING.md).
+A push to `main` builds and publishes the v0.6.0 prerelease after native builds and real-model smoke tests succeed on both platforms. A `v*` tag can publish a later version; existing releases are preserved. Manual workflow runs produce downloadable Actions artifacts without publishing. See [release process](docs/RELEASING.md).
 
 ### Windows portable preview assembled without a Windows runner
 
@@ -116,3 +116,9 @@ Notes and chat history are not encrypted. Private mode avoids saving the current
 ## License
 
 Original project code is MIT licensed. llama.cpp, model weights, bundled runtime dependencies and publications retain their own licenses; see [third-party components](THIRD-PARTY.md) and [official sources](docs/SOURCES.md).
+
+## Reviewed learning (0.6)
+
+Open **My knowledge → Learning workshop** to save corrections and reusable procedures, import/export selected learning packs and preview community examples bundled with a release. Learning persists in your local data directory across updates. References are retrieved when relevant; model weights do not change.
+
+Community sharing is voluntary: edit the example, approve public sharing, then open and submit a GitHub issue draft. No automatic conversation upload or GitHub token storage. Maintainers review contributions before shipping them in a future pack. Optional local performance totals contain no prompt text and are not uploaded. See [learning and privacy](docs/LEARNING.md).

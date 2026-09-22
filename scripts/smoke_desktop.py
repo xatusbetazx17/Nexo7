@@ -55,6 +55,15 @@ def main():
             assert json.loads(request("/api/artifacts/" + artifact["id"]))["content"] == "Local file"
             imported = json.loads(request("/api/import", {"name":"sample.txt", "data":"TG9jYWwgaW1wb3J0"}))
             assert imported["content"] == "Local import"
+            pack = json.loads(request("/api/learning/community"))
+            assert pack["format"] == "nexo-learning-v1"
+            preview = json.loads(request("/api/learning/preview", {"pack":pack}))
+            assert len(preview["entries"]) > 0
+            imported = json.loads(request("/api/learning/import", {"pack":pack,"consent":True}))
+            assert imported["added"] == len(pack["entries"])
+            learned = json.loads(request("/api/learning"))["entries"]
+            exported = json.loads(request("/api/learning/export", {"ids":[learned[0]["id"]]}))
+            assert len(exported["entries"]) == 1
             state = json.loads(request("/api/setup"))
             assert state["phase"] == "idle" and not state["ready"]
             request("/api/shutdown", {})

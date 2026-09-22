@@ -16,6 +16,11 @@
     "workspace create/read/delete",
     "bounded text import",
     "CSV analysis",
+    "reviewed learning creation",
+    "literal learning HTML",
+    "consent resets on edit",
+    "public draft without automatic upload",
+    "community pack review and import",
     "no JavaScript errors"
   ]
 }

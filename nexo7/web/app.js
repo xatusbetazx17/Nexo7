@@ -43,6 +43,8 @@ function message(role, text, result, question="") {
       const create=node("button","Create file","quiet");
       create.onclick=()=>{const code=text.match(/```[^\n]*\n([\s\S]*?)```/);$("artifact-content").value=code?code[1]:text;showWorkspace();};actions.append(create);
       if(!result.private && question && result.status==="completed") {
+        const correct=node("button","Correct / teach","quiet");
+        correct.onclick=()=>{view(true);$("learn-question").value=question.slice(0,2000);$("learn-answer").value=text.slice(0,8000);$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-panel").scrollIntoView();};actions.append(correct);
         for(const [rating,label] of [["useful","Save as useful example"],["incorrect","Mark incorrect"]]){
           const feedback=node("button",label,"quiet");feedback.onclick=async()=>{
             if(rating==="useful"&&!confirm("Save this question and answer as a searchable example? This does not verify its accuracy or retrain the model."))return;
@@ -64,13 +66,13 @@ async function initialize(first=true) {
     const preferences=await api("/api/preferences");
     $("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
     const language = preferences.response_language || config.response_language || "auto";
-    if([...$("language").options].some(o=>o.value===language)) $("language").value=language;
+    $("language").value=language;
     $("resource-note").textContent = config.local_ram_limit_bytes ? `Native memory budget: ${(config.local_ram_limit_bytes/1e9).toFixed(1)} GB · ${config.local_backend}` : "";
     $("privacy-note").textContent = config.provider === "openai" ? "Your queries and relevant excerpts will be sent to OpenAI. Local history is not encrypted." : "Memory and history stay on this computer, without encryption. PubMed needs an Internet connection.";
     if (!config.persist_history) { $("private").checked=true; $("private").disabled=true; }
     const data=await api("/api/history?session="+encodeURIComponent(session));
     $("messages").replaceChildren(); conversation=data.messages; for(const m of conversation) message(m.role,m.content);
-    await loadDocuments();
+    await loadDocuments(); await loadLearning();
     desktopMode=Boolean(config.desktop);$("workspace-tab").hidden=!desktopMode; $("setup-tab").hidden=!desktopMode; $("quit").hidden=!desktopMode;
     if(first && desktopMode) {showSetup(); clearTimeout(setupTimer); pollSetup();}
   } catch(exc) { error(exc.message); }
@@ -92,7 +94,7 @@ $("language").onchange=()=>sessionStorage.setItem("nexo-language",$("language").
 for(const button of document.querySelectorAll("[data-prompt]")) button.onclick=()=>{$("prompt").value=button.dataset.prompt;$("prompt").focus();};
 $("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research";$("prompt").maxLength=$("mode").value==="research"?500:8000;};
 $("research-suggestion").onclick=()=>{$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
-function view(memory) {hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
+function view(memory) {if(memory)loadLearning().catch(exc=>error(exc.message));hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
 $("chat-tab").onclick=()=>view(false);$("memory-tab").onclick=()=>view(true);
 $("new").onclick=()=>{if(busy)return;session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
 $("export").onclick=()=>{const blob=new Blob([JSON.stringify({app:"Nexo 7",exported_at:new Date().toISOString(),conversation},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="nexo7-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
@@ -191,3 +193,35 @@ $("artifact-form").onsubmit=async event=>{event.preventDefault();try{await api("
 initialize();
 
 $("workspace-file").onchange=async()=>{const file=$("workspace-file").files[0];if(!file)return;if(file.size>200000){$("artifact-status").textContent="Workspace file limit: 200 KB";return;}$("artifact-name").value=file.name;$("artifact-content").value=await file.text();$("artifact-status").textContent="Loaded into editor. Review and save to make it available to Nexo.";};
+
+let pendingLearningPack=null;
+function learningEntry(){return {question:$("learn-question").value,answer:$("learn-answer").value,language:$("learn-language").value.trim(),kind:$("learn-kind").value};}
+async function loadLearning(){
+ const [data,prefs]=await Promise.all([api("/api/learning"),api("/api/preferences")]);
+ $("use-learning").checked=prefs.use_learning;$("local-metrics").checked=prefs.local_metrics;
+ $("learning-entries").replaceChildren();
+ for(const entry of data.entries){
+  const card=node("div","","document-card"),label=node("label",` ${entry.language} · ${entry.kind}: ${entry.question}`),check=document.createElement("input");
+  check.type="checkbox";check.dataset.learningId=entry.id;label.prepend(check);card.append(label);
+  const detail=document.createElement("details");detail.append(node("summary","Review full example"),node("pre",entry.answer));card.append(detail);
+  const edit=node("button","Load into editor","quiet");edit.onclick=()=>{for(const key of ["question","answer","language","kind"])$("learn-"+key).value=entry[key];$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-status").textContent="Loaded. Saving creates a new example; delete the old one if replacing it.";};
+  const remove=node("button","Delete","quiet");remove.onclick=async()=>{if(!confirm("Delete this learned example and its searchable reference?"))return;try{await api("/api/learning/"+entry.id,"DELETE");await loadLearning();await loadDocuments();}catch(exc){$("learning-status").textContent=exc.message;}};
+  card.append(edit,remove);$("learning-entries").append(card);
+ }
+ $("learning-metrics").textContent=data.metrics.length?data.metrics.map(m=>`${m.bucket}: ${m.count} responses · ${(m.elapsed_ms/m.count/1000).toFixed(2)} s average · ${m.tokens} reported tokens`).join("\n"):"No performance totals saved.";
+}
+$("learning-settings").onclick=async()=>{try{await api("/api/preferences","POST",{use_learning:$("use-learning").checked,local_metrics:$("local-metrics").checked});$("learning-status").textContent="Saved locally. No telemetry upload is enabled.";}catch(exc){$("learning-status").textContent=exc.message;}};
+$("learning-form").onsubmit=async event=>{event.preventDefault();try{const result=await api("/api/learning/import","POST",{pack:{format:"nexo-learning-v1",entries:[learningEntry()]},consent:$("learn-consent").checked});$("learning-status").textContent=`Saved ${result.added} new example(s); ${result.duplicates} duplicate(s). Model weights unchanged.`;$("learn-consent").checked=false;await loadLearning();await loadDocuments();}catch(exc){$("learning-status").textContent=exc.message;}};
+for(const key of ["question","answer","language","kind"])$("learn-"+key).addEventListener("input",()=>{$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();});
+$("prepare-contribution").onclick=async()=>{try{
+ const draft=await api("/api/learning/contribute","POST",{entry:learningEntry(),consent:$("share-consent").checked});
+ const link=node("a","Open GitHub to review and submit ↗");link.href=draft.url;link.target="_blank";link.rel="noopener noreferrer";
+ $("contribution-preview").replaceChildren(node("pre",draft.body),link);$("learning-status").textContent="Draft prepared locally. Opening GitHub sends this draft to GitHub; submitting the issue publishes it.";
+}catch(exc){$("learning-status").textContent=exc.message;}};
+$("export-learning").onclick=async()=>{try{const ids=[...document.querySelectorAll("[data-learning-id]:checked")].map(e=>e.dataset.learningId);const pack=await api("/api/learning/export","POST",{ids});const url=URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)],{type:"application/json"}));const a=node("a","");a.href=url;a.download="nexo-learning-pack.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(exc){$("learning-status").textContent=exc.message;}};
+function resetPack(){pendingLearningPack=null;$("pack-consent").checked=false;$("import-learning").disabled=true;$("learning-preview").textContent="";}
+async function previewPack(pack){resetPack();const data=await api("/api/learning/preview","POST",{pack});pendingLearningPack={format:"nexo-learning-v1",entries:data.entries};$("learning-preview").textContent=JSON.stringify(pendingLearningPack,null,2);$("import-learning").disabled=false;}
+$("learning-file").onchange=async()=>{resetPack();try{const file=$("learning-file").files[0];if(!file)return;if(file.size>400000)throw new Error("Learning pack limit: 400 KB");await previewPack(JSON.parse(await file.text()));}catch(exc){$("learning-status").textContent=exc.message;}};
+$("community-learning").onclick=async()=>{resetPack();try{await previewPack(await api("/api/learning/community"));}catch(exc){$("learning-status").textContent=exc.message;}};
+$("import-learning").onclick=async()=>{try{const result=await api("/api/learning/import","POST",{pack:pendingLearningPack,consent:$("pack-consent").checked});$("learning-status").textContent=`Imported ${result.added}; skipped ${result.duplicates} duplicates.`;resetPack();await loadLearning();await loadDocuments();}catch(exc){$("learning-status").textContent=exc.message;}};
+$("clear-learning-metrics").onclick=async()=>{try{await api("/api/learning-metrics","DELETE");await loadLearning();}catch(exc){$("learning-status").textContent=exc.message;}};

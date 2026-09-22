@@ -1,10 +1,11 @@
-# Nexo 7 0.5.0 — native local assistant
+# Nexo 7 0.6.0 — reviewed local learning
 
-- Runs directly on Windows/Linux; the desktop no longer requires Docker or WSL.
-- Pinned SHA-256-verified native engine and GGUF downloads, reusable offline after initial setup.
-- OS-specific memory guards, automatic CPU/model fallback and cleanup when Nexo closes.
-- PDF/DOCX/text import with a limited extraction worker and review before saving.
-- Local workspace read tools, CSV statistics, JSON validation, Python syntax inspection and calendar arithmetic.
-- Native Windows/Linux executable builds and real-model desktop smoke tests gate publication.
+- Learning workshop: save reviewed corrections and procedures, retrieve them as cited reference text, disable their use or delete them.
+- Versioned learning packs: preview, approve, deduplicate, selected export and atomic bounded import. Existing data stays in the same local application directory.
+- Community contributions: prepare a public GitHub issue draft after separate explicit consent, with common sensitive-data checks. No automatic upload or credential collection.
+- Bundled community examples can be reviewed and imported; contributions require maintainer review before inclusion in a release.
+- Optional local aggregate performance totals exclude private chats and prompt text.
+- Plain-language explanation style and editable response language codes.
+- Added learning regression gate and packaged learning import/export checks.
 
-Windows Vulkan/NVIDIA is experimental; native Linux uses CPU to retain the strict virtual-address-space limit. No universal compatibility, model superiority or autonomous learning claim. Output can be wrong. The memory budget excludes app/browser, OS, dedicated VRAM and disk storage; Windows committed memory and Linux address space are different measures. Binaries are unsigned previews. Download models once before offline use.
+No weight training, automatic code modification, unlimited learning, universal language/task support, or demonstrated superiority to other models. Native Windows/Linux execution and existing memory guards remain. GPU support remains experimental and no physical 8 GB device was validated in this development session. See LEARNING.md for data limits and consent details.

@@ -21,6 +21,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     workspace = Workspace(Path(config.database).resolve().parent / "workspace") if controller else None
 
     engine = engine or Engine(config, store, workspace=workspace)
+    from .learning import Learning, validate_pack, contribution
+    learning = Learning(store)
     import_slots = threading.BoundedSemaphore(1)
 
     class Handler(BaseHTTPRequestHandler):
@@ -68,7 +70,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.5.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.6.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -78,6 +80,11 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     "desktop": controller is not None})
             if path == "/api/setup" and controller:
                 return self._send(200, controller.snapshot())
+            if path == "/api/learning/community":
+                pack = json.loads((Path(__file__).parent / "knowledge" / "community.json").read_text(encoding="utf-8"))
+                return self._send(200, {"format": "nexo-learning-v1", "entries": validate_pack(pack)})
+            if path == "/api/learning":
+                return self._send(200, {"entries": learning.entries(), "metrics": learning.metrics(), "weight_training": False})
             if path == "/api/preferences":
                 return self._send(200, store.preferences())
             if path == "/api/artifacts" and workspace:
@@ -114,6 +121,14 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == "/api/learning/preview":
+                    return self._send(200, {"entries": validate_pack(body.get("pack"))})
+                if path == "/api/learning/import":
+                    return self._send(201, learning.import_pack(body.get("pack"), body.get("consent")))
+                if path == "/api/learning/export":
+                    return self._send(200, learning.export(body.get("ids")))
+                if path == "/api/learning/contribute":
+                    return self._send(200, contribution(body.get("entry"), body.get("consent")))
                 if path == "/api/import":
                     if not import_slots.acquire(blocking=False):
                         return self._send(429,{"error":"Another document import is running"})
@@ -175,6 +190,11 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             if not self._allowed(True):
                 return
             path = urlsplit(self.path).path
+            if path == "/api/learning-metrics":
+                learning.clear_metrics()
+                return self._send(200, {"deleted": True})
+            if path.startswith("/api/learning/"):
+                return self._send(200, {"deleted": learning.delete(path.rsplit("/", 1)[1])})
             if path.startswith("/api/artifacts/") and workspace:
                 try:
                     return self._send(200, {"deleted": workspace.delete(path.rsplit("/",1)[1])})

@@ -19,3 +19,7 @@ The optional cross-assembled Windows launcher uses Zig and mingw-w64 components.
 - llama.cpp b11093: MIT, https://github.com/ggml-org/llama.cpp/blob/b11093/LICENSE. Native archives are downloaded from the project's official release and verified using pinned SHA-256 digests. Archive notices are retained when extracted.
 - pypdf 6.10.0: BSD-3-Clause, https://github.com/py-pdf/pypdf/blob/6.10.0/LICENSE. Bundled with desktop builds for text-based PDF extraction; license copied into the portable archive.
 - GGUF conversions: bartowski/Qwen_Qwen3.5-{0.8B,2B,4B,9B}-GGUF on Hugging Face. Exact repository revisions, filenames, sizes and hashes are in nexo7/native_catalog.json. Model weights are separate downloads; consult the original Qwen Apache-2.0 terms and conversion repositories when redistributing them.
+
+## Bundled learning data
+
+`nexo7/knowledge/community.json` is released under CC0-1.0 (https://creativecommons.org/publicdomain/zero/1.0/legalcode). Other application source remains under the repository MIT license. New community examples require explicit contributor consent and rights review; this data license does not apply to a user's private notes or locally saved examples.

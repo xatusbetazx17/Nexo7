@@ -11,7 +11,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 
 
 def main():
@@ -52,6 +52,7 @@ def main():
             shutil.copy2(candidate, licenses / "PYTHON-LICENSE.txt")
             break
     shutil.copy2(ROOT / "docs" / "QUICKSTART.md", stage / "START-HERE.md")
+    shutil.copy2(ROOT / "docs" / "LEARNING.md", stage / "LEARNING.md")
     if windows:
         archive = output / (name + ".zip")
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as file:

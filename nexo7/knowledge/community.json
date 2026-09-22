@@ -1,0 +1,7 @@
+{
+  "format": "nexo-learning-v1",
+  "entries": [
+    {"question":"¿Cómo compruebo una multiplicación en Nexo?","answer":"Escribe /calc 24.5 * 40. La calculadora devuelve 980.0 sin llamar al modelo. Comprueba que los números y las unidades correspondan a tu tarea.","language":"es","kind":"procedure"},
+    {"question":"How do I verify a multiplication in Nexo?","answer":"Enter /calc 24.5 * 40. The calculator returns 980.0 without calling the model. Check that the numbers and units match your task.","language":"en","kind":"procedure"}
+  ]
+}

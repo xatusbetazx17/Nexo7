@@ -1,0 +1,9 @@
+{
+  "scope": "Reviewed pack schema/privacy heuristics, exact-question retrieval and calculator regression; not semantic accuracy, held-out generalization or weight training",
+  "pack_examples": 2,
+  "retrieval_before": 0,
+  "retrieval_after": 2,
+  "calculator_regressions_passed": 3,
+  "learning_disable_passed": true,
+  "passed": true
+}

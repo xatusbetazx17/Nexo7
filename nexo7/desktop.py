@@ -60,7 +60,7 @@ def instance_lock(directory):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Nexo 7 desktop assistant")
-    parser.add_argument("--version", action="version", version="Nexo 7 0.5.0")
+    parser.add_argument("--version", action="version", version="Nexo 7 0.6.0")
     parser.add_argument("--no-open", action="store_true", help="Do not open a browser automatically")
     parser.add_argument("--port", type=int, default=0, help="Local port; 0 selects an available port")
     parser.add_argument("--data-dir", type=Path, help="Override the per-user application data directory")

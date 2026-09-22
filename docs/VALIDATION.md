@@ -30,3 +30,12 @@ python scripts/smoke_native.py --binary dist/Nexo7
 ```
 
 On Windows pass dist/Nexo7.exe. The real smoke test downloads a pinned engine and ~580 MB model unless cached, then runs actual inference. No paid API is used. The first-run download path needs Internet; subsequent local chat does not.
+
+## 0.6.0 reviewed-learning validation
+
+- Local Python suite: 100 tests, 99 passed and one optional PyTorch skip.
+- Learning regression: 2/2 bundled exact questions retrieve their reviewed examples after import (0/2 before import in an empty store); 3/3 calculator cases unchanged. This measures retrieval plumbing, not general intelligence or unseen-question accuracy.
+- Authenticated API tests cover consent, preview without mutation, selected export, deletion, private metrics exclusion, credential-pattern rejection, Unicode persistence and capacity failure without partial import.
+- JSDOM interaction checks cover the workshop, public draft preparation, consent reset on editing, community pack preview/import and literal HTML handling. This is not a rendered-browser visual inspection.
+- Release gates run Windows/Linux native builds, packaged learning import/export and actual model generation with a reviewed reference admitted into context. Consult the 0.6 release Actions run for platform results; local tests alone do not establish Windows execution.
+- No GPU benchmark, physical 8 GB device test, continuous training or broad multilingual quality benchmark was performed.
