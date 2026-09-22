@@ -1,0 +1,8 @@
+{
+  "release": "b11093",
+  "binary_url": "https://github.com/ggml-org/llama.cpp/releases/download/b11093/llama-b11093-bin-ubuntu-x64.tar.gz",
+  "model_revision": "f36b1ea49a332ede8fe5f389bbf5b3575ef71f48",
+  "model_file": "Qwen_Qwen3.5-0.8B-Q4_K_M.gguf",
+  "model_sha256": "fb044e93939a70469c905781334f5de1e6c8b608ced6cbc8c9249bd4127d9526",
+  "model_repository": "bartowski/Qwen_Qwen3.5-0.8B-GGUF"
+}

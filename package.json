@@ -1,0 +1,10 @@
+{
+  "name": "nexo7-ui-tests",
+  "private": true,
+  "scripts": {
+    "test:ui": "node scripts/ui_integration.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

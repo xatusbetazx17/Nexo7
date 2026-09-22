@@ -1,0 +1,8 @@
+{"id":"es-ram","language":"es","prompt":"Explica en una frase qué es la RAM de una computadora.","expected_regex":"memoria"}
+{"id":"en-ram","language":"en","prompt":"Explain in one sentence what computer RAM is.","expected_regex":"memory"}
+{"id":"pt-ram","language":"pt","prompt":"Explique em uma frase o que é a RAM de um computador.","expected_regex":"memória|memoria"}
+{"id":"fr-ram","language":"fr","prompt":"Explique en une phrase ce qu'est la RAM d'un ordinateur.","expected_regex":"mémoire"}
+{"id":"de-ram","language":"de","prompt":"Erkläre in einem Satz, was der RAM eines Computers ist.","expected_regex":"speicher"}
+{"id":"zh-ram","language":"zh","prompt":"用一句话解释计算机的RAM是什么。","expected_regex":"内存|记忆|記憶"}
+{"id":"ja-ram","language":"ja","prompt":"コンピューターのRAMとは何かを一文で説明してください。","expected_regex":"メモリ|記憶"}
+{"id":"ar-ram","language":"ar","prompt":"اشرح في جملة واحدة ما هي ذاكرة RAM في الكمبيوتر.","expected_regex":"ذاكرة"}

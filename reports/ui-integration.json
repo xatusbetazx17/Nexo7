@@ -1,0 +1,19 @@
+{
+  "environment": "JSDOM with real local HTTP server; not a rendered-browser layout test",
+  "passed": true,
+  "checks": [
+    "English setup view",
+    "missing-Docker explanation",
+    "download disabled without prerequisites",
+    "demo navigation",
+    "calculator response",
+    "document import",
+    "literal HTML handling",
+    "setup navigation",
+    "persistent preferences",
+    "explicitly approved example",
+    "authenticated artifact API",
+    "workspace create/read/delete",
+    "no JavaScript errors"
+  ]
+}

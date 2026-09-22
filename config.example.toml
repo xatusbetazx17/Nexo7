@@ -1,0 +1,23 @@
+# Advanced configuration. Copy to config.toml. Demo has no AI model.
+# Use the desktop wizard for guarded local inference.
+provider = "demo"
+response_language = "auto"
+model = ""
+fast_model = ""
+deep_model = ""
+ollama_url = "http://127.0.0.1:11434"
+ollama_context_tokens = 8192
+database = "data/nexo.sqlite3"
+max_output_tokens = 800
+max_total_output_tokens = 2400
+max_model_calls = 3
+max_tool_calls = 4
+max_context_chars = 22000
+history_messages = 8
+cache_seconds = 600
+timeout_seconds = 90
+research_network = true
+persist_history = true
+input_price_per_million = -1.0
+cached_input_price_per_million = -1.0
+output_price_per_million = -1.0

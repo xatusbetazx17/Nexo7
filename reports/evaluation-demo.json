@@ -1,0 +1,134 @@
+{
+  "scope": "Fixed engineering smoke tasks, not a general-intelligence or clinical benchmark. Regex checks require human review.",
+  "candidate": {
+    "provider": "demo",
+    "model": "none",
+    "optimized": true,
+    "passed": 6,
+    "total": 6,
+    "mean_ms": 0.15166666666666667,
+    "reported_tokens": 0,
+    "results": [
+      {
+        "id": "arithmetic-pay",
+        "passed": true,
+        "answer": "980.0",
+        "status": "completed",
+        "stats": {
+          "provider": "demo",
+          "model": "",
+          "model_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "tool_calls": 1,
+          "prompt_characters_sent": 0,
+          "cache_hit": false,
+          "estimated_cost_usd": 0.0,
+          "usage_complete": true,
+          "elapsed_ms": 0.32
+        }
+      },
+      {
+        "id": "arithmetic-precedence",
+        "passed": true,
+        "answer": "14",
+        "status": "completed",
+        "stats": {
+          "provider": "demo",
+          "model": "",
+          "model_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "tool_calls": 1,
+          "prompt_characters_sent": 0,
+          "cache_hit": false,
+          "estimated_cost_usd": 0.0,
+          "usage_complete": true,
+          "elapsed_ms": 0.08
+        }
+      },
+      {
+        "id": "arithmetic-parentheses",
+        "passed": true,
+        "answer": "20",
+        "status": "completed",
+        "stats": {
+          "provider": "demo",
+          "model": "",
+          "model_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "tool_calls": 1,
+          "prompt_characters_sent": 0,
+          "cache_hit": false,
+          "estimated_cost_usd": 0.0,
+          "usage_complete": true,
+          "elapsed_ms": 0.05
+        }
+      },
+      {
+        "id": "arithmetic-decimal",
+        "passed": true,
+        "answer": "3.33",
+        "status": "completed",
+        "stats": {
+          "provider": "demo",
+          "model": "",
+          "model_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "tool_calls": 1,
+          "prompt_characters_sent": 0,
+          "cache_hit": false,
+          "estimated_cost_usd": 0.0,
+          "usage_complete": true,
+          "elapsed_ms": 0.06
+        }
+      },
+      {
+        "id": "retrieval-router",
+        "passed": true,
+        "answer": "Direct lookup: these are retrieved excerpts, without AI synthesis.\n\n[D1] Evaluation fixture\nThe test router name is Faro. The test network identifier is NEXO-LAB-42.",
+        "status": "completed",
+        "stats": {
+          "provider": "demo",
+          "model": "",
+          "model_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "tool_calls": 0,
+          "prompt_characters_sent": 0,
+          "cache_hit": false,
+          "estimated_cost_usd": 0.0,
+          "usage_complete": true,
+          "elapsed_ms": 0.26
+        }
+      },
+      {
+        "id": "retrieval-network",
+        "passed": true,
+        "answer": "Direct lookup: these are retrieved excerpts, without AI synthesis.\n\n[D1] Evaluation fixture\nThe test router name is Faro. The test network identifier is NEXO-LAB-42.",
+        "status": "completed",
+        "stats": {
+          "provider": "demo",
+          "model": "",
+          "model_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "tool_calls": 0,
+          "prompt_characters_sent": 0,
+          "cache_hit": false,
+          "estimated_cost_usd": 0.0,
+          "usage_complete": true,
+          "elapsed_ms": 0.14
+        }
+      }
+    ]
+  }
+}

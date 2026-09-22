@@ -1,0 +1,6 @@
+{"id":"arithmetic-pay","prompt":"24.50 * 40","expected_regex":"^980(\\.0)?$"}
+{"id":"arithmetic-precedence","prompt":"2 + 3 * 4","expected_regex":"^14$"}
+{"id":"arithmetic-parentheses","prompt":"(2 + 3) * 4","expected_regex":"^20$"}
+{"id":"arithmetic-decimal","prompt":"/calc round(10 / 3, 2)","expected_regex":"^3\\.33$"}
+{"id":"retrieval-router","prompt":"What is the test router name?","expected_regex":"Faro"}
+{"id":"retrieval-network","prompt":"/search test network identifier","expected_regex":"NEXO-LAB-42"}

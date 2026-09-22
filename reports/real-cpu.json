@@ -1,0 +1,56 @@
+{
+  "scope": "Standalone official llama.cpp CPU CLI; not full Nexo/Docker integration or a physical 8 GB PC",
+  "virtual_address_space_limit_bytes": 8000000000,
+  "threads": 2,
+  "context_tokens": 2048,
+  "maximum_output_tokens": 192,
+  "reasoning": "off",
+  "model": "model.gguf",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "results": [
+    {
+      "case": "spanish",
+      "prompt": "Responde en español: escribe exactamente dos consejos breves para organizar archivos.",
+      "returncode": 0,
+      "wall_seconds_including_load": 4.734,
+      "peak_rss_kib": 895508,
+      "prompt_tokens_per_second": 94.5,
+      "generation_tokens_per_second": 37.1,
+      "answer": "1. **Utiliza una estructura de carpetas clara** separando los archivos por tipo (ej. documentos en una carpeta, enlaces en otra) para facilitar su orden y búsqueda.\n2. **Aplica el método de \"hacer más que hacer\"** guardando solo los documentos de valor, eliminando cualquier archivo temporal o basura para mantener la velocidad de trabajo.",
+      "stderr": ""
+    },
+    {
+      "case": "english",
+      "prompt": "In English, give exactly two short tips for organizing files.",
+      "returncode": 0,
+      "wall_seconds_including_load": 3.457,
+      "peak_rss_kib": 895484,
+      "prompt_tokens_per_second": 65.2,
+      "generation_tokens_per_second": 35.2,
+      "answer": "1. **Group related items together** (e.g., save documents from the same department in one folder).\n2. **Use logical file naming** (e.g., save documents with a clear date or subject in the filename).",
+      "stderr": ""
+    },
+    {
+      "case": "python",
+      "prompt": "Write only a Python function square(n) that returns n multiplied by itself.",
+      "returncode": 0,
+      "wall_seconds_including_load": 3.815,
+      "peak_rss_kib": 896484,
+      "prompt_tokens_per_second": 76.7,
+      "generation_tokens_per_second": 31.1,
+      "answer": "```python\ndef square(n):\n    \"\"\"\n    Return n multiplied by itself.\n\n    Parameters:\n        n (int/float): The number to square.\n\n    Returns:\n        int/float: n * n.\n    \"\"\"\n    return n * n\n```",
+      "stderr": ""
+    },
+    {
+      "case": "arithmetic",
+      "prompt": "Calculate 24.5 * 40. Answer with only the number.",
+      "returncode": 0,
+      "wall_seconds_including_load": 1.921,
+      "peak_rss_kib": 896320,
+      "prompt_tokens_per_second": 103.1,
+      "generation_tokens_per_second": 28.8,
+      "answer": "100",
+      "stderr": ""
+    }
+  ]
+}

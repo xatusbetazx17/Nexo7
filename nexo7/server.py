@@ -1,0 +1,186 @@
+from collections import deque
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import hmac
+import json
+from pathlib import Path
+import secrets
+import threading
+import time
+from urllib.parse import urlsplit, parse_qs
+from .engine import Engine
+from .net import TransportError
+
+
+def make_server(config, store, port=8787, token=None, engine=None, controller=None):
+    token = token or secrets.token_urlsafe(32)
+    engine = engine or Engine(config, store)
+    slots = threading.BoundedSemaphore(1 if config.provider == "ollama" else 2)
+    requests = deque()
+    request_lock = threading.Lock()
+    web = Path(__file__).parent / "web"
+    from .workspace import Workspace
+    workspace = Workspace(Path(config.database).resolve().parent / "workspace") if controller else None
+
+    class Handler(BaseHTTPRequestHandler):
+        server_version = "Nexo7"
+
+        def log_message(self, *args):
+            pass  # No prompts, tokens, credentials or query strings in access logs.
+
+        def _send(self, code, value, content_type="application/json; charset=utf-8"):
+            data = json.dumps(value, ensure_ascii=False).encode() if content_type.startswith("application/json") else value
+            self.send_response(code)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+            self.end_headers()
+            try:
+                self.wfile.write(data)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        def _allowed(self, api=False):
+            hosts = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+            if self.headers.get("Host") not in hosts:
+                self._send(403, {"error": "Host not allowed"})
+                return False
+            origin = self.headers.get("Origin")
+            if origin is not None and origin not in {"http://" + h for h in hosts}:
+                self._send(403, {"error": "Origin not allowed"})
+                return False
+            if api and not hmac.compare_digest(self.headers.get("X-Nexo-Key", ""), token):
+                self._send(401, {"error": "Open the private access link from the Nexo launcher"})
+                return False
+            return True
+
+        def do_GET(self):
+            path = urlsplit(self.path).path
+            if not self._allowed(path.startswith("/api/")):
+                return
+            static = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
+            if path in static:
+                name, mime = static[path]
+                return self._send(200, (web / name).read_bytes(), mime)
+            if path == "/api/status":
+                active = controller.config if controller else config
+                return self._send(200, {"name": "Nexo 7", "version": "0.4.0", "provider": active.provider,
+                    "model": active.model or "No model connected", "fast_model": active.fast_model,
+                    "deep_model": active.deep_model, "persist_history": active.persist_history,
+                    "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
+                    "research_network": active.research_network, "response_language": active.response_language,
+                    "local_ram_limit_bytes": active.local_ram_limit_bytes if active.provider == "ollama" else None,
+                    "local_backend": active.local_backend if active.provider == "ollama" else None,
+                    "desktop": controller is not None})
+            if path == "/api/setup" and controller:
+                return self._send(200, controller.snapshot())
+            if path == "/api/preferences":
+                return self._send(200, store.preferences())
+            if path == "/api/artifacts" and workspace:
+                return self._send(200, {"artifacts": workspace.list()})
+            if path.startswith("/api/artifacts/") and workspace:
+                try:
+                    return self._send(200, workspace.read(path.rsplit("/",1)[1]))
+                except (ValueError, OSError):
+                    return self._send(404, {"error": "Artifact not found"})
+            if path == "/api/documents":
+                return self._send(200, {"documents": store.documents()})
+            if path == "/api/history":
+                session = parse_qs(urlsplit(self.path).query).get("session", [""])[0]
+                return self._send(200, {"messages": store.history(session, 100)})
+            self._send(404, {"error": "Unknown route"})
+
+        def do_POST(self):
+            if not self._allowed(True):
+                return
+            with request_lock:
+                now = time.monotonic()
+                while requests and requests[0] < now - 60:
+                    requests.popleft()
+                if len(requests) >= 60:
+                    return self._send(429, {"error": "Too many requests; wait one minute"})
+                requests.append(now)
+            try:
+                size = int(self.headers.get("Content-Length", "-1"))
+                if not 0 <= size <= 500000:
+                    return self._send(413, {"error": "Request too large or missing Content-Length"})
+                if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
+                    return self._send(415, {"error": "application/json is required"})
+                body = json.loads(self.rfile.read(size))
+                if not isinstance(body, dict):
+                    raise ValueError("A JSON object is required")
+                path = urlsplit(self.path).path
+                if path == "/api/preferences":
+                    values = store.set_preferences(body)
+                    if controller:
+                        controller.preferences = values
+                    return self._send(200, values)
+                if path == "/api/feedback":
+                    return self._send(201, store.record_feedback(body.get("question"), body.get("answer"), body.get("rating")))
+                if path == "/api/artifacts" and workspace:
+                    return self._send(201, workspace.create(body.get("name"), body.get("content")))
+                if controller and path == "/api/setup/check":
+                    if type(body.get("cpu_only", False)) is not bool:
+                        raise ValueError("cpu_only must be a boolean")
+                    return self._send(200, controller.check(body.get("cpu_only", False)))
+                if controller and path == "/api/setup/start":
+                    return self._send(202, controller.start(cpu_only=body.get("cpu_only", False),
+                                                           language=body.get("language", "auto")))
+                if controller and path == "/api/setup/cancel":
+                    controller.cancel.set()
+                    return self._send(202, {"cancel_requested": True})
+                if controller and path == "/api/shutdown":
+                    controller.cancel.set()
+                    threading.Thread(target=self.server.shutdown, daemon=True).start()
+                    return self._send(202, {"stopping": True})
+                if path == "/api/chat":
+                    if type(body.get("private", False)) is not bool:
+                        raise ValueError("private must be a boolean")
+                    chat_lock = controller.operation if controller else slots
+                    if not chat_lock.acquire(blocking=False):
+                        return self._send(429, {"error": "The assistant is busy; wait for the current operation"})
+                    try:
+                        active_engine = Engine(controller.config, store) if controller else engine
+                        result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"))
+                    finally:
+                        chat_lock.release()
+                    return self._send(200, result)
+                if path == "/api/documents":
+                    doc_id = store.add_document(body.get("title"), body.get("content"), body.get("source", "personal"))
+                    return self._send(201, {"id": doc_id})
+                self._send(404, {"error": "Unknown route"})
+            except (ValueError, TypeError, UnicodeError) as exc:
+                self._send(400, {"error": str(exc)[:300]})
+            except TransportError as exc:
+                self._send(502, {"error": str(exc)})
+            except Exception:
+                self._send(500, {"error": "Internal error; check the project configuration"})
+
+        def do_DELETE(self):
+            if not self._allowed(True):
+                return
+            path = urlsplit(self.path).path
+            if path.startswith("/api/artifacts/") and workspace:
+                try:
+                    return self._send(200, {"deleted": workspace.delete(path.rsplit("/",1)[1])})
+                except (ValueError, OSError):
+                    return self._send(404, {"error": "Artifact not found"})
+            if path.startswith("/api/documents/"):
+                return self._send(200, {"deleted": store.delete_document(path.rsplit("/", 1)[1])})
+            if path.startswith("/api/history/"):
+                store.delete_history(path.rsplit("/", 1)[1])
+                return self._send(200, {"deleted": True})
+            self._send(404, {"error": "Unknown route"})
+
+    class LocalServer(ThreadingHTTPServer):
+        daemon_threads = True
+        def get_request(self):
+            sock, address = super().get_request()
+            sock.settimeout(15)
+            return sock, address
+
+    server = LocalServer(("127.0.0.1", port), Handler)
+    server.access_token = token
+    return server
