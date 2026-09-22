@@ -145,12 +145,15 @@ class NativeProcess:
         self.process.stdin.flush()
         receipt = queue.Queue()
         threading.Thread(target=lambda:receipt.put(self.process.stdout.readline(4096)), daemon=True).start()
+        error = "Native process could not establish its memory guard"
         try:
             self.receipt = json.loads(receipt.get(timeout=20))
+            if "error" in self.receipt:
+                error += ": " + self.receipt["error"]
             if self.receipt.get('limit') != limit or self.receipt.get('guard') not in {'linux_virtual_address_space','windows_job_committed_memory'}:
                 raise ValueError('Native guard was not verified')
         except Exception:
-            self.close(); raise ValueError('Native process could not establish its memory guard') from None
+            self.close(); raise ValueError(error) from None
         self.key = key
     def close(self):
         if self.process.stdin and not self.process.stdin.closed: self.process.stdin.close()

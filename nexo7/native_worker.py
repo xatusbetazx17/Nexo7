@@ -27,16 +27,16 @@ def windows_job(limit):
     k.AssignProcessToJobObject.argtypes = [w.HANDLE, w.HANDLE]
     k.CloseHandle.argtypes = [w.HANDLE]
     job = k.CreateJobObjectW(None, None)
-    if not job: raise OSError('Cannot create memory job')
+    if not job: raise OSError(ctypes.get_last_error(), 'Cannot create memory job')
     info = Extended(); info.basic.flags = 0x2000 | 0x200  # kill on close + aggregate committed memory
     info.job_memory = limit
     if not k.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)):
-        k.CloseHandle(job); raise OSError('Cannot set job memory limit')
+        error=ctypes.get_last_error(); k.CloseHandle(job); raise OSError(error, 'Cannot set job memory limit')
     if not k.AssignProcessToJobObject(job, k.GetCurrentProcess()):
-        k.CloseHandle(job); raise OSError('Cannot enter memory job')
+        error=ctypes.get_last_error(); k.CloseHandle(job); raise OSError(error, 'Cannot enter memory job')
     actual = Extended()
     if not k.QueryInformationJobObject(job, 9, ctypes.byref(actual), ctypes.sizeof(actual), None):
-        raise OSError('Cannot verify memory job')
+        raise OSError(ctypes.get_last_error(), 'Cannot verify memory job')
     if actual.job_memory != limit or actual.basic.flags & info.basic.flags != info.basic.flags:
         raise OSError('Memory job verification failed')
     return job  # Keep open for the supervisor lifetime; exit closes it and kills descendants.
@@ -53,7 +53,7 @@ def ensure_stdio():
             sys.stdout = os.fdopen(msvcrt.open_osfhandle(k.GetStdHandle(-11), os.O_WRONLY), 'w', encoding='utf-8')
 
 
-def main():
+def run_worker():
     ensure_stdio()
     spec = json.loads(sys.stdin.buffer.readline(65536))
     limit = spec['limit']
@@ -93,6 +93,14 @@ def main():
             except subprocess.TimeoutExpired: child.kill()
     threading.Thread(target=watch_parent, daemon=True).start()
     raise SystemExit(child.wait())
+
+def main():
+    try:
+        run_worker()
+    except Exception as exc:
+        ensure_stdio()
+        print(json.dumps({'error':type(exc).__name__+': '+str(exc)[:300]}),flush=True)
+        raise SystemExit(1)
 
 if __name__ == '__main__':
     main()
