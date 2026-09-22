@@ -138,10 +138,10 @@ def plan_local(hardware, daemon_memory=None, cpu_only=False, performance="balanc
     if hardware.total_bytes <= 0 or hardware.available_bytes <= 0:
         raise ValueError("Available RAM could not be measured; a model will not start without a verifiable budget.")
     # Available RAM already excludes memory occupied by the OS and other apps.
-    # Native Windows needs extra headroom, not a second allowance for the whole OS.
-    # Keep the larger legacy allowance for Docker VM overhead and Linux VA budgets.
+    # Native execution needs extra headroom, not a second allowance for the whole OS.
+    # Keep the larger legacy allowance for Docker VM overhead. OS guards remain separate.
     reserve = (max(GB, min(2 * GB, hardware.available_bytes // 4))
-               if native and hardware.system == "Windows" and daemon_memory is None
+               if native and hardware.system in {"Windows", "Linux"} and daemon_memory is None
                else max(2 * GB, hardware.total_bytes // 5))
     budget = min(OPERATING_RAM_LIMIT, hardware.total_bytes * 65 // 100,
                  max(0, hardware.available_bytes - reserve))

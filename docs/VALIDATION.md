@@ -43,3 +43,7 @@ On Windows pass dist/Nexo7.exe. The real smoke test downloads a pinned engine an
 ## 0.6.1 Windows available-memory fix
 
 Local suite: 103 tests, 102 passed and one optional PyTorch skip. New cases cover 8 GB total / 4 GB available, the 3.5 GB availability boundary, unchanged Docker/Linux reserves and budgets within remaining physical RAM. Release CI additionally gates publishing on real Windows source-mode inference with simulated 8/4 GB detection and a real job committed-memory limit at or below 3 GB. See Actions for execution results. This does not emulate Pentium instructions or establish speed on an actual 8 GB laptop.
+
+## 0.6.2 cross-platform available-memory baseline
+
+Local suite: 104 tests, 103 passed and one optional PyTorch skip. Linux source-mode real inference passed with simulated total/available memory of 8/4 decimal GB and an actual 3 GB virtual-address-space guard (`reports/native-8gb-linux.json`). It completed Spanish text, English code and reviewed-reference tasks, arithmetic, CSV analysis and document import. CPU speed in this environment does not represent a Dell N5030. Release CI gates both Windows and Linux on this constrained-memory scenario and native packaged smoke tests. The simulation changes admission inputs, not the physical machine's RAM; whole-system low-memory pressure was not emulated.

@@ -1,0 +1,111 @@
+{
+  "simulated_memory": true,
+  "scope": "Desktop API with actual native model, OS guard and no Docker",
+  "platform": "linux",
+  "packaged": false,
+  "answers": [
+    {
+      "prompt": "Di hola en español y explica en una frase qué puedes hacer.",
+      "answer": "Hola! Puedo ayudarte con tareas como calcular expresiones matemáticas, buscar información en documentos, analizar datos o simplemente conversar. ¿En qué puedo ayudarte hoy?",
+      "stats": {
+        "provider": "native",
+        "model": "qwen3.5:0.8b",
+        "model_calls": 1,
+        "input_tokens": 870,
+        "output_tokens": 33,
+        "cached_input_tokens": 0,
+        "tool_calls": 0,
+        "prompt_characters_sent": 3026,
+        "cache_hit": false,
+        "estimated_cost_usd": null,
+        "usage_complete": true,
+        "elapsed_ms": 8552.17
+      }
+    },
+    {
+      "prompt": "Write a Python function square(n) that returns n*n.",
+      "answer": "```python\ndef square(n):\n    return n * n\n```",
+      "stats": {
+        "provider": "native",
+        "model": "qwen3.5:0.8b",
+        "model_calls": 1,
+        "input_tokens": 1193,
+        "output_tokens": 16,
+        "cached_input_tokens": 0,
+        "tool_calls": 0,
+        "prompt_characters_sent": 4380,
+        "cache_hit": false,
+        "estimated_cost_usd": null,
+        "usage_complete": true,
+        "elapsed_ms": 10168.14
+      }
+    },
+    {
+      "prompt": "What is the fictional Zorilo marker?",
+      "answer": "The fictional Zorilo marker is a violet triangle.",
+      "stats": {
+        "provider": "native",
+        "model": "qwen3.5:0.8b",
+        "model_calls": 1,
+        "input_tokens": 957,
+        "output_tokens": 12,
+        "cached_input_tokens": 0,
+        "tool_calls": 0,
+        "prompt_characters_sent": 3416,
+        "cache_hit": false,
+        "estimated_cost_usd": null,
+        "usage_complete": true,
+        "elapsed_ms": 8301.14
+      },
+      "source_admitted": true
+    }
+  ],
+  "plan": {
+    "hardware": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "total_bytes": 8000000000,
+      "available_bytes": 4000000000,
+      "cpu_threads": 9,
+      "gpu_hint": "cpu",
+      "memory_source": "procfs + visible cgroup v2 limits",
+      "gpu_free_bytes": 0,
+      "gpu_total_bytes": 0,
+      "gpu_index": 0
+    },
+    "ram_limit_bytes": 3000000000,
+    "absolute_ram_ceiling_bytes": 16000000000,
+    "reserved_host_bytes": 1000000000,
+    "backend": "cpu",
+    "threads": 4,
+    "profiles": [
+      {
+        "model": "qwen3.5:0.8b",
+        "minimum_budget": 2500000000,
+        "max_download": 1500000000,
+        "context_tokens": 6144,
+        "download_bytes": 579615840
+      }
+    ],
+    "performance": "fast",
+    "gpu_index": 0,
+    "video_budget_bytes": null,
+    "video_budget_enforced": false,
+    "guard_scope": "Linux virtual address space per model process; excludes app/browser, OS, dedicated VRAM and disk storage",
+    "runtime": "native",
+    "enforced_limit_bytes": 3000000000,
+    "selected_model": "qwen3.5:0.8b",
+    "guard": "linux_virtual_address_space"
+  },
+  "checks": [
+    "real multilingual text generation",
+    "real code generation (not executed)",
+    "guarded setup",
+    "zero-model-call arithmetic",
+    "CSV totals",
+    "isolated document import",
+    "reviewed learning admitted to real model context",
+    "clean shutdown"
+  ],
+  "passed": true
+}

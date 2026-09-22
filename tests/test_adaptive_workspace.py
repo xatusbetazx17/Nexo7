@@ -12,7 +12,7 @@ class AdaptiveTests(unittest.TestCase):
         self.assertEqual(plan_local(hw)['profiles'][0]['model'],'qwen3.5:2b')
         self.assertEqual(plan_local(hw,performance='fast')['profiles'][0]['model'],'qwen3.5:0.8b')
         self.assertLessEqual(plan_local(hw)['ram_limit_bytes'],5*GB)
-    def test_native_windows_four_gb_available_admits_smallest_with_headroom(self):
+    def test_native_four_gb_available_admits_smallest_with_headroom(self):
         hw=Hardware('Windows','AMD64',8*GB,4*GB,4)
         p=plan_local(hw,cpu_only=True,performance='fast',native=True)
         self.assertEqual(p['ram_limit_bytes'],3*GB)
@@ -20,7 +20,9 @@ class AdaptiveTests(unittest.TestCase):
         self.assertEqual([x['model'] for x in p['profiles']],['qwen3.5:0.8b'])
         self.assertLessEqual(p['ram_limit_bytes']+p['reserved_host_bytes'],hw.available_bytes)
         with self.assertRaises(ValueError):plan_local(hw,cpu_only=True)
-        with self.assertRaises(ValueError):plan_local(replace(hw,system='Linux'),native=True)
+        linux=plan_local(replace(hw,system='Linux'),native=True)
+        self.assertEqual(linux['ram_limit_bytes'],3*GB)
+        self.assertEqual(linux['profiles'][0]['model'],'qwen3.5:0.8b')
     def test_native_windows_still_refuses_insufficient_available_memory(self):
         hw=Hardware('Windows','AMD64',8*GB,3_499_000_000,4)
         with self.assertRaisesRegex(ValueError,'additional headroom'):
@@ -35,6 +37,14 @@ class AdaptiveTests(unittest.TestCase):
                 self.assertLessEqual(p['ram_limit_bytes']+p['reserved_host_bytes'],available)
                 self.assertLessEqual(p['ram_limit_bytes'],12*GB)
                 self.assertLessEqual(p['ram_limit_bytes'],total*65//100)
+    def test_native_linux_pressure_and_larger_pc_scaling(self):
+        hw=Hardware('Linux','x86_64',8*GB,4*GB,4)
+        self.assertEqual(plan_local(hw,native=True)['profiles'][0]['model'],'qwen3.5:0.8b')
+        with self.assertRaises(ValueError):
+            plan_local(replace(hw,available_bytes=3_499_000_000),native=True)
+        bigger=replace(hw,total_bytes=16*GB,available_bytes=12*GB)
+        self.assertEqual(plan_local(bigger,native=True)['profiles'][0]['model'],'qwen3.5:4b')
+        self.assertGreater(plan_local(bigger,native=True)['ram_limit_bytes'],3*GB)
     def test_vram_pressure_reduces_profile_and_falls_back(self):
         hw=Hardware('Linux','x86_64',32*GB,26*GB,16,'nvidia','fixture',14*GB,16*GB,1)
         self.assertEqual(plan_local(hw)['profiles'][0]['model'],'qwen3.5:9b')

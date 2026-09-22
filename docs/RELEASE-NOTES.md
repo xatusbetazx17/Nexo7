@@ -1,9 +1,9 @@
-# Nexo 7 0.6.1 — available-memory planning on Windows
+# Nexo 7 0.6.2 — 4 GB available-memory baseline on Windows and Linux
 
-Native Windows now reserves additional headroom from measured available RAM: at least 1 GB, 25% of available RAM up to 2 GB. With 8 GB installed and 4 GB available, the model budget is 3 GB, admitting the 0.8B profile. Windows already reports RAM available after OS/app usage. The previous extra 2 GB margin rejected this case.
+Native Linux now uses the same available-memory headroom policy as native Windows: 1 GB minimum, 25% of available RAM up to 2 GB. With 8 GB installed and 4 GB available, both plan a 3 GB budget for the 0.8B model. This describes available RAM after OS/application usage, not a 4 GB installed-RAM guarantee.
 
-The 2.5 GB smallest-profile minimum, OS process memory guard, 65% total-RAM cap, 12 GB default ceiling and pre-load resource recheck remain. Docker and Linux retain their prior reserve policy. Below 3.5 decimal GB available, this Windows configuration still declines to start. Diagnostics now show available RAM, headroom and resulting budget.
+The 2.5 GB smallest-profile minimum, 65% installed-RAM cap, 12 GB default ceiling, pre-load recheck and actual platform memory guards remain. Windows limits worker/model committed memory; Linux limits virtual address space per model process. Legacy Docker reserves are unchanged.
 
-Windows CI also runs actual source-mode inference while simulating 8 GB total / at most 4 GB available and enforcing a real model-worker job limit of at most 3 GB. This is not a physical Dell/Pentium N5030 compatibility or performance test. Both packaged builds retain their native-model smoke tests.
+Both release platforms now gate publishing on source-mode real inference with simulated 8 GB total / at most 4 GB available and a real guard of at most 3 GB, in addition to packaged-model smoke tests. This does not establish physical low-end CPU compatibility or speed, whole-system peak memory, or universal task quality.
 
-Includes all 0.6 reviewed-learning features. No need to disable Windows services or remove memory guards.
+Use Fast for the smallest model; Balanced / Larger model can choose larger supported models on capable computers. Existing local data and learning features are preserved.

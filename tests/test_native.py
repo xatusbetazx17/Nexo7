@@ -29,11 +29,12 @@ class NativeTests(unittest.TestCase):
             self.assertRegex(item['sha256'],r'^[a-f0-9]{64}$')
             self.assertTrue(item['url'].startswith('https://'))
     def test_native_eight_gb_requires_no_docker(self):
-        hw=Hardware('Linux','x86_64',8*GB,6*GB,4)
+        hw=Hardware('Linux','x86_64',8*GB,4*GB,4)
         with patch('nexo7.native_runtime.detect_hardware',return_value=hw):
             plan=native_plan(performance='fast')
         self.assertEqual(plan['profiles'][0]['model'],'qwen3.5:0.8b')
-        self.assertLessEqual(plan['ram_limit_bytes'],4*GB)
+        self.assertEqual(plan['ram_limit_bytes'],3*GB)
+        self.assertEqual(plan['reserved_host_bytes'],GB)
         self.assertEqual(plan['backend'],'cpu')
     def test_external_or_forged_native_runtime_fails_closed(self):
         with self.assertRaises(ValueError):verify_native(Config(provider='native',model='qwen3.5:0.8b',native_runtime_id='unknown'))

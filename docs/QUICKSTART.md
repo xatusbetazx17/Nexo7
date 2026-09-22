@@ -1,4 +1,4 @@
-# Start Nexo 7 — native edition 0.5
+# Start Nexo 7 — native edition 0.6.2
 
 1. Extract the archive into a folder you own. Windows: open Nexo7.exe. Linux: run ./Nexo7 (chmod +x Nexo7 if needed).
 2. The local browser interface opens. Python and the PDF reader are included. No Docker or WSL required.
@@ -32,3 +32,9 @@ Local data is not encrypted: %LOCALAPPDATA%\Nexo7 on Windows; $XDG_DATA_HOME/Nex
 This is an independent assistant around Qwen, not official GPT-7. Quality varies, and neither universal task competence nor clinical capability is claimed.
 
 Upgrading from 0.4: quit the old application before opening the new one. Personal notes/preferences remain in the same data folder. Only the exact bundled old starter guide is automatically replaced with native instructions; user-authored notes are preserved. Old Docker downloads are not deleted automatically.
+
+## Starting with about 4 GB available RAM
+
+On native Windows and Linux, 4 decimal GB **available** gives a 3 GB model budget plus 1 GB additional headroom. Available RAM is measured after OS/application usage; it is not installed RAM. The smallest 0.8B model is selected at this budget. Below 3.5 GB available the planner still refuses to load. No system services need to be disabled. Actual model loading must also succeed inside the platform-specific memory guard.
+
+Fast always selects the smallest native model. Balanced / Larger model can select larger supported models when memory permits; compatible Windows NVIDIA acceleration is optional. More RAM alone does not guarantee faster responses: CPU/GPU capability and the selected model also matter. Long documents, complex reasoning and unsupported tasks remain limited. This is not a promise of good performance for every task on a 4 GB installed-memory PC.
