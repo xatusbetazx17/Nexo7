@@ -8,6 +8,8 @@ import threading
 
 
 def windows_job(limit):
+    import mmap
+    limit = limit // mmap.PAGESIZE * mmap.PAGESIZE
     from ctypes import wintypes as w
     size = ctypes.c_size_t
     class Basic(ctypes.Structure):
@@ -38,8 +40,8 @@ def windows_job(limit):
     if not k.QueryInformationJobObject(job, 9, ctypes.byref(actual), ctypes.sizeof(actual), None):
         raise OSError(ctypes.get_last_error(), 'Cannot verify memory job')
     if actual.job_memory != limit or actual.basic.flags & info.basic.flags != info.basic.flags:
-        raise OSError('Memory job verification failed')
-    return job  # Keep open for the supervisor lifetime; exit closes it and kills descendants.
+        raise OSError(f'Memory job verification failed: requested={limit}, actual={actual.job_memory}, flags={actual.basic.flags:#x}')
+    return job, actual.job_memory  # Keep open for the supervisor lifetime; exit closes it and kills descendants.
 
 
 def ensure_stdio():
@@ -60,12 +62,13 @@ def run_worker():
     if type(limit) is not int or not 1_000_000_000 <= limit <= 16_000_000_000:
         raise ValueError('Invalid native memory limit')
     if sys.platform == 'win32':
-        job = windows_job(limit)
+        job, enforced_limit = windows_job(limit)
         guard = 'windows_job_committed_memory'
     elif sys.platform.startswith('linux'):
         import resource
         resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
         if resource.getrlimit(resource.RLIMIT_AS) != (limit, limit): raise OSError('Memory limit not applied')
+        enforced_limit = limit
         guard = 'linux_virtual_address_space'
     else:
         raise OSError('Native guard supports Windows and Linux only')
@@ -82,7 +85,7 @@ def run_worker():
     child = subprocess.Popen(spec['command'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, env=env,
                              creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0)
-    print(json.dumps({'guard': guard, 'limit': limit, 'pid': child.pid}), flush=True)
+    print(json.dumps({'guard': guard, 'limit': limit, 'enforced_limit': enforced_limit, 'pid': child.pid}), flush=True)
     def watch_parent():
         # Pipe EOF handles both orderly app shutdown and an application crash.
         while os.read(sys.stdin.fileno(), 1):

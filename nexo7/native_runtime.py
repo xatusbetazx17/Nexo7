@@ -150,7 +150,7 @@ class NativeProcess:
             self.receipt = json.loads(receipt.get(timeout=20))
             if "error" in self.receipt:
                 error += ": " + self.receipt["error"]
-            if self.receipt.get('limit') != limit or self.receipt.get('guard') not in {'linux_virtual_address_space','windows_job_committed_memory'}:
+            if self.receipt.get('limit') != limit or not 0 < self.receipt.get('enforced_limit',0) <= limit or self.receipt.get('guard') not in {'linux_virtual_address_space','windows_job_committed_memory'}:
                 raise ValueError('Native guard was not verified')
         except Exception:
             self.close(); raise ValueError(error) from None
@@ -221,7 +221,7 @@ def start_native(database, *, cpu_only=False, emit=print, cancel=None, performan
                              max_model_calls=2 if performance == 'fast' else 3,
                              max_total_output_tokens=512 if performance == 'fast' else 1536, timeout_seconds=180)
                 with LOCK: ACTIVE[identifier] = (runtime,url,cfg)
-                current.update(ram_limit_bytes=limit,selected_model=profile['model'],guard=runtime.receipt['guard'])
+                current.update(ram_limit_bytes=limit,enforced_limit_bytes=runtime.receipt['enforced_limit'],selected_model=profile['model'],guard=runtime.receipt['guard'])
                 emit('Ready: native local AI. Downloads are reused on future launches.')
                 return cfg, current
             except (ValueError,OSError,TransportError) as exc:
