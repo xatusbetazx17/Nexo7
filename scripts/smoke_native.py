@@ -81,14 +81,20 @@ def main():
             assert learned['status']=='completed' and learned['stats']['model_calls']>=1,learned
             assert any('violet triangle' in s['text'] for s in learned['sources']),learned
             result['answers'].append({'prompt':'What is the fictional Zorilo marker?','answer':learned['answer'],'stats':learned['stats'],'source_admitted':True})
-            calc=request('/api/chat' ,{'message':'/calc 24.5 * 40','private':True})
+            web_reply=request('/api/chat',{'message':'Computer network','mode':'web','remember_web':True,'language':'en'})
+            assert web_reply['status']=='completed' and web_reply['stats']['model_calls']==1,web_reply
+            assert web_reply['stats']['network_requests']==1 and any(s['id'].startswith('W') for s in web_reply['sources']),web_reply
+            reuse=request('/api/chat',{'message':'Computer network','mode':'web','synthesize_web':False,'private':True})
+            assert reuse['stats']['network_requests']==0 and reuse['stats']['model_calls']==0 and reuse['stats']['web_reused'],reuse
+            result['answers'].append({'prompt':'Computer network (live Wikipedia excerpts)','answer':web_reply['answer'],'stats':web_reply['stats']})
+            calc=request('/api/chat'  ,{'message':'/calc 24.5 * 40','private':True})
             assert calc['answer']=='980.0' and calc['stats']['model_calls']==0
             request('/api/artifacts',{'name':'sales.csv','content':'amount\n10.25\n20.75\n'})
             analysis=request('/api/chat',{'message':'/inspect sales.csv','private':True})
             assert json.loads(analysis['answer'])['columns'][0]['sum']=='31.00'
             imported=request('/api/import',{'name':'note.txt','data':base64.b64encode(b'Local document').decode()})
             assert imported['content']=='Local document'
-            result['checks']=['real multilingual text generation','real code generation (not executed)','guarded setup','zero-model-call arithmetic','CSV totals','isolated document import','reviewed learning admitted to real model context','clean shutdown']
+            result['checks']=['real multilingual text generation','real code generation (not executed)','guarded setup','zero-model-call arithmetic','CSV totals','isolated document import','reviewed learning admitted to real model context','live web excerpts used by native model','saved web results reused without network or model calls','clean shutdown']
             request('/api/shutdown',{});process.wait(timeout=30);assert process.returncode==0
             result['passed']=True
         finally:

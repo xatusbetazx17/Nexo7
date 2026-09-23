@@ -20,7 +20,9 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     from .workspace import Workspace
     workspace = Workspace(Path(config.database).resolve().parent / "workspace") if controller else None
 
-    engine = engine or Engine(config, store, workspace=workspace)
+    from .web_research import WebResearch
+    web_research = WebResearch(store)
+    engine = engine or Engine(config, store, workspace=workspace, web=web_research)
     from .learning import Learning, validate_pack, contribution
     learning = Learning(store)
     import_slots = threading.BoundedSemaphore(1)
@@ -70,7 +72,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.6.2", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.7.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -80,6 +82,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     "desktop": controller is not None})
             if path == "/api/setup" and controller:
                 return self._send(200, controller.snapshot())
+            if path == "/api/web":
+                return self._send(200, web_research.status())
             if path == "/api/learning/community":
                 pack = json.loads((Path(__file__).parent / "knowledge" / "community.json").read_text(encoding="utf-8"))
                 return self._send(200, {"format": "nexo-learning-v1", "entries": validate_pack(pack)})
@@ -121,6 +125,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == "/api/web/key":
+                    return self._send(200, web_research.set_key(body.get("key"),body.get("storage_rights",False)))
                 if path == "/api/learning/preview":
                     return self._send(200, {"entries": validate_pack(body.get("pack"))})
                 if path == "/api/learning/import":
@@ -170,8 +176,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     if not chat_lock.acquire(blocking=False):
                         return self._send(429, {"error": "The assistant is busy; wait for the current operation"})
                     try:
-                        active_engine = Engine(controller.config, store, workspace=workspace) if controller else engine
-                        result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"))
+                        active_engine = Engine(controller.config, store, workspace=workspace, web=web_research) if controller else engine
+                        result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"), web_provider=body.get("web_provider", "wikipedia"), web_language=body.get("web_language", "en"), remember_web=body.get("remember_web", False), refresh_web=body.get("refresh_web", False), synthesize_web=body.get("synthesize_web", True))
                     finally:
                         chat_lock.release()
                     return self._send(200, result)
@@ -190,6 +196,13 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             if not self._allowed(True):
                 return
             path = urlsplit(self.path).path
+            if path == "/api/web":
+                return self._send(200, {"deleted": web_research.delete()})
+            if path.startswith("/api/web/"):
+                try:
+                    return self._send(200, {"deleted": web_research.delete(path.rsplit("/",1)[1])})
+                except ValueError as exc:
+                    return self._send(400, {"error": str(exc)})
             if path == "/api/learning-metrics":
                 learning.clear_metrics()
                 return self._send(200, {"deleted": True})

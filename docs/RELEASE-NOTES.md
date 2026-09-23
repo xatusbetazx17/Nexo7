@@ -1,9 +1,10 @@
-# Nexo 7 0.6.2 — 4 GB available-memory baseline on Windows and Linux
+# Nexo 7 0.7.0 — opt-in Internet lookup and reusable web memory
 
-Native Linux now uses the same available-memory headroom policy as native Windows: 1 GB minimum, 25% of available RAM up to 2 GB. With 8 GB installed and 4 GB available, both plan a 3 GB budget for the 0.8B model. This describes available RAM after OS/application usage, not a 4 GB installed-RAM guarantee.
+- Search Wikipedia without a key or connect your own Brave Search API key for broader web results.
+- Save retrieved excerpts locally with source URLs, retrieval times and a seven-day reuse window; repeated matching lookups can work offline without another search.
+- Refresh explicitly, inspect expired entries, and delete individual/all saved web sources. Private chat never saves new web sources.
+- Excerpts-only mode avoids model calls. Web explanation uses a single model round without tool schemas; context packing shortens excerpts before removing sources.
+- Search keys stay in application memory. Brave storage requires a plan granting storage rights; no key is provided. No conversations or retrieved web data are automatically uploaded to GitHub.
+- Windows/Linux 4 GB available-memory admission and platform memory guards remain.
 
-The 2.5 GB smallest-profile minimum, 65% installed-RAM cap, 12 GB default ceiling, pre-load recheck and actual platform memory guards remain. Windows limits worker/model committed memory; Linux limits virtual address space per model process. Legacy Docker reserves are unchanged.
-
-Both release platforms now gate publishing on source-mode real inference with simulated 8 GB total / at most 4 GB available and a real guard of at most 3 GB, in addition to packaged-model smoke tests. This does not establish physical low-end CPU compatibility or speed, whole-system peak memory, or universal task quality.
-
-Use Fast for the smallest model; Balanced / Larger model can choose larger supported models on capable computers. Existing local data and learning features are preserved.
+This adds retrieval and reuse, not weight training or new model intelligence. Wikipedia is not general web search; Brave live operation requires your key. Search snippets are unverified excerpts, not full articles. See WEB-RESEARCH.md for limits, privacy and setup.

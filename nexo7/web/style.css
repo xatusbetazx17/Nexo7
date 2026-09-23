@@ -8,3 +8,5 @@
 #learning-panel details {margin-block:14px}
 #learning-entries .document-card {display:block;margin-block:12px}
 #learning-entries button {margin:8px}
+#web-sources pre,.message details pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}
+#web-sources .document-card {display:block}

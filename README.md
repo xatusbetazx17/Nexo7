@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.6.2.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.7.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -81,7 +81,7 @@ python scripts/build_desktop.py
 
 This produces a portable archive and SHA-256 checksum in `release/`. Each build must pass an executable smoke test before packaging. The release workflow builds on Windows Server 2022 and Ubuntu 22.04 runners with x86-64 Python. Windows binaries are unsigned. Linux compatibility depends on glibc and system libraries; the local development build's host is recorded in the validation report.
 
-A push to `main` builds and publishes the v0.6.2 prerelease after native builds and real-model smoke tests succeed on both platforms. A `v*` tag can publish a later version; existing releases are preserved. Manual workflow runs produce downloadable Actions artifacts without publishing. See [release process](docs/RELEASING.md).
+A push to `main` builds and publishes the v0.7.0 prerelease after native builds and real-model smoke tests succeed on both platforms. A `v*` tag can publish a later version; existing releases are preserved. Manual workflow runs produce downloadable Actions artifacts without publishing. See [release process](docs/RELEASING.md).
 
 ### Windows portable preview assembled without a Windows runner
 
@@ -122,3 +122,9 @@ Original project code is MIT licensed. llama.cpp, model weights, bundled runtime
 Open **My knowledge → Learning workshop** to save corrections and reusable procedures, import/export selected learning packs and preview community examples bundled with a release. Learning persists in your local data directory across updates. References are retrieved when relevant; model weights do not change.
 
 Community sharing is voluntary: edit the example, approve public sharing, then open and submit a GitHub issue draft. No automatic conversation upload or GitHub token storage. Maintainers review contributions before shipping them in a future pack. Optional local performance totals contain no prompt text and are not uploaded. See [learning and privacy](docs/LEARNING.md).
+
+## Internet lookup and reusable web memory (0.7)
+
+Choose **Web lookup** to search Wikipedia without a key, or connect your own Brave Search API key for broader results. **Remember retrieved excerpts** saves dated references locally for reuse; **Refresh now** bypasses saved results. Uncheck model explanation for excerpts without model calls. Saved sources can be inspected/deleted in My knowledge. Private chat never saves new web excerpts. Ordinary chat can retrieve saved, unexpired references without accessing the Internet.
+
+This is bounded source retrieval, not automatic model training or infallible knowledge. Search providers receive the submitted topic. Brave may incur provider charges and requires storage rights to remember results. See [web research](docs/WEB-RESEARCH.md).

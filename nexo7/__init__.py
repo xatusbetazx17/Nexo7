@@ -1,2 +1,2 @@
 """Nexo 7: a personal assistant application, not an OpenAI model."""
-__version__ = "0.6.2"
+__version__ = "0.7.0"

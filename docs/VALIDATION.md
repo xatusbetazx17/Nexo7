@@ -47,3 +47,9 @@ Local suite: 103 tests, 102 passed and one optional PyTorch skip. New cases cove
 ## 0.6.2 cross-platform available-memory baseline
 
 Local suite: 104 tests, 103 passed and one optional PyTorch skip. Linux source-mode real inference passed with simulated total/available memory of 8/4 decimal GB and an actual 3 GB virtual-address-space guard (`reports/native-8gb-linux.json`). It completed Spanish text, English code and reviewed-reference tasks, arithmetic, CSV analysis and document import. CPU speed in this environment does not represent a Dell N5030. Release CI gates both Windows and Linux on this constrained-memory scenario and native packaged smoke tests. The simulation changes admission inputs, not the physical machine's RAM; whole-system low-memory pressure was not emulated.
+
+## 0.7.0 web lookup and source reuse
+
+Local suite: 121 tests, 120 passed and one optional PyTorch skip. Web tests cover explicit selection, no background network in ordinary chat, private non-persistence, cross-restart offline reuse, seven-day expiry, refresh, source deletion/cache invalidation, 100-group capacity, fixed destinations, link filtering, key isolation, Brave storage-rights gating and source-preserving context compaction. JSDOM interaction tests cover lookup, remembered-result reuse and deletion with a fixture provider.
+
+A live local Wikipedia lookup for “Computer network” returned three excerpts. Brave protocol handling was fixture-tested; no live key was available. The release pipeline gates Windows/Linux builds on live packaged Wikipedia retrieval followed by zero-request reuse, plus actual native-model synthesis of web excerpts and model-free reuse. It retains the 8 GB total / 4 GB available simulated-memory tests with real 3 GB guards. See release Actions for those execution results. None of these checks establishes broad accuracy gains, new model training or improved performance on a physical Dell N5030.

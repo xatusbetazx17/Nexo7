@@ -21,6 +21,9 @@
     "consent resets on edit",
     "public draft without automatic upload",
     "community pack review and import",
+    "opt-in web lookup with fixture provider",
+    "saved web reuse",
+    "web source deletion",
     "no JavaScript errors"
   ]
 }

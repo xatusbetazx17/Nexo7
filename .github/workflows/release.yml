@@ -31,6 +31,8 @@ jobs:
         run: python -m pip install pyinstaller==6.22.0
       - name: Build and test native executable
         run: python scripts/build_desktop.py
+      - name: Live web lookup and saved-source reuse in packaged app
+        run: python scripts/smoke_web.py dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
       - name: Real native model smoke test
         run: python scripts/smoke_native.py --binary dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
       - name: Real native inference with simulated 8 GB total and 4 GB available
@@ -56,7 +58,7 @@ jobs:
       - name: Publish preview release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.6.2' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.7.0' }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; native builds remain available as workflow artifacts."

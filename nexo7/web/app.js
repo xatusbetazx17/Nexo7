@@ -26,6 +26,7 @@ function message(role, text, result, question="") {
     const s=result.stats;
     const line = `${s.model_calls} calls · ${s.input_tokens+s.output_tokens} reported tokens · ${(s.elapsed_ms/1000).toFixed(2)} s${s.cache_hit ? " · Cache" : ""}${s.provider === "openai" && s.estimated_cost_usd !== null ? " · Estimated API $" + s.estimated_cost_usd.toFixed(6) : ""}`;
     article.append(node("div", line, "metrics"));
+    if(s.web_reused||s.network_requests)article.append(node("div",`${s.network_requests||0} search requests · ${s.web_reused?"Saved sources reused":"New excerpts retrieved"}${s.web_saved?" · Saved locally":""}`,"metrics"));
     if (result.sources.length) {
       const details=document.createElement("details"); details.append(node("summary",`${result.sources.length} retrieved sources`));
       for (const source of result.sources) {
@@ -33,10 +34,20 @@ function message(role, text, result, question="") {
         if (source.url && /^https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+\/$/.test(source.url)) {
           const link=node("a"," Open record ↗");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";p.append(link);
         }
+        if(source.id.startsWith("W") && safeWebLink(source.url)){
+          const link=node("a"," Open web source ↗");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";p.append(link);
+          p.append(node("small",` Retrieved ${source.retrieved_at} · ${source.source}`));
+          const excerpt=node("pre",source.text);details.append(excerpt);
+        }
         if (source.retraction_flag) p.append(node("strong"," · Retraction notice"));
         details.append(p);
       }
       article.append(details);
+    }
+    if(question && !result.sources.length && result.mode!=="web"){
+      const lookup=node("button","Look up this topic online","quiet");
+      lookup.onclick=()=>{$("mode").value="web";$("mode").onchange();$("prompt").value=question.slice(0,500);$("prompt").focus();};
+      article.append(lookup);
     }
     if(desktopMode){
       const actions=node("div","","language-controls");
@@ -72,7 +83,7 @@ async function initialize(first=true) {
     if (!config.persist_history) { $("private").checked=true; $("private").disabled=true; }
     const data=await api("/api/history?session="+encodeURIComponent(session));
     $("messages").replaceChildren(); conversation=data.messages; for(const m of conversation) message(m.role,m.content);
-    await loadDocuments(); await loadLearning();
+    await loadDocuments(); await loadLearning(); await loadWebSources();
     desktopMode=Boolean(config.desktop);$("workspace-tab").hidden=!desktopMode; $("setup-tab").hidden=!desktopMode; $("quit").hidden=!desktopMode;
     if(first && desktopMode) {showSetup(); clearTimeout(setupTimer); pollSetup();}
   } catch(exc) { error(exc.message); }
@@ -84,7 +95,7 @@ $("composer").onsubmit=async event=>{
   busy=true;$("send").disabled=true;$("send").textContent="Working…";error();
   message("user",text);conversation.push({role:"user",content:text});$("prompt").value="";
   try {
-    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value});
+    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked});
     message("assistant",result.answer,result,text);conversation.push({role:"assistant",content:result.answer,sources:result.sources,stats:result.stats});
   } catch(exc) {error(exc.message);}
   finally {busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
@@ -92,9 +103,9 @@ $("composer").onsubmit=async event=>{
 $("prompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("composer").requestSubmit();}};
 $("language").onchange=()=>sessionStorage.setItem("nexo-language",$("language").value);
 for(const button of document.querySelectorAll("[data-prompt]")) button.onclick=()=>{$("prompt").value=button.dataset.prompt;$("prompt").focus();};
-$("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research";$("prompt").maxLength=$("mode").value==="research"?500:8000;};
+$("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research";$("web-controls").hidden=$("mode").value!=="web";$("prompt").maxLength=["research","web"].includes($("mode").value)?500:8000;};
 $("research-suggestion").onclick=()=>{$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
-function view(memory) {if(memory)loadLearning().catch(exc=>error(exc.message));hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
+function view(memory) {if(memory){loadLearning().catch(exc=>error(exc.message));loadWebSources().catch(exc=>error(exc.message));}hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
 $("chat-tab").onclick=()=>view(false);$("memory-tab").onclick=()=>view(true);
 $("new").onclick=()=>{if(busy)return;session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
 $("export").onclick=()=>{const blob=new Blob([JSON.stringify({app:"Nexo 7",exported_at:new Date().toISOString(),conversation},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="nexo7-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
@@ -225,3 +236,20 @@ $("learning-file").onchange=async()=>{resetPack();try{const file=$("learning-fil
 $("community-learning").onclick=async()=>{resetPack();try{await previewPack(await api("/api/learning/community"));}catch(exc){$("learning-status").textContent=exc.message;}};
 $("import-learning").onclick=async()=>{try{const result=await api("/api/learning/import","POST",{pack:pendingLearningPack,consent:$("pack-consent").checked});$("learning-status").textContent=`Imported ${result.added}; skipped ${result.duplicates} duplicates.`;resetPack();await loadLearning();await loadDocuments();}catch(exc){$("learning-status").textContent=exc.message;}};
 $("clear-learning-metrics").onclick=async()=>{try{await api("/api/learning-metrics","DELETE");await loadLearning();}catch(exc){$("learning-status").textContent=exc.message;}};
+
+function safeWebLink(value){try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}}
+async function loadWebSources(){
+ const data=await api("/api/web");$("brave-status").textContent=data.brave_configured?"Key configured for this run. Storage permission: "+(data.storage_rights?"confirmed":"not confirmed; search answers will not be saved"):"No Brave key configured. Wikipedia remains available.";
+ $("web-sources").replaceChildren();
+ for(const source of data.sources){
+  const card=node("div","","document-card"),details=document.createElement("details");
+  details.append(node("summary",`[${source.id}] ${source.title} · ${source.expired?"Expired — refresh before reuse":"Available for local reuse"}`),node("p",`Retrieved ${source.retrieved_at}. ${source.source}`),node("pre",source.text));
+  if(safeWebLink(source.url)){const link=node("a","Open original source ↗");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";details.append(link);}
+  const remove=node("button","Delete","quiet");remove.onclick=async()=>{try{await api("/api/web/"+source.id,"DELETE");await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
+  card.append(details,remove);$("web-sources").append(card);
+ }
+}
+$("save-brave-key").onclick=async()=>{try{await api("/api/web/key","POST",{key:$("brave-key").value,storage_rights:$("brave-storage").checked});$("brave-key").value="";await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
+$("clear-brave-key").onclick=async()=>{try{await api("/api/web/key","POST",{key:""});$("brave-key").value="";$("brave-storage").checked=false;await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
+$("reload-web-sources").onclick=()=>loadWebSources().catch(exc=>$("web-status").textContent=exc.message);
+$("clear-web-sources").onclick=async()=>{if(!confirm("Delete saved web excerpts? Existing chat history is separate; use Clear history to remove a conversation."))return;try{await api("/api/web","DELETE");await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
