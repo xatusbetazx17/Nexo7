@@ -72,7 +72,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.7.1", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.8.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -154,7 +154,13 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if path == "/api/feedback":
                     return self._send(201, store.record_feedback(body.get("question"), body.get("answer"), body.get("rating")))
                 if path == "/api/artifacts" and workspace:
-                    return self._send(201, workspace.create(body.get("name"), body.get("content")))
+                    item = workspace.create(body.get("name"), body.get("content"))
+                    from .local_tools import inspect_file
+                    try:
+                        item['verification'] = inspect_file(workspace, item['id'])
+                    except ValueError as exc:
+                        item['verification'] = {'error': str(exc), 'passed': False}
+                    return self._send(201, item)
                 if controller and path == "/api/setup/check":
                     if type(body.get("cpu_only", False)) is not bool:
                         raise ValueError("cpu_only must be a boolean")
@@ -177,7 +183,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                         return self._send(429, {"error": "The assistant is busy; wait for the current operation"})
                     try:
                         active_engine = Engine(controller.config, store, workspace=workspace, web=web_research) if controller else engine
-                        result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"), web_provider=body.get("web_provider", "wikipedia"), web_language=body.get("web_language", "en"), remember_web=body.get("remember_web", False), refresh_web=body.get("refresh_web", False), synthesize_web=body.get("synthesize_web", True))
+                        result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"), web_provider=body.get("web_provider", "wikipedia"), web_language=body.get("web_language", "en"), remember_web=body.get("remember_web", False), refresh_web=body.get("refresh_web", False), synthesize_web=body.get("synthesize_web", True), allow_internet=body.get("allow_internet", False))
                     finally:
                         chat_lock.release()
                     return self._send(200, result)

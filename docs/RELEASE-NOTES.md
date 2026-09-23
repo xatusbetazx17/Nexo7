@@ -1,3 +1,10 @@
+# Nexo 7 0.8.0 — bounded local companion
+
+- Local-first request routing, exact reviewed-answer reuse without model generation, and one optional research follow-up for expressed uncertainty.
+- Per-request Internet permission resets after sending. Source metadata is visible; factual truth and source independence are not automatically verified.
+- Read-only device checks, reviewed file creation with syntax/statistics checks, and one bounded Python/JSON repair proposal without execution or overwriting.
+- Existing RAM guards and optional separate training pipeline remain. Routing heuristics currently recognize English/Spanish signals; general multilingual responses depend on the model.
+
 # Nexo 7 0.7.1 — lighter everyday chat
 
 - Default Chat mode uses a compact prompt without search, saved-source retrieval or model-selected tools; native answers are capped at 128 tokens.

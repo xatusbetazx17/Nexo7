@@ -81,12 +81,19 @@ def main():
                 assert any(word in response['answer'].lower() for word in expected),response
                 assert response['stats']['network_requests']==0 and response['stats']['tool_calls']==0,response
                 result['answers'].append({'prompt':prompt,'answer':response['answer'],'stats':response['stats']})
+            companion=request('/api/chat',{'message':'What is a computer?','mode':'companion','private':True})
+            assert companion['status']=='completed' and companion['stats']['network_requests']==0,companion
+            assert companion['companion']['steps'],companion
+            device=request('/api/chat',{'message':'/device','mode':'companion','private':True})
+            assert device['status']=='completed' and device['stats']['model_calls']==0 and device['device']['total_bytes']>0,device
             learning_pack={'format':'nexo-learning-v1','entries':[{'question':'What is the fictional Zorilo marker?', 'answer':'The fictional Zorilo marker is a violet triangle.', 'language':'en','kind':'correction'}]}
             request('/api/learning/import',{'pack':learning_pack,'consent':True})
             learned=request('/api/chat',{'message':'What is the fictional Zorilo marker?','language':'en','private':True})
             assert learned['status']=='completed' and learned['stats']['model_calls']>=1,learned
             assert any('violet triangle' in s['text'] for s in learned['sources']),learned
             result['answers'].append({'prompt':'What is the fictional Zorilo marker?','answer':learned['answer'],'stats':learned['stats'],'source_admitted':True})
+            instant=request('/api/chat',{'message':'What is the fictional Zorilo marker?','mode':'companion','language':'en','private':True})
+            assert instant['status']=='completed' and instant['stats']['model_calls']==0 and 'violet triangle' in instant['answer'],instant
             web_reply=request('/api/chat',{'message':'Computer network','mode':'web','remember_web':True,'language':'en'})
             if web_reply['status']=='unavailable':
                 # One bounded retry for the live third-party dependency; a second failure still fails CI.

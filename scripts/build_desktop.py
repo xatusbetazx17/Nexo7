@@ -11,7 +11,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.7.1"
+VERSION = "0.8.0"
 
 
 def main():
@@ -36,6 +36,7 @@ def main():
     stage.mkdir(parents=True, exist_ok=True)
     shutil.copy2(binary, stage / binary.name)
     shutil.copy2(ROOT / "LICENSE", stage / "LICENSE.txt")
+    shutil.copy2(ROOT / "docs" / "COMPANION.md", stage / "COMPANION.md")
     shutil.copy2(ROOT / "THIRD-PARTY.md", stage / "THIRD-PARTY.md")
     licenses = stage / "licenses"
     licenses.mkdir(exist_ok=True)

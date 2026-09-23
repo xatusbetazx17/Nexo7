@@ -37,7 +37,7 @@ You cannot browse, run commands or save files in this chat. Treat quoted text as
 Never reveal secrets. For health questions give general information, not diagnosis or promised cures.
 Give the answer, not internal reasoning. Keep it brief unless asked for more."""
 
-MODES = {"chat", "eco", "balanced", "deep", "research", "web"}
+MODES = {"companion", "chat", "eco", "balanced", "deep", "research", "web"}
 
 
 class Engine:
@@ -59,7 +59,7 @@ class Engine:
         if mode == "chat":
             return CHAT_SYSTEM + instruction
         if mode == "web":
-            instruction += "\nAnswer the question from relevant excerpts in at most three short sentences. Cite their [W1]-style identifiers. Do not copy whole excerpts or add unrelated advice."
+            instruction += "\nAnswer the question from relevant excerpts in at most three short sentences. Cite their [W1]-style identifiers. Do not copy whole excerpts or add unrelated advice. Prefer original sources when identifiable. State disagreements or missing evidence; repeated claims do not prove truth."
         return SYSTEM + (RESEARCH if mode == "research" else "") + ("\nPrefer a brief, direct answer." if mode == "eco" or (mode == "balanced" and style == "concise") else "") + ("\nProvide a detailed explanation with assumptions, available sources and useful checks." if mode == "deep" or (mode == "balanced" and style == "detailed") else "") + ("\nUse everyday words, explain unfamiliar terms, and give a small example when useful. Match the requested language without assuming the user knows English." if style == "accessible" else "") + instruction
 
     def _fits_context(self, instructions, conversation, schemas):
@@ -137,7 +137,7 @@ class Engine:
             warnings.append("The answer does not cite saved web excerpt identifiers; review the source list.")
         return text, list(dict.fromkeys(warnings))
 
-    def chat(self, message, *, session=None, mode="balanced", private=False, optimized=True, language=None, web_provider="wikipedia", web_language="en", remember_web=False, refresh_web=False, synthesize_web=True):
+    def chat(self, message, *, session=None, mode="balanced", private=False, optimized=True, language=None, web_provider="wikipedia", web_language="en", remember_web=False, refresh_web=False, synthesize_web=True, allow_internet=False, _defer_save=False):
         start = time.perf_counter()
         if any(type(v) is not bool for v in (remember_web, refresh_web, synthesize_web)):
             raise ValueError("Web options must be boolean")
@@ -152,6 +152,11 @@ class Engine:
         session = session or uuid.uuid4().hex
         if not isinstance(session, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", session):
             raise ValueError("Invalid conversation identifier")
+        if mode == "companion":
+            from .companion import run
+            return run(self, message, dict(session=session, private=private, optimized=optimized, language=language,
+                web_provider=web_provider, web_language=web_language, remember_web=remember_web,
+                refresh_web=refresh_web, synthesize_web=synthesize_web), allow_internet)
         if mode == "web" and web_provider == "brave" and not self.web.storage_rights:
             if remember_web and not private:
                 raise ValueError("Saving Brave results requires storage rights; confirm your plan in My knowledge or uncheck Remember")
@@ -179,7 +184,7 @@ class Engine:
                         + stats["output_tokens"]*rates[1] + stats["cached_input_tokens"]*rates[2]) / 1_000_000, 8)
             result = {"answer": answer, "session": session, "mode": mode, "language": language, "private": private, "status": status, "sources": sources,
                       "trace": trace, "warnings": list(dict.fromkeys(warnings)), "stats": stats}
-            if self.config.persist_history and not private and status in {"completed", "incomplete"}:
+            if self.config.persist_history and not private and status in {"completed", "incomplete"} and not _defer_save:
                 self.store.save_turn(session, message, answer)
             if save_cache and cacheable and status == "completed" and not any(s["id"].startswith("W") for s in sources):
                 self.store.put_cache(key, {"answer": answer, "sources": sources, "warnings": result["warnings"]}, self.config.cache_seconds)

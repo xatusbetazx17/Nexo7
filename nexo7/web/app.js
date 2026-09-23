@@ -23,6 +23,12 @@ function message(role, text, result, question="") {
   article.append(node("div", role === "user" ? "YOU" : "NEXO 7", "message-label"));
   article.append(node("div", text, "message-text"));
   if (result) {
+    if(result.companion){
+      const steps=node('details','');steps.append(node('summary','How Nexo handled this request'));
+      for(const step of result.companion.steps)steps.append(node('p',step.action+': '+step.result));
+      if(result.sources.length)steps.append(node('p',result.companion.evidence.domains.length+' source domains. Agreement and truth are not automatically verified.'));
+      article.append(steps);
+    }
     const s=result.stats;
     const line = `${s.model_calls} calls · ${s.input_tokens+s.output_tokens} reported tokens · ${(s.elapsed_ms/1000).toFixed(2)} s${s.cache_hit ? " · Cache" : ""}${s.provider === "openai" && s.estimated_cost_usd !== null ? " · Estimated API $" + s.estimated_cost_usd.toFixed(6) : ""}`;
     article.append(node("div", line, "metrics"));
@@ -96,19 +102,19 @@ $("composer").onsubmit=async event=>{
   const started=Date.now(); const progress=setInterval(()=>{$("send").textContent=`Working… ${Math.floor((Date.now()-started)/1000)}s`;},1000);
   message("user",text);conversation.push({role:"user",content:text});$("prompt").value="";
   try {
-    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked});
+    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked,allow_internet:$("allow-internet").checked});
     message("assistant",result.answer,result,text);conversation.push({role:"assistant",content:result.answer,sources:result.sources,stats:result.stats});
   } catch(exc) {error(exc.message);}
-  finally {clearInterval(progress);busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
+  finally {$("allow-internet").checked=false;clearInterval(progress);busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
 };
 $("prompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("composer").requestSubmit();}};
 $("language").onchange=()=>sessionStorage.setItem("nexo-language",$("language").value);
 for(const button of document.querySelectorAll("[data-prompt]")) button.onclick=()=>{$("prompt").value=button.dataset.prompt;$("prompt").focus();};
-$("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research";$("web-controls").hidden=$("mode").value!=="web";$("prompt").maxLength=["research","web"].includes($("mode").value)?500:8000;};
+$("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research";$("web-controls").hidden=!["web","companion"].includes($("mode").value);$("prompt").maxLength=["research","web"].includes($("mode").value)?500:8000;};
 $("research-suggestion").onclick=()=>{$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
 function view(memory) {if(memory){loadLearning().catch(exc=>error(exc.message));loadWebSources().catch(exc=>error(exc.message));}hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
 $("chat-tab").onclick=()=>view(false);$("memory-tab").onclick=()=>view(true);
-$("new").onclick=()=>{if(busy)return;$("mode").value="chat";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
+$("new").onclick=()=>{if(busy)return;$("allow-internet").checked=false;$("mode").value="companion";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
 $("export").onclick=()=>{const blob=new Blob([JSON.stringify({app:"Nexo 7",exported_at:new Date().toISOString(),conversation},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="nexo7-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
 $("forget").onclick=async()=>{if(busy||!confirm("Clear local history for this conversation? Exported copies and provider data are managed separately."))return;try{await api("/api/history/"+encodeURIComponent(session),"DELETE");$("new").click();}catch(exc){error(exc.message);}};
 async function loadDocuments(){
@@ -197,11 +203,15 @@ async function loadArtifacts(){
   const analyze=node("button","Analyze","quiet");
   analyze.onclick=async()=>{try{const data=await api("/api/inspect","POST",{filename:item.id});$("analysis-result").textContent=JSON.stringify(data,null,2);}catch(exc){$("analysis-result").textContent=exc.message;}};
   const discuss=node("button","Ask about file","quiet");
-  discuss.onclick=()=>{view(false);$("prompt").value=`Read the workspace file with ID ${item.id} (${item.name}) and explain its contents.`;$("prompt").focus();};
-  card.append(label,download,analyze,discuss,remove);$("artifacts").append(card);
+  discuss.onclick=()=>{view(false);$("mode").value="balanced";$("mode").onchange();$("prompt").value=`Read the workspace file with ID ${item.id} (${item.name}) and explain its contents.`;$("prompt").focus();};
+  const repair=node("button","Propose syntax repair","quiet");
+  repair.hidden=!/\.(py|json)$/.test(item.name);
+  repair.onclick=()=>{view(false);$("mode").value="companion";$("mode").onchange();$("allow-internet").checked=false;$("prompt").value='/repair '+item.id;$("prompt").focus();};
+  card.append(label,download,analyze,discuss,repair,remove);$("artifacts").append(card);
  }
 }
-$("artifact-form").onsubmit=async event=>{event.preventDefault();try{await api("/api/artifacts","POST",{name:$("artifact-name").value,content:$("artifact-content").value});$("artifact-status").textContent="Saved locally. Review code before executing it.";await loadArtifacts();}catch(exc){$("artifact-status").textContent=exc.message;}};
+$("artifact-form").onsubmit=async event=>{event.preventDefault();try{const saved=await api("/api/artifacts","POST",{name:$("artifact-name").value,content:$("artifact-content").value});$("artifact-status").textContent="Saved locally. Check: "+JSON.stringify(saved.verification)+". No code executed; syntax is not proof of correctness.";await loadArtifacts();}catch(exc){$("artifact-status").textContent=exc.message;}};
+$("mode").onchange();
 initialize();
 
 $("workspace-file").onchange=async()=>{const file=$("workspace-file").files[0];if(!file)return;if(file.size>200000){$("artifact-status").textContent="Workspace file limit: 200 KB";return;}$("artifact-name").value=file.name;$("artifact-content").value=await file.text();$("artifact-status").textContent="Loaded into editor. Review and save to make it available to Nexo.";};

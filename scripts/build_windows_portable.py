@@ -21,7 +21,7 @@ PYTHON_URL = f'https://www.python.org/ftp/python/{PYTHON_VERSION}/python-{PYTHON
 
 def main():
     build = ROOT / 'build/windows-portable'
-    stage = build / 'Nexo7-0.7.1-windows-x86_64-preview'
+    stage = build / 'Nexo7-0.8.0-windows-x86_64-preview'
     stage.mkdir(parents=True, exist_ok=True)
     archive = build / f'python-{PYTHON_VERSION}-embed-amd64.zip'
     if not archive.exists():

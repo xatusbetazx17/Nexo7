@@ -1,4 +1,4 @@
-# Start Nexo 7 — native edition 0.7.1
+# Start Nexo 7 — native edition 0.8.0
 
 1. Extract the archive into a folder you own. Windows: open Nexo7.exe. Linux: run ./Nexo7 (chmod +x Nexo7 if needed).
 2. The local browser interface opens. Python and the PDF reader are included. No Docker or WSL required.
@@ -45,6 +45,8 @@ Select Web lookup, choose Wikipedia (no key) or your configured Brave Search acc
 
 ## Everyday questions
 
-Choose **Chat · everyday questions** for questions such as “What is a chicken?” or “¿Qué es una gallina?”. It uses a short prompt and no Internet search. Use **New chat** to leave research mode and clear the active conversation. For the Dell with 8 GB installed RAM, select **Fast** in setup. Longer replies are available in **Detailed**, and saved documents/examples in **Saved knowledge & tools**.
+Choose **Chat · everyday questions** for questions such as “What is a chicken?” or “¿Qué es una gallina?”. It uses a short prompt and no Internet search. Use **New chat** to leave research mode and return to Companion with Internet permission off. For the Dell with 8 GB installed RAM, select **Fast** in setup. Longer replies are available in **Detailed**, and saved documents/examples in **Saved knowledge & tools**.
 
-If an older version repeatedly waited about 180 seconds, install v0.7.1 in a new folder after quitting Nexo. Open the new executable and start a New chat. Existing downloaded models and saved data remain in the usual per-user data directory. This update reduces prompt and output work but cannot guarantee a specific speed on an untested CPU.
+If an older version repeatedly waited about 180 seconds, install v0.8.0 in a new folder after quitting Nexo. Open the new executable and start a New chat. Existing downloaded models and saved data remain in the usual per-user data directory. This update reduces prompt and output work but cannot guarantee a specific speed on an untested CPU.
+
+See [Companion workflow](COMPANION.md) for reviewed memory, per-request research, device observations and bounded syntax repairs.

@@ -25,11 +25,11 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   assert(d.getElementById('start-local').disabled);
   d.getElementById('try-demo').click();
   assert(d.getElementById('setup-view').hidden);
-  assert.equal(d.getElementById('mode').value,'chat');
+  assert.equal(d.getElementById('mode').value,'companion');
   d.getElementById('mode').value='research';
   d.getElementById('mode').onchange();
   d.getElementById('new').click();
-  assert.equal(d.getElementById('mode').value,'chat');
+  assert.equal(d.getElementById('mode').value,'companion');
   assert(d.getElementById('research-notice').hidden);
   d.getElementById('prompt').value='/calc 24.5 * 40';
   d.getElementById('composer').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
@@ -73,7 +73,12 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>!d.getElementById('artifacts').textContent.includes('example.py'));
   const imported=await request('/api/import','POST',{name:'notes.txt',data:Buffer.from('Offline document import').toString('base64')});
   assert.equal(imported.content,'Offline document import');
-  await request('/api/artifacts','POST',{name:'sales.csv',content:'amount\n10\n20\n'});
+  const checked=await request('/api/artifacts','POST',{name:'sales.csv',content:'amount\n10\n20\n'});
+  assert.equal(checked.verification.rows,2);
+  const broken=await request('/api/artifacts','POST',{name:'broken.py',content:'def f(:'});
+  assert.equal(broken.verification.syntax_valid,false);
+  const device=await request('/api/chat','POST',{message:'/device',mode:'companion',private:true});
+  assert.equal(device.stats.model_calls,0);assert(device.device.total_bytes>0);
   const summary=await request('/api/inspect','POST',{filename:'sales.csv'});
   assert.equal(summary.columns[0].sum,'30');
   d.getElementById('memory-tab').click();
