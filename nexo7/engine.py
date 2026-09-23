@@ -58,6 +58,8 @@ class Engine:
         style = self.store.preferences()["style"]
         if mode == "chat":
             return CHAT_SYSTEM + instruction
+        if mode == "web":
+            instruction += "\nAnswer the question from relevant excerpts in at most three short sentences. Cite their [W1]-style identifiers. Do not copy whole excerpts or add unrelated advice."
         return SYSTEM + (RESEARCH if mode == "research" else "") + ("\nPrefer a brief, direct answer." if mode == "eco" or (mode == "balanced" and style == "concise") else "") + ("\nProvide a detailed explanation with assumptions, available sources and useful checks." if mode == "deep" or (mode == "balanced" and style == "detailed") else "") + ("\nUse everyday words, explain unfamiliar terms, and give a small example when useful. Match the requested language without assuming the user knows English." if style == "accessible" else "") + instruction
 
     def _fits_context(self, instructions, conversation, schemas):

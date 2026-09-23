@@ -88,6 +88,10 @@ def main():
             assert any('violet triangle' in s['text'] for s in learned['sources']),learned
             result['answers'].append({'prompt':'What is the fictional Zorilo marker?','answer':learned['answer'],'stats':learned['stats'],'source_admitted':True})
             web_reply=request('/api/chat',{'message':'Computer network','mode':'web','remember_web':True,'language':'en'})
+            if web_reply['status']=='unavailable':
+                # One bounded retry for the live third-party dependency; a second failure still fails CI.
+                time.sleep(2)
+                web_reply=request('/api/chat',{'message':'Computer network','mode':'web','remember_web':True,'language':'en'})
             assert web_reply['status']=='completed' and web_reply['stats']['model_calls']==1,web_reply
             assert web_reply['stats']['network_requests']==1 and any(s['id'].startswith('W') for s in web_reply['sources']),web_reply
             reuse=request('/api/chat',{'message':'Computer network','mode':'web','synthesize_web':False,'private':True})
