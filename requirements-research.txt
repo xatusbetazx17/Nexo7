@@ -1,0 +1,5 @@
+# Optional research environment only. Install a matching CPU/CUDA PyTorch wheel first.
+torch==2.10.0
+transformers==5.17.0
+peft==0.21.0
+psutil==7.2.2

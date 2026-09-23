@@ -32,7 +32,7 @@ Web explanation uses one local generation round without advertising additional t
 
 ## What this release does not implement
 
-This is not continuous weight training, distillation, a new inference architecture, arbitrary web browsing, automatic knowledge-gap detection, or a guarantee of more accurate answers. Model compression/training changes need a separate compatible dataset, compute and held-out accuracy/latency/memory comparisons. It does not autonomously search every time the model is uncertain. Each Web lookup request is user-selected; ordinary chat stays offline except explicitly selected literature research or a configured cloud generation provider.
+Web lookup is not continuous weight training, distillation, a new inference architecture, arbitrary web browsing, automatic knowledge-gap detection, or a guarantee of more accurate answers. The separate [model research workflow](MODEL-RESEARCH.md) now provides reviewed datasets, distillation drafts, LoRA training and held-out comparisons. Cached web sources are never automatically sent into that pipeline. Web lookup does not autonomously search every time the model is uncertain. Each Web lookup request is user-selected; ordinary chat stays offline except explicitly selected literature research or a configured cloud generation provider.
 
 ## Verification
 

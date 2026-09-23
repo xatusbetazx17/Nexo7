@@ -12,6 +12,10 @@ Select **Fast** for the 0.8B model (~580 MB). Balanced/Larger-model preferences 
 
 Windows can attempt NVIDIA/Vulkan acceleration when VRAM is measurable, with CPU fallback. **This Linux native release uses CPU** because GPU drivers may reserve more virtual address space than its strict address-space budget allows. AMD/Intel GPU acceleration and general native Linux GPU support are not promised in this release. See [START HERE](docs/QUICKSTART.md).
 
+## Optional model training and research
+
+The source repository now includes a separate [model improvement workflow](docs/MODEL-RESEARCH.md): reviewed datasets with held-out splits, local-teacher sequence distillation, actual LoRA training, baseline/candidate evaluation, adapter merging and small architecture experiments. Start with `python -m research --help`. These developer tools require optional dependencies and a suitable training computer; they add no training dependencies to the desktop application. The distributed desktop weights remain unchanged until a candidate is independently evaluated, quantized and approved. No general capability gain is claimed.
+
 ## What it does
 
 - Adapts a supported Qwen3.5 model profile to available host RAM and measured free NVIDIA VRAM. Offers Fast, Balanced and Larger-model preferences.

@@ -17,3 +17,6 @@ release/
 *.egg-info/
 .venv/
 node_modules/
+research-runs/
+*.safetensors
+*.gguf

@@ -1,0 +1,213 @@
+{
+  "date": "2026-09-23",
+  "purpose": "Engineering smoke only; not a capability benchmark",
+  "base": {
+    "repository": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  },
+  "versions": {
+    "torch": "2.10.0+cpu",
+    "transformers": "5.17.0",
+    "peft": "0.21.0",
+    "psutil": "7.2.2"
+  },
+  "dataset": "bbe77615576fad3f0856b2793a7c585bed45852ce0fc6f509b438aacbc569ea0",
+  "training": {
+    "steps": 2,
+    "rank": 2,
+    "trainable_parameters": 79872,
+    "results": {
+      "validation_loss_before": 2.4452705372657095,
+      "validation_loss_after": 2.4301232951028005,
+      "training_loss_first": 0.4525989890098572,
+      "training_loss_last": 0.008865349926054478
+    },
+    "elapsed_seconds": 7.550164700005553
+  },
+  "baseline": {
+    "schema": "nexo-evaluation-v1",
+    "base": {
+      "repository": "Qwen/Qwen3.5-0.8B",
+      "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+    },
+    "adapter": null,
+    "dataset": "bbe77615576fad3f0856b2793a7c585bed45852ce0fc6f509b438aacbc569ea0",
+    "split": "test",
+    "settings": {
+      "seed": 42,
+      "max_length": 128,
+      "max_new_tokens": 16
+    },
+    "environment": {
+      "os": "Linux-6.18.44-x86_64-with-glibc2.39",
+      "processor": "x86_64",
+      "cpu_count": 9,
+      "ram": 23109894144,
+      "device": "cpu",
+      "threads": 4,
+      "gpu": null
+    },
+    "versions": {
+      "torch": "2.10.0+cpu",
+      "transformers": "5.17.0",
+      "peft": "0.21.0",
+      "psutil": "7.2.2"
+    },
+    "peak_rss_bytes": 5729157120,
+    "peak_cuda_allocated_bytes": 0,
+    "results": [
+      {
+        "id": "demo-4",
+        "language": "en",
+        "answer": "ello",
+        "correct": false,
+        "seconds": 1.1517853110053693,
+        "tokens": 4
+      },
+      {
+        "id": "demo-5",
+        "language": "es",
+        "answer": "Como no has especificado el lenguaje o el contexto en el que quieres que lo",
+        "correct": false,
+        "seconds": 3.4336842490010895,
+        "tokens": 16
+      }
+    ],
+    "accuracy": 0.0,
+    "mean_seconds": 2.2927347800032294,
+    "limitations": "Exact-match tasks only. RSS is sampled, GPU metric excludes driver allocations. No factuality judge."
+  },
+  "candidate": {
+    "schema": "nexo-evaluation-v1",
+    "base": {
+      "repository": "Qwen/Qwen3.5-0.8B",
+      "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+    },
+    "adapter": "c597b96ca3283b464d5828c70f2e711c94e9e89f1b48bd5e91af1185d7a08c3b",
+    "dataset": "bbe77615576fad3f0856b2793a7c585bed45852ce0fc6f509b438aacbc569ea0",
+    "split": "test",
+    "settings": {
+      "seed": 42,
+      "max_length": 128,
+      "max_new_tokens": 16
+    },
+    "environment": {
+      "os": "Linux-6.18.44-x86_64-with-glibc2.39",
+      "processor": "x86_64",
+      "cpu_count": 9,
+      "ram": 23109894144,
+      "device": "cpu",
+      "threads": 4,
+      "gpu": null
+    },
+    "versions": {
+      "torch": "2.10.0+cpu",
+      "transformers": "5.17.0",
+      "peft": "0.21.0",
+      "psutil": "7.2.2"
+    },
+    "peak_rss_bytes": 5739786240,
+    "peak_cuda_allocated_bytes": 0,
+    "results": [
+      {
+        "id": "demo-4",
+        "language": "en",
+        "answer": "ello",
+        "correct": false,
+        "seconds": 2.1895059589951416,
+        "tokens": 4
+      },
+      {
+        "id": "demo-5",
+        "language": "es",
+        "answer": "Como no has especificado el lenguaje o el contexto, he preparado dos ejemplos claros",
+        "correct": false,
+        "seconds": 5.892237769003259,
+        "tokens": 16
+      }
+    ],
+    "accuracy": 0.0,
+    "mean_seconds": 4.0408718639992,
+    "limitations": "Exact-match tasks only. RSS is sampled, GPU metric excludes driver allocations. No factuality judge."
+  },
+  "comparison": {
+    "checks": {
+      "held_out_test": true,
+      "accuracy_improved": false,
+      "no_language_regression": true,
+      "latency_budget": false,
+      "process_ram_budget": false,
+      "cuda_allocations_budget": true
+    },
+    "baseline_accuracy": 0.0,
+    "candidate_accuracy": 0.0,
+    "language_scores": {
+      "en": [
+        0.0,
+        0.0
+      ],
+      "es": [
+        0.0,
+        0.0
+      ]
+    },
+    "candidate_for_human_review": false,
+    "automatic_release": false,
+    "limitations": "Small exact-match tests do not establish general intelligence or statistical significance. Repeat on representative tasks and the target PC; benchmark the final quantized artifact separately."
+  },
+  "architecture_smoke": {
+    "schema": "nexo-architecture-v1",
+    "steps": 2,
+    "seed": 42,
+    "corpora": {
+      "train": "9d5aa36e8417266e44f375320f0532d217a7a71e14d3b2863547b1565fe16a57",
+      "validation": "8087c21e57cbacbfaf52ae29024837c7f97061c312ac50c208da23a234299611"
+    },
+    "results": [
+      {
+        "config": {
+          "context": 64,
+          "width": 32,
+          "heads": 4,
+          "layers": 2
+        },
+        "parameters": 35712,
+        "validation_loss": 5.497367579762528,
+        "training_seconds": 0.023009003001789097,
+        "sampled_process_peak_rss": 359444480
+      },
+      {
+        "config": {
+          "context": 64,
+          "width": 64,
+          "heads": 4,
+          "layers": 2
+        },
+        "parameters": 120576,
+        "validation_loss": 5.410532509408346,
+        "training_seconds": 0.01797159600391751,
+        "sampled_process_peak_rss": 363151360
+      },
+      {
+        "config": {
+          "context": 64,
+          "width": 64,
+          "heads": 4,
+          "layers": 4
+        },
+        "parameters": 220544,
+        "validation_loss": 5.404577022645531,
+        "training_seconds": 0.03501483699801611,
+        "sampled_process_peak_rss": 367812608
+      }
+    ],
+    "limitations": "Toy byte models trained from scratch; no Qwen transfer or assistant capability. Same process allocator may retain memory between candidates; use fresh processes for memory conclusions."
+  },
+  "tiny_fixture": {
+    "optimizer_update": true,
+    "base_unchanged": true,
+    "merge_logits_match": true
+  },
+  "production_weights_changed": false,
+  "general_improvement_demonstrated": false
+}
