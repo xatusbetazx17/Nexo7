@@ -22,7 +22,9 @@ def calculate(expression):
            ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod}
 
     def visit(node):
-        if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        if isinstance(node, ast.Name) and node.id in {"pi", "e", "tau"}:
+            value = getattr(math, node.id)
+        elif isinstance(node, ast.Constant) and type(node.value) in (int, float):
             value = node.value
         elif isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
             value = visit(node.operand) * (-1 if isinstance(node.op, ast.USub) else 1)
@@ -35,7 +37,9 @@ def calculate(expression):
             value = a ** b
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and not node.keywords:
             args = [visit(a) for a in node.args]
-            if node.func.id == "sqrt" and len(args) == 1:
+            if node.func.id in {"sin", "cos", "tan", "asin", "acos", "atan", "log", "log10", "exp"} and len(args) == 1:
+                value = getattr(math, node.func.id)(args[0])
+            elif node.func.id == "sqrt" and len(args) == 1:
                 value = math.sqrt(args[0])
             elif node.func.id == "abs" and len(args) == 1:
                 value = abs(args[0])

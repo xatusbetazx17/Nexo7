@@ -191,6 +191,15 @@ class Engine:
             self.learning.record_metrics(stats, status, private)
             return result
 
+        if message.startswith('/math '):
+            if self.config.max_tool_calls < 1:
+                return finish('Math tools are disabled.', 'unavailable')
+            from .advanced_math import solve
+            result = solve(json.loads(message[6:]))
+            stats['tool_calls'] = 1
+            trace.append({'tool': 'decimal_math', 'status': 'computed'})
+            return finish(json.dumps(result, ensure_ascii=False, indent=2), save_cache=True)
+
         if message.startswith(('/date ', '/inspect ')) and self.config.max_tool_calls < 1:
             return finish('Local tools are disabled by the tool limit.', 'unavailable')
         if message.startswith('/date '):
@@ -215,6 +224,13 @@ class Engine:
             natural_calc = re.fullmatch(r"(?:calculate|compute|what is|calcula|cu[aá]nto es)\s+([\d\s.+*/%()\-]+)\??", message, re.I)
             if natural_calc and re.search(r"\d", natural_calc[1]):
                 calc = natural_calc[1].strip().rstrip('.')
+        if calc is None and optimized:
+            scientific = re.fullmatch(r"(?:calculate|compute|calcula)\s+([a-zA-Z0-9_\s.+*/%(),\-]+)\??", message, re.I)
+            if scientific:
+                expression = scientific[1].strip()
+                names = set(re.findall(r'[A-Za-z_]+', expression))
+                if names and names <= {'pi','e','tau','sqrt','abs','round','sin','cos','tan','asin','acos','atan','log','log10','exp'}:
+                    calc = expression
         if calc is None and optimized and re.fullmatch(r"[\d\s.+*/%()\-]+", message) and re.search(r"\d", message):
             calc = message
         if calc is not None:

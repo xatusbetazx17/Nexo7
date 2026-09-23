@@ -42,7 +42,7 @@ def run(engine, message, options, allow_internet=False):
     route = 'web' if current and internet else 'balanced' if learned or MEMORY.search(message) or re.search(r'\b(create|write|build|crea|escribe|programa)\b', message, re.I) else 'chat'
     exact = next((e for e in engine.learning.entries() if ' '.join(e['question'].casefold().split()) == ' '.join(message.casefold().split())
                   and options['language'] in ('auto', e['language'])), None) if engine.store.preferences()['use_learning'] else None
-    if exact and not current:
+    if exact and not current and not message.startswith('/'):
         result = local_result(exact['answer'])
         result['warnings'].append('Reused your reviewed example; not independently fact-checked.')
         steps.append({'action': 'Reuse reviewed answer', 'result': 'Exact question and compatible language; no model call'})

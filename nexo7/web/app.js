@@ -257,10 +257,34 @@ async function loadWebSources(){
   details.append(node("summary",`[${source.id}] ${source.title} · ${source.expired?"Expired — refresh before reuse":"Available for local reuse"}`),node("p",`Retrieved ${source.retrieved_at}. ${source.source}`),node("pre",source.text));
   if(safeWebLink(source.url)){const link=node("a","Open original source ↗");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";details.append(link);}
   const remove=node("button","Delete","quiet");remove.onclick=async()=>{try{await api("/api/web/"+source.id,"DELETE");await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
-  card.append(details,remove);$("web-sources").append(card);
+  const contribute=node('button','Contribute a note','quiet');
+  contribute.onclick=()=>{noteSource=source.id;$("note-source").textContent='Reference: '+source.title+' · '+source.url;$("note-question").value='';$("note-answer").value='';$("note-rights").value='';resetNote();$("search-contribution").scrollIntoView();};
+  card.append(details,contribute,remove);$("web-sources").append(card);
  }
 }
 $("save-brave-key").onclick=async()=>{try{await api("/api/web/key","POST",{key:$("brave-key").value,storage_rights:$("brave-storage").checked});$("brave-key").value="";await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
 $("clear-brave-key").onclick=async()=>{try{await api("/api/web/key","POST",{key:""});$("brave-key").value="";$("brave-storage").checked=false;await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
 $("reload-web-sources").onclick=()=>loadWebSources().catch(exc=>$("web-status").textContent=exc.message);
 $("clear-web-sources").onclick=async()=>{if(!confirm("Delete saved web excerpts? Existing chat history is separate; use Clear history to remove a conversation."))return;try{await api("/api/web","DELETE");await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
+
+let noteSource=null, noteRevision=0;
+function resetNote(){noteRevision++;for(const id of ['note-own','note-private','note-publish'])$(id).checked=false;$("note-preview").replaceChildren();$("note-status").textContent='';}
+for(const id of ['note-question','note-answer','note-language','note-rights'])$(id).addEventListener('input',resetNote);
+for(const id of ['note-own','note-private','note-publish'])$(id).addEventListener('change',()=>{noteRevision++;$("note-preview").replaceChildren();});
+$("note-prepare").onclick=async()=>{const revision=++noteRevision;$("note-preview").replaceChildren();try{
+ const draft=await api('/api/contributions/prepare','POST',{source_id:noteSource,question:$("note-question").value,answer:$("note-answer").value,language:$("note-language").value,rights_statement:$("note-rights").value,own_rights:$("note-own").checked,no_private_data:$("note-private").checked,publish_and_train:$("note-publish").checked});
+ if(revision!==noteRevision)return;
+ const open=node('a','Open GitHub draft to review and submit ↗');open.href=draft.url;open.target='_blank';open.rel='noopener noreferrer';
+ const download=node('button','Download contribution JSON','quiet');download.onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(draft.payload,null,2)],{type:'application/json'}));const a=node('a','');a.href=url;a.download='nexo-contribution-'+draft.payload.id.slice(0,12)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+ $("note-preview").replaceChildren(node('pre',draft.body),open,download);$("note-status").textContent=draft.warning+' Nothing has been uploaded yet.';
+}catch(exc){$("note-status").textContent=exc.message;}};
+
+$("math-operation").onchange=()=>{const op=$("math-operation").value;$("math-vector").hidden=$("math-vector-label").hidden=op!=='linear';$("math-input-label").textContent=op==='quadratic'?'Coefficients a, b, c separated by commas':op==='linear'?'One matrix row per line, values separated by commas':'Values separated by commas';$("math-input").value=op==='quadratic'?'1, -5, 6':op==='linear'?'2, 1\n1, -1':'0.1, 0.2, 0.3';$("math-vector").value='5, 1';$("math-result").textContent='';};
+$("math-run").onclick=async()=>{try{
+ const operation=$("math-operation").value, split=text=>text.split(',').map(v=>v.trim());
+ let input={operation};
+ if(operation==='linear'){input.matrix=$("math-input").value.trim().split(/\r?\n/).map(split);input.vector=split($("math-vector").value);}
+ else if(operation==='statistics')input.values=split($("math-input").value);
+ else{const values=split($("math-input").value);if(values.length!==3)throw Error('Enter exactly three coefficients');[input.a,input.b,input.c]=values;}
+ const response=await api('/api/math','POST',input);$("math-result").textContent=JSON.stringify(response.result,null,2);
+}catch(exc){$("math-result").textContent=exc.message;}};

@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.8.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.9.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -15,6 +15,12 @@ Windows can attempt NVIDIA/Vulkan acceleration when VRAM is measurable, with CPU
 ## Optional model training and research
 
 The source repository now includes a separate [model improvement workflow](docs/MODEL-RESEARCH.md): reviewed datasets with held-out splits, local-teacher sequence distillation, actual LoRA training, baseline/candidate evaluation, adapter merging and small architecture experiments. Start with `python -m research --help`. These developer tools require optional dependencies and a suitable training computer; they add no training dependencies to the desktop application. The distributed desktop weights remain unchanged until a candidate is independently evaluated, quantized and approved. No general capability gain is claimed.
+
+## Shared notes and offline math
+
+Saved web sources now offer **Contribute a note**: write an original explanation, review rights/privacy/public-training consent, inspect the exact payload, then submit through your own GitHub account. Maintainers can convert approved notes into training-only records. No automatic upload or live weight update occurs. See [contributions](docs/CONTRIBUTIONS.md).
+
+The offline math panel computes linear systems (up to 8 unknowns), quadratic roots including complex roots, and statistics using 50-digit Decimal arithmetic. `/calc` also supports bounded scientific functions; trigonometric arguments are radians. This is not a general symbolic algebra engine or proof of model-level intelligence.
 
 ## Companion mode
 

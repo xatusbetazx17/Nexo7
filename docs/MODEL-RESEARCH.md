@@ -32,6 +32,8 @@ There is no hard memory limiter on these explicit research commands. Use a separ
 machine with sufficient RAM, then evaluate a compressed candidate on the target PC.
 No research dependencies are imported or bundled by the desktop app.
 
+Community notes can be admitted through the separately reviewed [contribution workflow](CONTRIBUTIONS.md). Its converter emits training-only rows; independent held-out splits are still required.
+
 ## 1. Prepare approved data
 
 Input is JSONL: one object per line with these required fields:

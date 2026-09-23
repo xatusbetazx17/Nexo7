@@ -1,3 +1,9 @@
+# Nexo 7 0.9.0 — reviewed search-note contributions and offline math
+
+- Source-linked original-note editor, explicit rights/privacy/CC0/training consent, conservative copying/private-data screens, exact GitHub draft preview and JSON download. User signs in and submits through GitHub; no token storage or background uploads.
+- Separate maintainer review-to-training conversion verifies contribution hashes and keeps imported notes in the training split. No model is automatically trained or promoted.
+- Offline Decimal linear systems, real/complex quadratic roots, statistics and bounded scientific calculator functions; available through UI and commands. Existing model and RAM guards remain.
+
 # Nexo 7 0.8.0 — bounded local companion
 
 - Local-first request routing, exact reviewed-answer reuse without model generation, and one optional research follow-up for expressed uncertainty.

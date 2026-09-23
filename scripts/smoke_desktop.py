@@ -47,6 +47,13 @@ def main():
             assert status["desktop"] and status["provider"] == "demo"
             result = json.loads(request("/api/chat", {"message": "/calc 24.5 * 40", "language": "en"}))
             assert result["answer"] == "980.0" and result["stats"]["model_calls"] == 0
+            math_result = json.loads(request("/api/math", {"operation":"quadratic","a":"1","b":"-5","c":"6"}))
+            assert sorted(math_result["result"]["roots"]) == ["2", "3"]
+            try:
+                request("/api/contributions/prepare", {})
+                raise AssertionError("Contribution accepted without consent")
+            except HTTPError as exc:
+                assert exc.code == 400
             docs = json.loads(request("/api/documents"))["documents"]
             assert any(d["title"] == "Nexo starter guide" for d in docs)
             preferences = json.loads(request("/api/preferences", {"performance": "fast"}))

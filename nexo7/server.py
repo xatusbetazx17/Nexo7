@@ -72,7 +72,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.8.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.9.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -125,6 +125,15 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == "/api/math":
+                    active = controller.config if controller else config
+                    if active.max_tool_calls < 1:
+                        raise ValueError("Math tools are disabled")
+                    from .advanced_math import solve
+                    return self._send(200, solve(body))
+                if path == "/api/contributions/prepare":
+                    from .contributions import prepare
+                    return self._send(200, prepare(web_research, body))
                 if path == "/api/web/key":
                     return self._send(200, web_research.set_key(body.get("key"),body.get("storage_rights",False)))
                 if path == "/api/learning/preview":
