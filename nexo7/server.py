@@ -25,6 +25,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     engine = engine or Engine(config, store, workspace=workspace, web=web_research)
     from .learning import Learning, validate_pack, contribution
     learning = Learning(store)
+    from .task_agent import TaskAgent
+    agent = TaskAgent(store, workspace) if workspace else None
     import_slots = threading.BoundedSemaphore(1)
 
     class Handler(BaseHTTPRequestHandler):
@@ -72,7 +74,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.10.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.11.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -80,6 +82,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     "local_ram_limit_bytes": active.local_ram_limit_bytes if active.provider in {"native", "ollama"} else None,
                     "local_backend": active.local_backend if active.provider in {"native", "ollama"} else None,
                     "desktop": controller is not None})
+            if path == "/api/tasks" and agent:
+                return self._send(200, {"tasks":agent.list()})
             if path == "/api/setup" and controller:
                 return self._send(200, controller.snapshot())
             if path == "/api/web":
@@ -125,6 +129,26 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == '/api/tasks/plan' and agent:
+                    if not controller.operation.acquire(blocking=False):return self._send(429,{'error':'Another model operation is running'})
+                    try:result=agent.plan(body.get('goal'),Engine(controller.config,store,workspace=workspace,web=web_research))
+                    finally:controller.operation.release()
+                    return self._send(200,result)
+                if path == '/api/tasks' and agent:
+                    return self._send(201, agent.create(body))
+                if path.startswith('/api/tasks/') and agent:
+                    parts = path.split('/')
+                    if len(parts)!=5:raise ValueError('Invalid task action')
+                    identifier,action=parts[3:]
+                    if action=='run':
+                        if not controller.operation.acquire(blocking=False):return self._send(429, {'error':'Another model/setup operation is running'})
+                        try:result=agent.run(identifier,Engine(controller.config,store,workspace=workspace,web=web_research))
+                        finally:controller.operation.release()
+                    elif action=='apply':result=agent.apply(identifier,body.get('proposal_id'))
+                    elif action=='rollback':result=agent.rollback(identifier)
+                    elif action=='cancel':result=agent.cancel(identifier)
+                    else:raise ValueError('Unknown task action')
+                    return self._send(200,result)
                 if path == "/api/export/document":
                     from .doc_export import export_document
                     return self._send(200, export_document(body))
@@ -217,6 +241,9 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             if not self._allowed(True):
                 return
             path = urlsplit(self.path).path
+            if path.startswith('/api/tasks/') and agent:
+                try:return self._send(200,agent.delete(path.rsplit('/',1)[1]))
+                except ValueError as exc:return self._send(400,{'error':str(exc)})
             if path == "/api/web":
                 return self._send(200, {"deleted": web_research.delete()})
             if path.startswith("/api/web/"):

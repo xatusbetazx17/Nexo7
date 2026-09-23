@@ -54,6 +54,14 @@
       "filename": "Qwen_Qwen3.5-9B-Q4_K_M.gguf",
       "repository": "bartowski/Qwen_Qwen3.5-9B-GGUF",
       "revision": "182be2fd6c7bc44887d88a91cb03ff009cc9f549"
+    },
+    "qwen2.5:1.5b": {
+      "url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "size": 1117320736,
+      "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "repository": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9"
     }
   }
 }

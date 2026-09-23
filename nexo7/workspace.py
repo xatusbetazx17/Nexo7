@@ -55,10 +55,32 @@ class Workspace:
                 raise ValueError('Artifact not found')
             p=matches[0]
             if p.stat().st_size>200000:raise ValueError('Artifact exceeds size limit')
-            return {'id':identifier,'name':p.name[34:],'content':p.read_text(encoding='utf-8')}
+            return {'id':identifier,'name':p.name[34:],'content':p.read_bytes().decode('utf-8')}
 
     def delete(self, identifier):
         with self.lock:
             item=self.read(identifier)
             (self.root/(identifier+'--'+item['name'])).unlink()
             return True
+
+    def replace(self, identifier, expected_hash, content):
+        """Atomic text replacement, conditional on the exact reviewed base content."""
+        import hashlib
+        import os
+        if not isinstance(content,str) or not 0 <= len(content.encode('utf-8')) <= 200000:
+            raise ValueError('Replacement content must contain at most 200000 UTF-8 bytes')
+        with self.lock:
+            item=self.read(identifier)
+            if hashlib.sha256(item['content'].encode()).hexdigest()!=expected_hash:
+                raise ValueError('File changed since review; reload and propose a new change')
+            if sum(e['bytes'] for e in self.list())-len(item['content'].encode())+len(content.encode())>20_000_000:
+                raise ValueError('Workspace quota reached')
+            target=self.root/(identifier+'--'+item['name'])
+            temporary=self.root/('.change-'+uuid.uuid4().hex)
+            try:
+                with temporary.open('x',encoding='utf-8',newline='') as stream:
+                    stream.write(content);stream.flush();os.fsync(stream.fileno())
+                temporary.chmod(0o600);os.replace(temporary,target)
+            finally:
+                temporary.unlink(missing_ok=True)
+            return self.read(identifier)

@@ -1,3 +1,12 @@
+# Nexo 7 0.11.0 — persistent workspace tasks and measured model comparison
+
+- Model-assisted draft plans, persistent 1–4 step tasks, bounded retries and compact file ledger.
+- Full proposed-file/diff review; conditional atomic edits, read-back verification and reverse rollback that refuses to overwrite newer work.
+- Syntax/content checks plus optional numeric Python function cases using a restricted AST interpreter, with no arbitrary code execution.
+- Published three-model diagnostic with raw answers, failures and manual definition review. Existing default retained; optional pinned Qwen2.5 1.5B Instruct candidate requires a 3 GB model budget.
+- Disabled native server prompt-cache and context-checkpoint defaults after a longer low-memory task sequence exposed excess memory use.
+- Existing features and low-memory profiles preserved. No general intelligence, universal correctness or superiority claim.
+
 # Nexo 7 0.10.0 — local companion controls and smaller memory profile
 
 - Native low-memory profile for 4 GB installed / at least 2.5 GB available; bounded batches, shorter context and one model call. New native requests pause below 512 MB available. Process guards do not cover the whole PC.

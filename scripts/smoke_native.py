@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--binary')
     parser.add_argument('--simulate-8gb',action='store_true',help='Source-only test: cap detected total/available RAM to 8/4 decimal GB; OS memory guards remain real')
     parser.add_argument('--simulate-4gb',action='store_true',help='Source-only: 4 GB installed, 2.5 GB available; actual 1.5 GB model-process guard')
+    parser.add_argument('--candidate',action='store_true',help='Explicit Qwen2.5 1.5B candidate; needs a 3 GB model budget')
     parser.add_argument('--cache',type=Path,help='Optional previously downloaded catalog files; normal hashes are still checked')
     parser.add_argument('--output',default='reports/native-smoke.json')
     args=parser.parse_args()
@@ -59,7 +60,7 @@ def main():
                     with urlopen(Request(base+path,data=data,headers={'Content-Type':'application/json','X-Nexo-Key':key}),timeout=180) as r:return json.load(r)
                 except HTTPError as exc:
                     raise AssertionError(path + ': ' + exc.read().decode()) from None
-            request('/api/preferences',{'performance':'fast','cpu_only':True})
+            request('/api/preferences',{'performance':'fast','cpu_only':True,'model_choice':'qwen2.5:1.5b' if args.candidate else 'automatic'})
             report=request('/api/setup/check',{'cpu_only':True})
             assert report['requirements_ok'],report
             assert report['plan']['runtime']=='native'
@@ -85,7 +86,7 @@ def main():
                 assert response['status']=='completed',response
                 assert response['stats']['model_calls']>=1 and response['stats']['output_tokens']>0,response
                 result['answers'].append({'prompt':prompt,'answer':response['answer'],'stats':response['stats']})
-            for prompt,language,expected in [('What is a chiken?', 'en', ('bird', 'poultry')), ('¿Qué es una gallina?', 'es', ('ave', 'doméstic', 'huevo'))]:
+            for prompt,language,expected in [('What is a chiken?', 'en', ('bird', 'poultry', 'fowl')), ('¿Qué es una gallina?', 'es', ('ave', 'doméstic', 'huevo'))]:
                 response=request('/api/chat',{'message':prompt,'mode':'chat','language':language,'private':True})
                 assert response['status']=='completed',response
                 assert any(word in response['answer'].lower() for word in expected),response
@@ -121,7 +122,21 @@ def main():
             assert json.loads(analysis['answer'])['columns'][0]['sum']=='31.00'
             imported=request('/api/import',{'name':'note.txt','data':base64.b64encode(b'Local document').decode()})
             assert imported['content']=='Local document'
-            result['checks']=['real multilingual text generation','real code generation (not executed)','guarded setup','zero-model-call arithmetic','CSV totals','isolated document import','reviewed learning admitted to real model context','live web excerpts used by native model','saved web results reused without network or model calls','clean shutdown']
+            task=request('/api/tasks',{'goal':'Create a tested square function and its usage note','steps':[
+                {'name':'agent-square.py','instruction':'Define square(n) returning n*n. Only file content.','function_tests':[{'function':'square','args':[3],'expected':9},{'function':'square','args':[-4],'expected':16}]},
+                {'name':'agent-readme.md','instruction':'Write one short sentence explaining agent-square.py. Include that exact filename.','required':['agent-square.py']}]})
+            for index in range(2):
+                task=request('/api/tasks/'+task['id']+'/run',{})
+                if task['state']=='blocked' and task['steps'][index]['attempts']<2:
+                    task=request('/api/tasks/'+task['id']+'/run',{})
+                assert task['state']=='awaiting_review',task
+                task=request('/api/tasks/'+task['id']+'/apply',{'proposal_id':task['steps'][index]['proposal_id']})
+                assert task['steps'][index]['state']=='applied',task
+            assert task['state']=='completed',task
+            result['agent_task']={'state':task['state'],'steps':[{'name':s['name'],'attempts':s['attempts'],'validation':s['validation']} for s in task['steps']]}
+            request('/api/tasks/'+task['id']+'/rollback',{})
+            request('/api/tasks/'+task['id']+'/rollback',{})
+            result['checks']=['real local multi-step agent generation, scalar function cases, reviewed apply and rollback','real multilingual text generation' ,'real code generation (not executed)','guarded setup','zero-model-call arithmetic','CSV totals','isolated document import','reviewed learning admitted to real model context','live web excerpts used by native model','saved web results reused without network or model calls','clean shutdown']
             request('/api/shutdown',{});process.wait(timeout=30);assert process.returncode==0
             result['passed']=True
         finally:

@@ -24,7 +24,7 @@ from nexo7.workspace import Workspace
 
 class NativeTests(unittest.TestCase):
     def test_catalog_has_pinned_hashes_and_supported_models(self):
-        self.assertEqual(set(CATALOG['models']),{'qwen3.5:0.8b','qwen3.5:2b','qwen3.5:4b','qwen3.5:9b'})
+        self.assertEqual(set(CATALOG['models']),{'qwen3.5:0.8b','qwen3.5:2b','qwen3.5:4b','qwen3.5:9b','qwen2.5:1.5b'})
         for item in [*CATALOG['models'].values(),*CATALOG['runtimes'].values()]:
             self.assertRegex(item['sha256'],r'^[a-f0-9]{64}$')
             self.assertTrue(item['url'].startswith('https://'))

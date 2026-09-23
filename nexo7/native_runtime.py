@@ -110,7 +110,7 @@ def extract_runtime(archive, destination):
     return matches[0]
 
 
-def native_plan(cpu_only=False, performance='balanced'):
+def native_plan(cpu_only=False, performance='balanced', model_choice='automatic'):
     hw = detect_hardware()
     if hw.system not in {'Windows','Linux'} or hw.machine.lower() not in {'amd64','x86_64'}:
         raise ValueError('This native release supports 64-bit x86 Windows and glibc Linux')
@@ -119,6 +119,12 @@ def native_plan(cpu_only=False, performance='balanced'):
     use_cpu = cpu_only or hw.system == 'Linux' or hw.gpu_hint != 'nvidia' or hw.gpu_index != 0
     plan = plan_local(hw, cpu_only=use_cpu, performance=performance, native=True)
     if performance == 'fast': plan['profiles'] = [p for p in plan['profiles'] if p['model'] == 'qwen3.5:0.8b']
+    if model_choice not in ('automatic','qwen2.5:1.5b'):raise ValueError('Unknown model choice')
+    if model_choice == 'qwen2.5:1.5b':
+        if plan['ram_limit_bytes'] < 3_000_000_000:raise ValueError('This candidate needs a 3 GB model budget plus host headroom. Keep Automatic on lower-memory devices.')
+        plan['profiles'] = [dict(model=model_choice,minimum_budget=3_000_000_000,max_download=1_200_000_000,context_tokens=4096)]
+        plan['low_memory'] = True
+    plan['model_choice'] = model_choice
     plan['runtime'] = 'native'
     plan['backend'] = 'vulkan' if plan['backend'] == 'nvidia' and not use_cpu else 'cpu'
     plan['guard_scope'] = ('Windows job committed memory (worker + model)' if hw.system == 'Windows'
@@ -163,16 +169,18 @@ class NativeProcess:
         self.process.stdout.close()
 
 
-def start_native(database, *, cpu_only=False, emit=print, cancel=None, performance='balanced'):
+def start_native(database, *, cpu_only=False, emit=print, cancel=None, performance='balanced', model_choice='automatic'):
     cancelled(cancel)
-    plan = native_plan(cpu_only, performance)
+    def get_plan(cpu):
+        return native_plan(cpu,performance) if model_choice=='automatic' else native_plan(cpu,performance,model_choice=model_choice)
+    plan = get_plan(cpu_only)
     root = Path(database).resolve().parent / 'native'
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     system = platform.system()
     last_error = 'No profile could load'
     backends = [plan['backend']] + (['cpu'] if plan['backend'] != 'cpu' else [])
     for backend in backends:
-        current = native_plan(backend == 'cpu', performance)
+        current = get_plan(backend == 'cpu')
         backend = current['backend']
         entry = CATALOG['runtimes'][system+'-'+backend]
         archive = download(entry, root / entry['url'].rsplit('/',1)[1], emit, cancel)
@@ -186,7 +194,7 @@ def start_native(database, *, cpu_only=False, emit=print, cancel=None, performan
             emit('Preparing '+profile['model']+' with '+backend.upper()+'; '+current['guard_scope'])
             model_path = download(model, root / 'models' / model['filename'], emit, cancel)
             # Recheck available host RAM after downloads and immediately before loading.
-            refreshed = native_plan(backend == 'cpu', performance)
+            refreshed = get_plan(backend == 'cpu')
             if profile['minimum_budget'] > refreshed['ram_limit_bytes']: continue
             limit = refreshed['ram_limit_bytes']
             key = secrets.token_urlsafe(32)
@@ -196,7 +204,7 @@ def start_native(database, *, cpu_only=False, emit=print, cancel=None, performan
                        '--host','127.0.0.1','--port',str(port), '-t',str(current['threads']), '-tb',str(current['threads']),
                        '-c',str(profile['context_tokens']), '-b','128', '-ub','64', '-np','1', '-n','512', '-lm','none',
                        '-ngl','99' if backend == 'vulkan' else '0', '--fit','off','--reasoning','off',
-                       '--no-webui','--no-agent','--no-ui-mcp-proxy','--no-slots','--log-disable']
+                       '--cache-ram','0','--ctx-checkpoints','0','--no-webui','--no-agent','--no-ui-mcp-proxy','--no-slots','--log-disable']
             if backend == 'vulkan': command += ['--device','Vulkan0']
             runtime = None
             try:

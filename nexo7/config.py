@@ -51,7 +51,11 @@ class Config:
             raise ValueError("response_language must be auto or a language code such as en or es")
         if self.provider in {"ollama", "native"}:
             from .hardware import PROFILES
-            if self.model not in {p.model for p in PROFILES}:
+            supported = {p.model for p in PROFILES}
+            if self.provider == "native":
+                import json
+                supported.update(json.loads((Path(__file__).parent / "native_catalog.json").read_text())["models"])
+            if self.model not in supported:
                 raise ValueError("Bounded local mode only accepts the supported Qwen model profiles")
             if any(value and value != self.model for value in (self.fast_model, self.deep_model)):
                 raise ValueError("All modes share one local model to control memory use")

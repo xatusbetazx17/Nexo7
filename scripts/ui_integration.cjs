@@ -67,6 +67,13 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>useful.disabled);
   assert((await request('/api/documents')).documents.some(x=>x.source.includes('user-approved')));
   d.getElementById('workspace-tab').click();
+  d.getElementById('task-goal').value='Write a project guide';
+  d.getElementById('task-steps').value='guide.md | Write a short guide | Guide';
+  d.getElementById('task-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await waitFor(()=>d.getElementById('tasks').textContent.includes('Write a project guide'));
+  assert.equal((await request('/api/tasks')).tasks.length,1);
+  [...d.querySelectorAll('#tasks button')].find(b=>b.textContent==='Delete task history').click();
+  await waitFor(()=>!d.getElementById('tasks').textContent.includes('Write a project guide'));
   d.getElementById('artifact-name').value='example.py';
   d.getElementById('artifact-content').value='print("review before running")';
   d.getElementById('artifact-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
@@ -164,7 +171,7 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>!d.getElementById('web-sources').textContent.includes('Network fixture'));
   assert.equal((await request('/api/web')).sources.length,0);
   assert.deepEqual(errors,[]);
-  const result={environment:'JSDOM with real local HTTP server; not a rendered-browser layout test',passed:true,checks:['English setup view','low-memory explanation','download disabled without prerequisites','demo navigation','calculator response','document import','literal HTML handling','setup navigation','persistent preferences','explicitly approved example','authenticated artifact API','workspace create/read/delete','bounded text import','CSV analysis','reviewed learning creation','literal learning HTML','consent resets on edit','public draft without automatic upload','community pack review and import','opt-in web lookup with fixture provider','saved web reuse','personality preferences persist','local DOCX export','source-linked reviewed learning','original-note draft and consent reset','offline quadratic and linear math UI','web source deletion','no JavaScript errors']};
+  const result={environment:'JSDOM with real local HTTP server; not a rendered-browser layout test',passed:true,checks:['English setup view','low-memory explanation','download disabled without prerequisites','demo navigation','calculator response','document import','literal HTML handling','setup navigation','persistent preferences','explicitly approved example','authenticated artifact API','workspace create/read/delete','persistent task plan UI and deletion','bounded text import','CSV analysis','reviewed learning creation','literal learning HTML','consent resets on edit','public draft without automatic upload','community pack review and import','opt-in web lookup with fixture provider','saved web reuse','personality preferences persist','local DOCX export','source-linked reviewed learning','original-note draft and consent reset','offline quadratic and linear math UI','web source deletion','no JavaScript errors']};
   fs.mkdirSync(path.join(root,'reports'),{recursive:true});
   fs.writeFileSync(path.join(root,'reports/ui-integration.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result));

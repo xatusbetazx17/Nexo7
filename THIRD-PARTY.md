@@ -23,3 +23,15 @@ The optional cross-assembled Windows launcher uses Zig and mingw-w64 components.
 ## Bundled learning data
 
 `nexo7/knowledge/community.json` is released under CC0-1.0 (https://creativecommons.org/publicdomain/zero/1.0/legalcode). Other application source remains under the repository MIT license. New community examples require explicit contributor consent and rights review; this data license does not apply to a user's private notes or locally saved examples.
+
+## Optional Qwen2.5 1.5B Instruct candidate
+
+The native candidate uses Qwen's official Q4_K_M GGUF from
+https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF at revision
+`91cad51170dc346986eccefdc2dd33a9da36ead9`, under Apache-2.0 as declared in
+that repository's model card. Its file hash and download size are pinned in
+`nexo7/native_catalog.json`. Weights are downloaded separately, not bundled.
+
+The task-agent implementation was written independently after reviewing the
+architecture described by Emir Code (https://github.com/daristanapeyvan/emircode).
+No Emir Code source files were copied or incorporated.

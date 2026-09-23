@@ -81,7 +81,7 @@ async function initialize(first=true) {
     const config=await api("/api/status"); $("login").hidden=true;
     $("provider").textContent = config.provider === "demo" ? "Demo · no AI model" : `Configured: ${config.provider} · ${config.model}`;
     const preferences=await api("/api/preferences");
-    $("personality").value=preferences.personality;$("adapt-tone").checked=preferences.adapt_tone;$("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
+    $("model-choice").value=preferences.model_choice;$("personality").value=preferences.personality;$("adapt-tone").checked=preferences.adapt_tone;$("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
     const language = preferences.response_language || config.response_language || "auto";
     $("language").value=language;
     $("resource-note").textContent = config.local_ram_limit_bytes ? `Native memory budget: ${(config.local_ram_limit_bytes/1e9).toFixed(1)} GB · ${config.local_backend}` : "";
@@ -188,11 +188,11 @@ $("quit").onclick=async()=>{
   catch(exc){error(exc.message);}
 };
 async function savePreferences(){
- return api("/api/preferences","POST",{personality:$("personality").value,adapt_tone:$("adapt-tone").checked,performance:$("performance").value,style:$("reply-style").value,auto_start:$("auto-start").checked,cpu_only:$("cpu-only").checked,response_language:$("language").value});
+ return api("/api/preferences","POST",{model_choice:$("model-choice").value,personality:$("personality").value,adapt_tone:$("adapt-tone").checked,performance:$("performance").value,style:$("reply-style").value,auto_start:$("auto-start").checked,cpu_only:$("cpu-only").checked,response_language:$("language").value});
 }
 $("save-preferences").onclick=async()=>{try{await savePreferences();$("preferences-status").textContent="Saved. Hardware settings apply at the next local start.";}catch(exc){$("preferences-status").textContent=exc.message;}};
 $("language").onchange=async()=>{try{await api("/api/preferences","POST",{response_language:$("language").value});}catch(exc){error(exc.message);}};
-function showWorkspace(){hideSetup();$("chat-view").hidden=true;$("memory-view").hidden=true;$("workspace-view").hidden=false;$("chat-tab").classList.remove("active");$("memory-tab").classList.remove("active");$("workspace-tab").classList.add("active");$("page-title").textContent="My workspace.";loadArtifacts().catch(exc=>$("artifact-status").textContent=exc.message);}
+function showWorkspace(){hideSetup();$("chat-view").hidden=true;$("memory-view").hidden=true;$("workspace-view").hidden=false;$("chat-tab").classList.remove("active");$("memory-tab").classList.remove("active");$("workspace-tab").classList.add("active");$("page-title").textContent="My workspace.";loadArtifacts().catch(exc=>$("artifact-status").textContent=exc.message);loadTasks().catch(exc=>$("task-status").textContent=exc.message);}
 $("workspace-tab").onclick=showWorkspace;
 async function loadArtifacts(){
  const data=await api("/api/artifacts");$("artifacts").replaceChildren();
@@ -301,3 +301,44 @@ $("export-docx").onclick=async()=>{try{
  const bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes],{type:file.mime}));
  const a=node('a','');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$("artifact-status").textContent=file.notice;
 }catch(exc){$("artifact-status").textContent=exc.message;}};
+
+let taskBusy=false;
+async function loadTasks(){
+ const data=await api('/api/tasks');$("tasks").replaceChildren();
+ for(const job of data.tasks){
+  const card=node('div','','document-card');card.append(node('h3',job.goal),node('p',job.state+' · '+job.tokens_reserved+' reserved output tokens · '+job.active_seconds+' active seconds'));
+  for(const step of job.steps){
+   const details=document.createElement('details');details.append(node('summary',step.name+' — '+step.state+' · '+step.attempts+' attempts'),node('p',step.instruction));
+   if(step.validation)details.append(node('pre',JSON.stringify(step.validation,null,2)));
+   if(job.requires_reconciliation)details.append(node('h4','Before application'),node('pre',step.before||'(new file)'));
+   if(job.state==='blocked'&&step.candidate)details.append(node('h4','Last generated attempt'),node('pre',step.candidate));
+   if(step.state==='review'){details.open=true;details.append(node('pre',step.diff||'(No text changes)'),node('h4','Full proposed file'),node('pre',step.candidate));}
+   card.append(details);
+  }
+  if(job.error)card.append(node('p',job.error,'warning'));
+  const ledger=document.createElement('details');ledger.append(node('summary','Task history'));
+  for(const event of job.ledger)ledger.append(node('p',new Date(event.time*1000).toLocaleString()+' · '+event.message));card.append(ledger);
+  function action(label,route,body={}){const button=node('button',label,'quiet');button.disabled=taskBusy;
+   button.onclick=async()=>{if(taskBusy)return;if(route==='apply'&&!confirm('Apply this exact reviewed proposal to the workspace file?'))return;if(route==='rollback'&&!confirm('Undo the most recent applied step if the file has not changed?'))return;
+    taskBusy=true;button.disabled=true;$("task-status").textContent='Working on '+job.goal+'…';
+    try{await api('/api/tasks/'+job.id+'/'+route,'POST',body);$("task-status").textContent='Task updated.';await loadArtifacts();}
+    catch(exc){$("task-status").textContent=exc.message;}finally{taskBusy=false;await loadTasks();}
+   };card.append(button);
+  }
+  if(['ready','blocked'].includes(job.state))action('Generate / resume next step','run');
+  if(job.state==='awaiting_review'){const step=job.steps.find(s=>s.state==='review');action('Apply reviewed change','apply',{proposal_id:step.proposal_id});}
+  if(job.state!=='running'&&job.steps.some(s=>s.state==='applied'))action('Undo last applied step','rollback');
+  if(!['running','completed','cancelled'].includes(job.state))action('Cancel task','cancel');
+  if(job.state!=='running'){const remove=node('button','Delete task history','quiet');remove.onclick=async()=>{if(taskBusy||!confirm('Delete this task and rollback snapshots? Applied workspace files remain.'))return;try{await api('/api/tasks/'+job.id,'DELETE');await loadTasks();}catch(exc){$("task-status").textContent=exc.message;}};card.append(remove);}
+  $("tasks").append(card);
+ }
+}
+$("reload-tasks").onclick=()=>loadTasks().catch(exc=>$("task-status").textContent=exc.message);
+$("task-form").onsubmit=async event=>{event.preventDefault();try{
+ const steps=$("task-steps").value.trim().split(/\r?\n/).filter(s=>s.trim()).map(line=>{const parts=line.split('|').map(x=>x.trim());if(parts.length<2||parts.length>4)throw Error('Use filename | instruction | optional required text');return {name:parts[0],instruction:parts[1],required:parts[2]?parts[2].split(';;').map(x=>x.trim()):[],function_tests:parts[3]?JSON.parse(parts[3]):[]};});
+ await api('/api/tasks','POST',{goal:$("task-goal").value,steps});$("task-status").textContent='Plan saved. Generate the first step when ready.';await loadTasks();
+}catch(exc){$("task-status").textContent=exc.message;}};
+
+$("suggest-task-steps").onclick=async()=>{if(taskBusy)return;taskBusy=true;$("suggest-task-steps").disabled=true;$("task-status").textContent='Suggesting a plan…';try{
+ const plan=await api('/api/tasks/plan','POST',{goal:$("task-goal").value});$("task-steps").value=plan.steps.map(s=>s.name+' | '+s.instruction+' | '+s.required.join(';;')).join('\n');$("task-status").textContent=plan.notice;
+}catch(exc){$("task-status").textContent=exc.message;}finally{taskBusy=false;$("suggest-task-steps").disabled=false;}};

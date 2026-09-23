@@ -14,6 +14,7 @@
     "explicitly approved example",
     "authenticated artifact API",
     "workspace create/read/delete",
+    "persistent task plan UI and deletion",
     "bounded text import",
     "CSV analysis",
     "reviewed learning creation",

@@ -33,7 +33,7 @@ class SetupController:
         hardware = detect_hardware()
         report = {"hardware": asdict(hardware), "requirements_ok":False, "plan":None, "error":None}
         try:
-            report["plan"] = native_plan(cpu_only, self.preferences["performance"])
+            report["plan"] = native_plan(cpu_only, self.preferences["performance"], model_choice=self.preferences.get("model_choice","automatic"))
             report["requirements_ok"] = True
         except (ValueError, OSError) as exc:
             report["error"] = str(exc)
@@ -57,7 +57,7 @@ class SetupController:
             try:
                 self.emit("Checking native runtime and available memory…")
                 config, plan = start_native(self.config.database, cpu_only=cpu_only,
-                                          emit=self.emit, cancel=self.cancel, performance=self.preferences["performance"])
+                                          emit=self.emit, cancel=self.cancel, performance=self.preferences["performance"], model_choice=self.preferences.get("model_choice","automatic"))
                 with self.lock:
                     self.config = replace(config, response_language=language)
                     self.owns_runtime = True

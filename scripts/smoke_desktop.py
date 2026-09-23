@@ -57,6 +57,10 @@ def main():
             exported = json.loads(request('/api/export/document', {'title':'Local report','content':'# Summary\nWorks offline.'}))
             import base64
             assert base64.b64decode(exported['data']).startswith(b'PK')
+            task = json.loads(request('/api/tasks', {'goal':'Write a guide','steps':[{'name':'guide.md','instruction':'Write a guide'}]}))
+            assert task['state']=='ready'
+            assert any(j['id']==task['id'] for j in json.loads(request('/api/tasks'))['tasks'])
+            request('/api/tasks/'+task['id']+'/cancel', {})
             docs = json.loads(request("/api/documents"))["documents"]
             assert any(d["title"] == "Nexo starter guide" for d in docs)
             preferences = json.loads(request("/api/preferences", {"performance": "fast"}))

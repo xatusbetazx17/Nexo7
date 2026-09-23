@@ -34,7 +34,7 @@ class Store:
 
     def preferences(self):
         defaults = {"performance": "balanced", "response_language": "auto", "style": "concise",
-                    "personality": "neutral", "adapt_tone": False, "cpu_only": False, "auto_start": False, "local_metrics": False, "use_learning": True}
+                    "model_choice": "automatic", "personality": "neutral", "adapt_tone": False, "cpu_only": False, "auto_start": False, "local_metrics": False, "use_learning": True}
         with self.lock:
             row = self.db.execute("SELECT value FROM meta WHERE key='preferences'").fetchone()
         if row:
@@ -49,6 +49,8 @@ class Store:
             values = {**self.preferences(), **updates}
             if values["performance"] not in {"fast", "balanced", "quality"} or values["style"] not in {"concise", "detailed", "accessible"}:
                 raise ValueError("Invalid preference value")
+            if values["model_choice"] not in ("automatic","qwen2.5:1.5b"):
+                raise ValueError("Unknown model choice")
             from .personality import PERSONALITIES
             if values["personality"] not in PERSONALITIES:
                 raise ValueError("Unknown personality")

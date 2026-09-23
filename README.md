@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.10.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.11.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -150,3 +150,7 @@ This is bounded source retrieval, not automatic model training or infallible kno
 ## Local companion controls
 
 Version 0.10 adds a smaller native profile (4 GB installed **and at least 2.5 GB available**), personality preferences, source-linked reviewed notes with expiry, outbound privacy checks and offline Word export. These are application features, not new trained model weights or a guarantee of accuracy. See [local companion guide](docs/COMPANION.md) for resource scopes, privacy limits and usage.
+
+## Persistent workspace agent
+
+Version 0.11 adds local model-assisted task planning, bounded generation/correction, persistent steps, reviewed diffs, conditional atomic edits, file verification and rollback. Optional tests check pure scalar Python functions without executing arbitrary code. Existing learning, documents, search and memory guards remain. See [task-agent guide and model comparison](docs/TASK-AGENT.md). An optional Qwen2.5 1.5B candidate is available when a 3 GB model budget fits; it is not a universal quality upgrade.
