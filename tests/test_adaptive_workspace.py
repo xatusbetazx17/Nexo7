@@ -24,7 +24,7 @@ class AdaptiveTests(unittest.TestCase):
         self.assertEqual(linux['ram_limit_bytes'],3*GB)
         self.assertEqual(linux['profiles'][0]['model'],'qwen3.5:0.8b')
     def test_native_windows_still_refuses_insufficient_available_memory(self):
-        hw=Hardware('Windows','AMD64',8*GB,3_499_000_000,4)
+        hw=Hardware('Windows','AMD64',8*GB,2_499_000_000,4)
         with self.assertRaisesRegex(ValueError,'additional headroom'):
             plan_local(hw,native=True)
         p=plan_local(replace(hw,available_bytes=3_500_000_000),native=True)
@@ -41,7 +41,7 @@ class AdaptiveTests(unittest.TestCase):
         hw=Hardware('Linux','x86_64',8*GB,4*GB,4)
         self.assertEqual(plan_local(hw,native=True)['profiles'][0]['model'],'qwen3.5:0.8b')
         with self.assertRaises(ValueError):
-            plan_local(replace(hw,available_bytes=3_499_000_000),native=True)
+            plan_local(replace(hw,available_bytes=2_499_000_000),native=True)
         bigger=replace(hw,total_bytes=16*GB,available_bytes=12*GB)
         self.assertEqual(plan_local(bigger,native=True)['profiles'][0]['model'],'qwen3.5:4b')
         self.assertGreater(plan_local(bigger,native=True)['ram_limit_bytes'],3*GB)

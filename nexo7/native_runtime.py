@@ -194,7 +194,7 @@ def start_native(database, *, cpu_only=False, emit=print, cancel=None, performan
                 sock.bind(('127.0.0.1',0)); port = sock.getsockname()[1]
             command = [str(executable), 'serve', '-m', str(model_path), '--alias', profile['model'],
                        '--host','127.0.0.1','--port',str(port), '-t',str(current['threads']), '-tb',str(current['threads']),
-                       '-c',str(profile['context_tokens']), '-np','1', '-n','512', '-lm','none',
+                       '-c',str(profile['context_tokens']), '-b','128', '-ub','64', '-np','1', '-n','512', '-lm','none',
                        '-ngl','99' if backend == 'vulkan' else '0', '--fit','off','--reasoning','off',
                        '--no-webui','--no-agent','--no-ui-mcp-proxy','--no-slots','--log-disable']
             if backend == 'vulkan': command += ['--device','Vulkan0']
@@ -216,9 +216,9 @@ def start_native(database, *, cpu_only=False, emit=print, cancel=None, performan
                 identifier = secrets.token_hex(16)
                 cfg = Config(provider='native', model=profile['model'], native_runtime_id=identifier,
                              database=str(database), local_ram_limit_bytes=limit, local_threads=current['threads'],
-                             local_backend=backend, ollama_context_tokens=profile['context_tokens'], history_messages=4,
-                             max_context_chars=12000, max_output_tokens=256 if performance == 'fast' else 512,
-                             max_model_calls=2 if performance == 'fast' else 3,
+                             local_backend=backend, ollama_context_tokens=profile['context_tokens'], history_messages=2 if current['low_memory'] else 4,
+                             max_context_chars=12000, max_output_tokens=256 if performance == 'fast' or current['low_memory'] else 512,
+                             max_model_calls=1 if current['low_memory'] else (2 if performance == 'fast' else 3),
                              max_total_output_tokens=512 if performance == 'fast' else 1536, timeout_seconds=180)
                 with LOCK: ACTIVE[identifier] = (runtime,url,cfg)
                 current.update(ram_limit_bytes=limit,enforced_limit_bytes=runtime.receipt['enforced_limit'],selected_model=profile['model'],guard=runtime.receipt['guard'])

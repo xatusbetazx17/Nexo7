@@ -155,24 +155,27 @@ def plan_local(hardware, daemon_memory=None, cpu_only=False, performance="balanc
     video_budget = max(0, hardware.gpu_free_bytes - max(512_000_000, hardware.gpu_total_bytes // 5))
     if gpu == "nvidia" and video_budget < PROFILES[0].max_download + 256_000_000:
         gpu = "cpu"
-    candidates = [p for p in PROFILES if p.minimum_budget <= budget
+    profiles = ((Profile("qwen3.5:0.8b", 1_500_000_000, 1_500_000_000, 4096),)
+                if native and budget < PROFILES[0].minimum_budget else PROFILES)
+    candidates = [p for p in profiles if p.minimum_budget <= budget
                   and not (gpu in {"cpu", "amd"} and p.model.endswith(":9b"))
                   and (gpu != "nvidia" or p.max_download + 256_000_000 <= video_budget)]
     if performance == "fast":
         ceiling = 0 if hardware.total_bytes <= 8_600_000_000 else 1
-        candidates = [p for p in candidates if p in PROFILES[:ceiling+1]]
+        candidates = [p for p in candidates if p.model in {v.model for v in PROFILES[:ceiling+1]}]
     elif performance == "balanced" and gpu == "cpu" and hardware.total_bytes <= 8_600_000_000:
-        candidates = [p for p in candidates if p in PROFILES[:2]]
+        candidates = [p for p in candidates if p.model in {v.model for v in PROFILES[:2]}]
     if not candidates:
         raise ValueError(f"Not enough available RAM: {hardware.available_bytes/GB:.2f} GB available, "
                          f"{reserve/GB:.2f} GB additional headroom, {budget/GB:.2f} GB model budget. "
-                         f"The smallest profile needs {PROFILES[0].minimum_budget/GB:.2f} GB. "
+                         f"The smallest profile needs {profiles[0].minimum_budget/GB:.2f} GB. "
                          "Close applications and check again, or use demo mode.")
     return {"hardware": asdict(hardware), "ram_limit_bytes": budget,
             "absolute_ram_ceiling_bytes": ABSOLUTE_RAM_LIMIT,
             "reserved_host_bytes": reserve, "backend": gpu,
             "threads": min(8, max(1, hardware.cpu_threads // 2)),
             "profiles": [{**asdict(p), "context_tokens": min(p.context_tokens, 6144 if budget < 6*GB else 8192)} for p in reversed(candidates)],
+            "low_memory": budget < PROFILES[0].minimum_budget,
             "performance": performance, "gpu_index": hardware.gpu_index,
             "video_budget_bytes": video_budget if gpu == "nvidia" else None,
             "video_budget_enforced": False,

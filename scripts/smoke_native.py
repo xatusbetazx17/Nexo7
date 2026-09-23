@@ -11,6 +11,7 @@ import tempfile
 import time
 from urllib.parse import urlsplit, parse_qs
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,11 +20,13 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--binary')
     parser.add_argument('--simulate-8gb',action='store_true',help='Source-only test: cap detected total/available RAM to 8/4 decimal GB; OS memory guards remain real')
+    parser.add_argument('--simulate-4gb',action='store_true',help='Source-only: 4 GB installed, 2.5 GB available; actual 1.5 GB model-process guard')
     parser.add_argument('--cache',type=Path,help='Optional previously downloaded catalog files; normal hashes are still checked')
     parser.add_argument('--output',default='reports/native-smoke.json')
     args=parser.parse_args()
-    if args.simulate_8gb and args.binary:parser.error('--simulate-8gb is source-only')
-    result={'simulated_memory':args.simulate_8gb,'scope':'Desktop API with actual native model, OS guard and no Docker', 'platform':sys.platform,'packaged':bool(args.binary),'answers':[]}
+    if args.simulate_8gb and args.simulate_4gb:parser.error('Choose one memory simulation')
+    if (args.simulate_8gb or args.simulate_4gb) and args.binary:parser.error('--simulate-8gb is source-only')
+    result={'simulated_memory':args.simulate_8gb or args.simulate_4gb, 'installed_4gb':args.simulate_4gb,'scope':'Desktop API with actual native model, OS guard and no Docker', 'platform':sys.platform,'packaged':bool(args.binary),'answers':[]}
     with tempfile.TemporaryDirectory(prefix='nexo-real-') as tmp:
         root=Path(tmp)
         if args.cache:
@@ -33,11 +36,12 @@ def main():
                     try:os.link(source,target)
                     except OSError:shutil.copy2(source,target)
         command=[str(Path(args.binary).resolve())] if args.binary else [sys.executable,'-m','nexo7.desktop']
-        if args.simulate_8gb:
+        if args.simulate_8gb or args.simulate_4gb:
+            total, available = (4_000_000_000, 2_500_000_000) if args.simulate_4gb else (8_000_000_000, 4_000_000_000)
             command=[sys.executable,'-c',
                 "from dataclasses import replace; import nexo7.native_runtime as runtime; "
                 "original=runtime.detect_hardware; "
-                "runtime.detect_hardware=lambda: (lambda hw: replace(hw,total_bytes=min(hw.total_bytes,8_000_000_000),available_bytes=min(hw.available_bytes,4_000_000_000)))(original()); "
+                f"runtime.detect_hardware=lambda: (lambda hw: replace(hw,total_bytes=min(hw.total_bytes,{total}),available_bytes=min(hw.available_bytes,{available})))(original()); "
                 "from nexo7.desktop import main; main()"]
         process=subprocess.Popen(command+['--no-open','--data-dir',str(root)],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         try:
@@ -51,7 +55,10 @@ def main():
             key=parse_qs(parsed.fragment)['token'][0]
             def request(path,body=None):
                 data=json.dumps(body).encode() if body is not None else None
-                with urlopen(Request(base+path,data=data,headers={'Content-Type':'application/json','X-Nexo-Key':key}),timeout=180) as r:return json.load(r)
+                try:
+                    with urlopen(Request(base+path,data=data,headers={'Content-Type':'application/json','X-Nexo-Key':key}),timeout=180) as r:return json.load(r)
+                except HTTPError as exc:
+                    raise AssertionError(path + ': ' + exc.read().decode()) from None
             request('/api/preferences',{'performance':'fast','cpu_only':True})
             report=request('/api/setup/check',{'cpu_only':True})
             assert report['requirements_ok'],report
@@ -69,6 +76,9 @@ def main():
             if args.simulate_8gb:
                 assert result['plan']['ram_limit_bytes']<=3_000_000_000
                 assert result['plan']['enforced_limit_bytes']<=3_000_000_000
+            if args.simulate_4gb:
+                assert result['plan']['ram_limit_bytes'] <= 1_500_000_000
+                assert result['plan']['enforced_limit_bytes'] <= 1_500_000_000
             status=request('/api/status');assert status['provider']=='native'
             for prompt,language in [('Di hola en español y explica en una frase qué puedes hacer.','es'),('Write a Python function square(n) that returns n*n.','en')]:
                 response=request('/api/chat',{'message':prompt,'language':language,'private':True})

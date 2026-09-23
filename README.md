@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.9.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.10.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -146,3 +146,7 @@ Community sharing is voluntary: edit the example, approve public sharing, then o
 Choose **Web lookup** to search Wikipedia without a key, or connect your own Brave Search API key for broader results. **Remember retrieved excerpts** saves dated references locally for reuse; **Refresh now** bypasses saved results. Uncheck model explanation for excerpts without model calls. Saved sources can be inspected/deleted in My knowledge. Private chat never saves new web excerpts. Ordinary chat can retrieve saved, unexpired references without accessing the Internet.
 
 This is bounded source retrieval, not automatic model training or infallible knowledge. Search providers receive the submitted topic. Brave may incur provider charges and requires storage rights to remember results. See [web research](docs/WEB-RESEARCH.md).
+
+## Local companion controls
+
+Version 0.10 adds a smaller native profile (4 GB installed **and at least 2.5 GB available**), personality preferences, source-linked reviewed notes with expiry, outbound privacy checks and offline Word export. These are application features, not new trained model weights or a guarantee of accuracy. See [local companion guide](docs/COMPANION.md) for resource scopes, privacy limits and usage.

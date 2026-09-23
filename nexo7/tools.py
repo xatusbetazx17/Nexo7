@@ -85,6 +85,8 @@ class PubMed:
         cached = self.store.get_cache(key) if use_cache else None
         if cached:
             return cached
+        from .privacy import check_outbound
+        check_outbound(query)
         data = self._request("esearch.fcgi", {"db": "pubmed", "term": query, "retmode": "json", "retmax": limit, "sort": "relevance"}, True)
         raw_ids = data.get("esearchresult", {}).get("idlist", [])
         ids = [str(i) for i in raw_ids if str(i).isdigit()][:limit]

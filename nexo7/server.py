@@ -72,7 +72,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.9.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.10.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -125,6 +125,12 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == "/api/export/document":
+                    from .doc_export import export_document
+                    return self._send(200, export_document(body))
+                if path == "/api/learning/from-source":
+                    from .reviewed_sources import admit
+                    return self._send(201, admit(learning, web_research, body))
                 if path == "/api/math":
                     active = controller.config if controller else config
                     if active.max_tool_calls < 1:

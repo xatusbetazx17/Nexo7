@@ -1,3 +1,12 @@
+# Nexo 7 0.10.0 — local companion controls and smaller memory profile
+
+- Native low-memory profile for 4 GB installed / at least 2.5 GB available; bounded batches, shorter context and one model call. New native requests pause below 512 MB available. Process guards do not cover the whole PC.
+- Local personality/tone preferences with explicit simulated-emotion and factual/permission boundaries.
+- Source-linked reviewed learning with provenance and expiry, separate from raw excerpts, public contributions and actual weight training.
+- Privacy preflight before external searches/cloud model calls; conservative pattern matching, not guaranteed de-identification.
+- Local macro-free Word DOCX export of reviewed text and headings.
+- No newly trained weights, universal accuracy claim, frontier-model parity, voice or arbitrary device control.
+
 # Nexo 7 0.9.0 — reviewed search-note contributions and offline math
 
 - Source-linked original-note editor, explicit rights/privacy/CC0/training consent, conservative copying/private-data screens, exact GitHub draft preview and JSON download. User signs in and submits through GitHub; no token storage or background uploads.

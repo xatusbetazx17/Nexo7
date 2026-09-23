@@ -61,7 +61,7 @@ function message(role, text, result, question="") {
       create.onclick=()=>{const code=text.match(/```[^\n]*\n([\s\S]*?)```/);$("artifact-content").value=code?code[1]:text;showWorkspace();};actions.append(create);
       if(!result.private && question && result.status==="completed") {
         const correct=node("button","Correct / teach","quiet");
-        correct.onclick=()=>{view(true);$("learn-question").value=question.slice(0,2000);$("learn-answer").value=text.slice(0,8000);$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-panel").scrollIntoView();};actions.append(correct);
+        correct.onclick=()=>{clearLearningSource();view(true);$("learn-question").value=question.slice(0,2000);$("learn-answer").value=text.slice(0,8000);$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-panel").scrollIntoView();};actions.append(correct);
         for(const [rating,label] of [["useful","Save as useful example"],["incorrect","Mark incorrect"]]){
           const feedback=node("button",label,"quiet");feedback.onclick=async()=>{
             if(rating==="useful"&&!confirm("Save this question and answer as a searchable example? This does not verify its accuracy or retrain the model."))return;
@@ -81,7 +81,7 @@ async function initialize(first=true) {
     const config=await api("/api/status"); $("login").hidden=true;
     $("provider").textContent = config.provider === "demo" ? "Demo · no AI model" : `Configured: ${config.provider} · ${config.model}`;
     const preferences=await api("/api/preferences");
-    $("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
+    $("personality").value=preferences.personality;$("adapt-tone").checked=preferences.adapt_tone;$("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
     const language = preferences.response_language || config.response_language || "auto";
     $("language").value=language;
     $("resource-note").textContent = config.local_ram_limit_bytes ? `Native memory budget: ${(config.local_ram_limit_bytes/1e9).toFixed(1)} GB · ${config.local_backend}` : "";
@@ -188,7 +188,7 @@ $("quit").onclick=async()=>{
   catch(exc){error(exc.message);}
 };
 async function savePreferences(){
- return api("/api/preferences","POST",{performance:$("performance").value,style:$("reply-style").value,auto_start:$("auto-start").checked,cpu_only:$("cpu-only").checked,response_language:$("language").value});
+ return api("/api/preferences","POST",{personality:$("personality").value,adapt_tone:$("adapt-tone").checked,performance:$("performance").value,style:$("reply-style").value,auto_start:$("auto-start").checked,cpu_only:$("cpu-only").checked,response_language:$("language").value});
 }
 $("save-preferences").onclick=async()=>{try{await savePreferences();$("preferences-status").textContent="Saved. Hardware settings apply at the next local start.";}catch(exc){$("preferences-status").textContent=exc.message;}};
 $("language").onchange=async()=>{try{await api("/api/preferences","POST",{response_language:$("language").value});}catch(exc){error(exc.message);}};
@@ -216,7 +216,11 @@ initialize();
 
 $("workspace-file").onchange=async()=>{const file=$("workspace-file").files[0];if(!file)return;if(file.size>200000){$("artifact-status").textContent="Workspace file limit: 200 KB";return;}$("artifact-name").value=file.name;$("artifact-content").value=await file.text();$("artifact-status").textContent="Loaded into editor. Review and save to make it available to Nexo.";};
 
-let pendingLearningPack=null;
+let pendingLearningPack=null, learningSource=null;
+function clearLearningSource(){learningSource=null;$("learning-source-note").textContent='';$("clear-learning-source").hidden=true;$("learn-consent").checked=false;}
+$("clear-learning-source").onclick=()=>{clearLearningSource();$("learn-question").value='';$("learn-answer").value='';};
+function setLearningSource(source){learningSource=source.id;$("learning-source-note").textContent='Review against '+source.url+' · source retrieved '+source.retrieved_at+' · automatic reuse expires '+source.expires_at+'. This is your review, not independent verification.';$("clear-learning-source").hidden=false;$("learn-consent").checked=false;}
+
 function learningEntry(){return {question:$("learn-question").value,answer:$("learn-answer").value,language:$("learn-language").value.trim(),kind:$("learn-kind").value};}
 async function loadLearning(){
  const [data,prefs]=await Promise.all([api("/api/learning"),api("/api/preferences")]);
@@ -224,18 +228,19 @@ async function loadLearning(){
  $("learning-entries").replaceChildren();
  for(const entry of data.entries){
   const card=node("div","","document-card"),label=node("label",` ${entry.language} · ${entry.kind}: ${entry.question}`),check=document.createElement("input");
-  check.type="checkbox";check.dataset.learningId=entry.id;label.prepend(check);card.append(label);
-  const detail=document.createElement("details");detail.append(node("summary","Review full example"),node("pre",entry.answer));card.append(detail);
-  const edit=node("button","Load into editor","quiet");edit.onclick=()=>{for(const key of ["question","answer","language","kind"])$("learn-"+key).value=entry[key];$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-status").textContent="Loaded. Saving creates a new example; delete the old one if replacing it.";};
+  check.type="checkbox";check.dataset.learningId=entry.id;check.disabled=Boolean(entry.provenance);label.prepend(check);card.append(label);
+  const detail=document.createElement("details");detail.append(node("summary","Review full example"),node("pre",entry.answer));if(entry.provenance)detail.append(node("p",(entry.expired?"Expired; refresh and review before reuse. ":"User-reviewed source note. ")+entry.provenance.url+" · "+entry.provenance.retrieved_at));card.append(detail);
+  const edit=node("button","Load into editor","quiet");edit.onclick=()=>{clearLearningSource();if(entry.provenance)setLearningSource(entry.provenance);for(const key of ["question","answer","language","kind"])$("learn-"+key).value=entry[key];$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-status").textContent="Loaded. Saving creates a new example; delete the old one if replacing it.";};
   const remove=node("button","Delete","quiet");remove.onclick=async()=>{if(!confirm("Delete this learned example and its searchable reference?"))return;try{await api("/api/learning/"+entry.id,"DELETE");await loadLearning();await loadDocuments();}catch(exc){$("learning-status").textContent=exc.message;}};
   card.append(edit,remove);$("learning-entries").append(card);
  }
  $("learning-metrics").textContent=data.metrics.length?data.metrics.map(m=>`${m.bucket}: ${m.count} responses · ${(m.elapsed_ms/m.count/1000).toFixed(2)} s average · ${m.tokens} reported tokens`).join("\n"):"No performance totals saved.";
 }
 $("learning-settings").onclick=async()=>{try{await api("/api/preferences","POST",{use_learning:$("use-learning").checked,local_metrics:$("local-metrics").checked});$("learning-status").textContent="Saved locally. No telemetry upload is enabled.";}catch(exc){$("learning-status").textContent=exc.message;}};
-$("learning-form").onsubmit=async event=>{event.preventDefault();try{const result=await api("/api/learning/import","POST",{pack:{format:"nexo-learning-v1",entries:[learningEntry()]},consent:$("learn-consent").checked});$("learning-status").textContent=`Saved ${result.added} new example(s); ${result.duplicates} duplicate(s). Model weights unchanged.`;$("learn-consent").checked=false;await loadLearning();await loadDocuments();}catch(exc){$("learning-status").textContent=exc.message;}};
+$("learning-form").onsubmit=async event=>{event.preventDefault();try{const result=learningSource?await api("/api/learning/from-source","POST",{source_id:learningSource,entry:learningEntry(),reviewed:$("learn-consent").checked}):await api("/api/learning/import","POST",{pack:{format:"nexo-learning-v1",entries:[learningEntry()]},consent:$("learn-consent").checked});$("learning-status").textContent=`Saved ${result.added} new example(s); ${result.duplicates} duplicate(s). Model weights unchanged.`;$("learn-consent").checked=false;await loadLearning();await loadDocuments();}catch(exc){$("learning-status").textContent=exc.message;}};
 for(const key of ["question","answer","language","kind"])$("learn-"+key).addEventListener("input",()=>{$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();});
 $("prepare-contribution").onclick=async()=>{try{
+ if(learningSource)throw Error("Use Contribute a note on the saved source to retain its reference and rights review.");
  const draft=await api("/api/learning/contribute","POST",{entry:learningEntry(),consent:$("share-consent").checked});
  const link=node("a","Open GitHub to review and submit ↗");link.href=draft.url;link.target="_blank";link.rel="noopener noreferrer";
  $("contribution-preview").replaceChildren(node("pre",draft.body),link);$("learning-status").textContent="Draft prepared locally. Opening GitHub sends this draft to GitHub; submitting the issue publishes it.";
@@ -259,7 +264,9 @@ async function loadWebSources(){
   const remove=node("button","Delete","quiet");remove.onclick=async()=>{try{await api("/api/web/"+source.id,"DELETE");await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
   const contribute=node('button','Contribute a note','quiet');
   contribute.onclick=()=>{noteSource=source.id;$("note-source").textContent='Reference: '+source.title+' · '+source.url;$("note-question").value='';$("note-answer").value='';$("note-rights").value='';resetNote();$("search-contribution").scrollIntoView();};
-  card.append(details,contribute,remove);$("web-sources").append(card);
+  const review=node('button','Review for local learning','quiet');
+  review.onclick=()=>{setLearningSource(source);$("learn-question").value='';$("learn-answer").value='';$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-panel").scrollIntoView();};
+  card.append(details,review,contribute,remove);$("web-sources").append(card);
  }
 }
 $("save-brave-key").onclick=async()=>{try{await api("/api/web/key","POST",{key:$("brave-key").value,storage_rights:$("brave-storage").checked});$("brave-key").value="";await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
@@ -288,3 +295,9 @@ $("math-run").onclick=async()=>{try{
  else{const values=split($("math-input").value);if(values.length!==3)throw Error('Enter exactly three coefficients');[input.a,input.b,input.c]=values;}
  const response=await api('/api/math','POST',input);$("math-result").textContent=JSON.stringify(response.result,null,2);
 }catch(exc){$("math-result").textContent=exc.message;}};
+
+$("export-docx").onclick=async()=>{try{
+ const file=await api('/api/export/document','POST',{title:$("document-title").value,content:$("artifact-content").value});
+ const bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes],{type:file.mime}));
+ const a=node('a','');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$("artifact-status").textContent=file.notice;
+}catch(exc){$("artifact-status").textContent=exc.message;}};

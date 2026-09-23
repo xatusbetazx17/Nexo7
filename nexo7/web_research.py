@@ -126,6 +126,8 @@ class WebResearch:
                 row=self.store.db.execute('SELECT 1 FROM web_searches WHERE key=? AND expires>?',(key,self.clock())).fetchone()
                 rows=self.store.db.execute('SELECT * FROM web_sources WHERE search_key=? ORDER BY id',(key,)).fetchall() if row else []
             if rows:return {'sources':[self._source(r) for r in rows],'reused':True,'network_requests':0,'saved':False}
+        from .privacy import check_outbound
+        check_outbound(query)
         with self.lock:api_key=self.key
         if provider=='brave' and not api_key:raise ValueError('Add your Brave Search API key in My knowledge, or choose Wikipedia')
         now=self.clock()

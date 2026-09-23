@@ -54,6 +54,9 @@ def main():
                 raise AssertionError("Contribution accepted without consent")
             except HTTPError as exc:
                 assert exc.code == 400
+            exported = json.loads(request('/api/export/document', {'title':'Local report','content':'# Summary\nWorks offline.'}))
+            import base64
+            assert base64.b64decode(exported['data']).startswith(b'PK')
             docs = json.loads(request("/api/documents"))["documents"]
             assert any(d["title"] == "Nexo starter guide" for d in docs)
             preferences = json.loads(request("/api/preferences", {"performance": "fast"}))

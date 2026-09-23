@@ -19,6 +19,8 @@ class OpenAIProvider:
         self.config = config
 
     def complete(self, instructions, conversation, tools, model, max_tokens):
+        from .privacy import check_outbound
+        check_outbound(json.dumps(conversation, ensure_ascii=False))
         key = os.environ.get("OPENAI_API_KEY", "")
         if not key:
             raise ValueError("OPENAI_API_KEY is missing from the environment. Do not enter it in chat.")
@@ -102,6 +104,10 @@ class NativeProvider(OllamaProvider):
     def _complete(self, instructions, conversation, tools, model, max_tokens):
         from .native_runtime import verify_native
         runtime, url = verify_native(self.config)
+        from .hardware import detect_hardware
+        available = detect_hardware(probe_gpu=False).available_bytes
+        if available < 512_000_000:
+            raise ValueError('New model request paused: less than 512 MB available RAM, or measurement unavailable. Close other apps or restart Nexo with Fast performance. Local calculators remain available.')
         if model != self.config.model:
             raise ValueError("A second model is not allowed")
         body = {"model": model, "messages": [{"role":"system", "content":instructions}] + conversation,

@@ -86,6 +86,7 @@ class Learning:
                 id TEXT PRIMARY KEY, fingerprint TEXT UNIQUE NOT NULL,
                 question TEXT NOT NULL, answer TEXT NOT NULL, language TEXT NOT NULL,
                 kind TEXT NOT NULL, document_id TEXT NOT NULL, created REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS learning_provenance(id TEXT PRIMARY KEY, metadata TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS learning_metrics(
                 bucket TEXT PRIMARY KEY, count INTEGER NOT NULL,
                 elapsed_ms REAL NOT NULL, tokens INTEGER NOT NULL);
@@ -93,9 +94,17 @@ class Learning:
 
     def entries(self):
         with self.store.lock:
-            return [dict(r) for r in self.store.db.execute(
-                "SELECT l.id,l.question,l.answer,l.language,l.kind FROM learning l "
-                "JOIN documents d ON d.id=l.document_id ORDER BY l.created DESC")]
+            rows = self.store.db.execute(
+                "SELECT l.id,l.question,l.answer,l.language,l.kind,p.metadata FROM learning l "
+                "JOIN documents d ON d.id=l.document_id LEFT JOIN learning_provenance p ON p.id=l.id ORDER BY l.created DESC").fetchall()
+            entries = []
+            for row in rows:
+                item = dict(row); metadata = item.pop('metadata')
+                if metadata:
+                    item['provenance'] = json.loads(metadata)
+                    item['expired'] = item['provenance']['expires'] <= time.time()
+                entries.append(item)
+            return entries
 
     def import_pack(self, pack, consent):
         if consent is not True:
@@ -132,6 +141,8 @@ class Learning:
         available = {e["id"]: e for e in self.entries()}
         if len(set(ids)) != len(ids) or any(i not in available for i in ids):
             raise ValueError("Unknown or duplicate example selection")
+        if any(available[i].get("provenance") for i in ids):
+            raise ValueError("Source-linked notes cannot use this pack format because it would discard provenance and expiry. Use the original-note GitHub contribution workflow instead.")
         pack = {"format": FORMAT, "entries": [{k: available[i][k] for k in FIELDS} for i in ids]}
         validate_pack(pack)
         return pack
@@ -144,6 +155,7 @@ class Learning:
                 return False
             s.db.execute("DELETE FROM chunks WHERE doc_id=?", (row[0],))
             s.db.execute("DELETE FROM documents WHERE id=?", (row[0],))
+            s.db.execute("DELETE FROM learning_provenance WHERE id=?", (ident,))
             s.db.execute("DELETE FROM learning WHERE id=?", (ident,))
             s._changed()
             return True
@@ -159,12 +171,17 @@ class Learning:
         with self.store.lock:
             rows = self.store.db.execute("SELECT l.*,c.rowid AS chunk_id,c.title,c.content FROM learning l "
                 "JOIN chunks c ON c.doc_id=l.document_id WHERE c.rowid=(SELECT MIN(rowid) FROM chunks WHERE doc_id=l.document_id)").fetchall()
+        entries = self.entries()
+        stale = {e['id'] for e in entries if e.get('expired')}
+        provenance = {e['id']:e['provenance'] for e in entries if e.get('provenance')}
         for row in rows:
+            if row['id'] in stale:
+                continue
             candidate = grams(row["question"])
             score = len(query & candidate) / max(1, len(query | candidate))
             if score >= 0.3:
                 scored.append((score, {"id": f"D{row['chunk_id']}", "document_id": row["document_id"],
-                    "title": row["title"], "text": row["content"], "source": "user-reviewed learning; not independently verified"}))
+                    "title": row["title"], "text": row["content"], "source": "user-reviewed learning; not independently verified", **({"provenance": provenance[row["id"]]} if row["id"] in provenance else {})}))
         return [item for _, item in sorted(scored, key=lambda pair: pair[0], reverse=True)[:limit]]
 
     def record_metrics(self, stats, status, private):
