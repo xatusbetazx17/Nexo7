@@ -3,6 +3,7 @@
 No pretrained intelligence or accuracy improvement is implied by this fixture.
 """
 import json
+import gc
 from pathlib import Path
 import subprocess
 import sys
@@ -71,6 +72,9 @@ def main():
         print(json.dumps({"status": "passed", "model": "tiny random Qwen3.5 fixture", "weights_updated": True,
             "base_unchanged": True, "merged_logits_match": True, "results": self_report["results"],
             "capability_improvement_demonstrated": False}, indent=2))
+        # Windows cannot unlink safetensors while their mapped tensors remain live.
+        del weights, adapted, merged, base, model
+        gc.collect()
 
 
 if __name__ == "__main__":
