@@ -157,6 +157,8 @@ class TaskAgent:
                 if Path(step['name']).suffix.lower() in ('.md','.txt'):
                     instruction+=' The current output is a prose document, not the source code shown as reference. Write only the document text.'
                 if step.get('validation') and not step['validation']['passed']:task_text+='\nFix the previous failed attempt:\n'+request['previous_attempt']+'\nCheck failures: '+json.dumps(request['correction'])
+                if step['function_tests']:
+                    task_text+='\nRequired Python format: each function body is exactly one return expression. Omit docstrings, input validation, if statements, raise statements, calls and usage examples. Test inputs and expected results: '+json.dumps(step['function_tests'])
                 conversation=[{'role':'user','content':task_text}]
                 if not engine._fits_context(instruction,conversation,[]):raise ValueError('Task/file exceeds this model context. Use a smaller file or shorter plan')
                 step['attempts']+=1;job['tokens_reserved']+=limit;run_calls+=1;run_reserved+=limit;self.save(job)
