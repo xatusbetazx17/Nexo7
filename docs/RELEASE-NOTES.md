@@ -1,3 +1,11 @@
+# Nexo 7 0.7.1 — lighter everyday chat
+
+- Default Chat mode uses a compact prompt without search, saved-source retrieval or model-selected tools; native answers are capped at 128 tokens.
+- Clearer labels distinguish everyday conversation, saved knowledge/tools, web lookup and PubMed research. New chat returns to everyday Chat.
+- Local timeouts identify the model on this computer and suggest recovery steps. Failed attempts are not saved as conversation turns, do not receive citation warnings, and do not offer Create file.
+- The Send button shows elapsed waiting time. Model weights and RAM guards are unchanged.
+- Added real native English typo/Spanish definition checks to both Windows and Linux release tests. The Dell Pentium N5030 has not been directly benchmarked; no response-time guarantee is made.
+
 # Nexo 7 0.7.0 — opt-in Internet lookup and reusable web memory
 
 - Search Wikipedia without a key or connect your own Brave Search API key for broader web results.

@@ -25,6 +25,12 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   assert(d.getElementById('start-local').disabled);
   d.getElementById('try-demo').click();
   assert(d.getElementById('setup-view').hidden);
+  assert.equal(d.getElementById('mode').value,'chat');
+  d.getElementById('mode').value='research';
+  d.getElementById('mode').onchange();
+  d.getElementById('new').click();
+  assert.equal(d.getElementById('mode').value,'chat');
+  assert(d.getElementById('research-notice').hidden);
   d.getElementById('prompt').value='/calc 24.5 * 40';
   d.getElementById('composer').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
   await waitFor(()=>[...d.querySelectorAll('.assistant .message-text')].some(e=>e.textContent==='980.0'));

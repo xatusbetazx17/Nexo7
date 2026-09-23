@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.7.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.7.1.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -15,6 +15,10 @@ Windows can attempt NVIDIA/Vulkan acceleration when VRAM is measurable, with CPU
 ## Optional model training and research
 
 The source repository now includes a separate [model improvement workflow](docs/MODEL-RESEARCH.md): reviewed datasets with held-out splits, local-teacher sequence distillation, actual LoRA training, baseline/candidate evaluation, adapter merging and small architecture experiments. Start with `python -m research --help`. These developer tools require optional dependencies and a suitable training computer; they add no training dependencies to the desktop application. The distributed desktop weights remain unchanged until a candidate is independently evaluated, quantized and approved. No general capability gain is claimed.
+
+## Everyday chat
+
+Select **Chat · everyday questions** for definitions, explanations and conversation. It runs locally without Internet lookup, saved-source retrieval or model-selected tools. It uses a compact prompt and caps native replies at 128 tokens to reduce work on modest CPUs. Select **Detailed** for longer answers or **Saved knowledge & tools** to use saved documents and examples. **New chat** clears the active conversation and returns to Chat. Search modes are explicit. Real speed still depends on your CPU; the Pentium N5030 has not been benchmarked directly.
 
 ## What it does
 

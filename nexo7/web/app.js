@@ -49,7 +49,7 @@ function message(role, text, result, question="") {
       lookup.onclick=()=>{$("mode").value="web";$("mode").onchange();$("prompt").value=question.slice(0,500);$("prompt").focus();};
       article.append(lookup);
     }
-    if(desktopMode){
+    if(desktopMode && ["completed","incomplete"].includes(result.status)){
       const actions=node("div","","language-controls");
       const create=node("button","Create file","quiet");
       create.onclick=()=>{const code=text.match(/```[^\n]*\n([\s\S]*?)```/);$("artifact-content").value=code?code[1]:text;showWorkspace();};actions.append(create);
@@ -93,12 +93,13 @@ $("composer").onsubmit=async event=>{
   event.preventDefault(); if(busy) return;
   const text=$("prompt").value.trim(); if(!text) return;
   busy=true;$("send").disabled=true;$("send").textContent="Working…";error();
+  const started=Date.now(); const progress=setInterval(()=>{$("send").textContent=`Working… ${Math.floor((Date.now()-started)/1000)}s`;},1000);
   message("user",text);conversation.push({role:"user",content:text});$("prompt").value="";
   try {
     const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked});
     message("assistant",result.answer,result,text);conversation.push({role:"assistant",content:result.answer,sources:result.sources,stats:result.stats});
   } catch(exc) {error(exc.message);}
-  finally {busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
+  finally {clearInterval(progress);busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
 };
 $("prompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("composer").requestSubmit();}};
 $("language").onchange=()=>sessionStorage.setItem("nexo-language",$("language").value);
@@ -107,7 +108,7 @@ $("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research"
 $("research-suggestion").onclick=()=>{$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
 function view(memory) {if(memory){loadLearning().catch(exc=>error(exc.message));loadWebSources().catch(exc=>error(exc.message));}hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
 $("chat-tab").onclick=()=>view(false);$("memory-tab").onclick=()=>view(true);
-$("new").onclick=()=>{if(busy)return;session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
+$("new").onclick=()=>{if(busy)return;$("mode").value="chat";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
 $("export").onclick=()=>{const blob=new Blob([JSON.stringify({app:"Nexo 7",exported_at:new Date().toISOString(),conversation},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="nexo7-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
 $("forget").onclick=async()=>{if(busy||!confirm("Clear local history for this conversation? Exported copies and provider data are managed separately."))return;try{await api("/api/history/"+encodeURIComponent(session),"DELETE");$("new").click();}catch(exc){error(exc.message);}};
 async function loadDocuments(){

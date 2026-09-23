@@ -110,8 +110,15 @@ class NativeProvider(OllamaProvider):
         if tools:
             body["tools"] = [{"type":"function", "function":{k:v for k,v in t.items() if k not in {"type","strict"}}} for t in tools]
             body["parallel_tool_calls"] = False
-        data = fetch_json(url+'/v1/chat/completions', payload=body,
-                          headers={"Authorization":"Bearer "+runtime.key}, timeout=self.config.timeout_seconds)
+        try:
+            data = fetch_json(url+'/v1/chat/completions', payload=body,
+                              headers={"Authorization":"Bearer "+runtime.key}, timeout=self.config.timeout_seconds)
+        except TransportError as exc:
+            if "time limit" in str(exc):
+                raise TransportError("The model running on this computer did not finish in time. "
+                    "Start a New chat, select Chat, and try a short question. Use Fast performance "
+                    "in setup and close other apps. This is a local response timeout, not an Internet search failure.") from None
+            raise TransportError("Local model request failed: " + str(exc)) from None
         choices = data.get('choices', [])
         if not choices: raise TransportError('Native model returned no choices')
         item = choices[0]; message = item.get('message', {})

@@ -75,6 +75,12 @@ def main():
                 assert response['status']=='completed',response
                 assert response['stats']['model_calls']>=1 and response['stats']['output_tokens']>0,response
                 result['answers'].append({'prompt':prompt,'answer':response['answer'],'stats':response['stats']})
+            for prompt,language,expected in [('What is a chiken?', 'en', ('bird', 'poultry')), ('¿Qué es una gallina?', 'es', ('ave', 'doméstic', 'huevo'))]:
+                response=request('/api/chat',{'message':prompt,'mode':'chat','language':language,'private':True})
+                assert response['status']=='completed',response
+                assert any(word in response['answer'].lower() for word in expected),response
+                assert response['stats']['network_requests']==0 and response['stats']['tool_calls']==0,response
+                result['answers'].append({'prompt':prompt,'answer':response['answer'],'stats':response['stats']})
             learning_pack={'format':'nexo-learning-v1','entries':[{'question':'What is the fictional Zorilo marker?', 'answer':'The fictional Zorilo marker is a violet triangle.', 'language':'en','kind':'correction'}]}
             request('/api/learning/import',{'pack':learning_pack,'consent':True})
             learned=request('/api/chat',{'message':'What is the fictional Zorilo marker?','language':'en','private':True})
