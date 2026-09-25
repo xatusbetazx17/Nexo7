@@ -1,3 +1,9 @@
+# v0.14.1 — Laptop layout refinement
+
+- Keeps the initial Send button visible at 1366 × 768, with a Chromium regression check.
+- Clarifies that scenario replies use the configured model, which may be local or remote.
+- Includes the v0.14 features listed below.
+
 # v0.14.0 — Everyday chat and what-if questions
 
 - New light/dark interface with Chat, Create, Library and Settings; technical controls and response diagnostics are expandable.

@@ -11,7 +11,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.14.0"
+VERSION = "0.14.1"
 
 
 def main():

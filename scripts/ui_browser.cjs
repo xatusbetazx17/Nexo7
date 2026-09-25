@@ -10,11 +10,12 @@ let browser;
  const deadline=Date.now()+45000;while(!fs.existsSync(path.join(directory,'access.json'))){if(Date.now()>deadline||child.exitCode!==null)throw Error('Desktop failed to start');await new Promise(r=>setTimeout(r,100));}
  const access=JSON.parse(fs.readFileSync(path.join(directory,'access.json'),'utf8'));
  browser=await chromium.launch({headless:true,executablePath:process.env.NEXO_CHROME||undefined,args:['--no-sandbox']});
- const page=await browser.newPage({viewport:{width:1366,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const page=await browser.newPage({viewport:{width:1366,height:768}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(access.url);await page.locator('#try-demo').click();
  await page.locator('#composer').waitFor({state:'visible'});
  assert.equal(await page.locator('#chat-options').getAttribute('open'),null);
  assert.equal(await page.locator('#web-controls').isVisible(),false);
+ const sendBox=await page.locator('#send').boundingBox();assert(sendBox.y+sendBox.height<=768,'Send button must fit a laptop screen without scrolling');
  await page.screenshot({path:path.join(output,'chat-desktop.png'),fullPage:true});
  await page.locator('#theme-toggle').click();await page.screenshot({path:path.join(output,'chat-dark.png'),fullPage:true});await page.locator('#theme-toggle').click();
  await page.locator('#prompt').fill('/calc 12*12');await page.locator('#prompt').press('Enter');await page.getByText('144',{exact:true}).waitFor();

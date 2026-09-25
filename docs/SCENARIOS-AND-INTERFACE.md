@@ -27,14 +27,14 @@ Library are also expandable. No permissions or sharing consent were removed.
 ## Imagined scenarios
 
 Automatic detects common English/Spanish expressions such as **imagine**, **what if**,
-**hypothetical**, **supongamos**, and **qué pasaría si**. It requests a local discussion
+**hypothetical**, **supongamos**, and **qué pasaría si**. It requests a discussion from the configured model
 of the scenario, with assumptions and unknowns kept distinct. Fictional premises
 should be distinguished from real physics. The prompt does not claim exact injuries,
 collision damage or repair prices from an incomplete story.
 
 These questions also leave explicit Web/Chat mode for scenario discussion unless the
 message explicitly asks for an online search. Choosing **Imagine / what-if** manually
-works for other languages or phrasings the heuristic does not recognize. The text
+works for other languages or phrasings the heuristic does not recognize. With a local model configured, this discussion stays local. The text
 model should use the requested response language, but language/reasoning quality
 still depends on that model. There is no claim of new trained reasoning weights or
 general accuracy. No online fallback is triggered merely because a hypothetical
