@@ -164,6 +164,10 @@ class Engine:
         session = session or uuid.uuid4().hex
         if not isinstance(session, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", session):
             raise ValueError("Invalid conversation identifier")
+        from .creation_requests import intent as creation_intent
+        creation = creation_intent(message) if mode not in ('research', 'web', 'scenario') else None
+        if creation:
+            mode = 'balanced'  # Route before companion lookup, refusals and answer-cache reuse.
         from .scenarios import hypothetical, explicit_lookup
         redirected_scenario = mode in ('web', 'chat') and hypothetical(message) and not explicit_lookup(message)
         if redirected_scenario:
@@ -207,6 +211,50 @@ class Engine:
             if save_cache and cacheable and status == "completed" and not any(s["id"].startswith("W") or s.get("provenance") for s in sources):
                 self.store.put_cache(key, {"answer": answer, "sources": sources, "warnings": result["warnings"]}, self.config.cache_seconds)
             self.learning.record_metrics(stats, status, private)
+            return result
+
+        if creation:
+            from .creation_requests import builtin, create, instructions
+            if self.config.max_tool_calls < 1:
+                return finish('File creation tools are disabled.', 'unavailable')
+            spec = builtin(message) if creation == 'drawing' else None
+            if spec is not None:
+                files = create('drawing', json.dumps(spec))
+                answer = 'Here is a simple built-in illustration. Download the PNG or editable SVG below.'
+            else:
+                if self.config.provider == 'demo':
+                    return finish('Start a local model to draft this creation. Simple built-in drawings work without a model.', 'unavailable')
+                prompt = instructions(creation)
+                if language != 'auto':
+                    prompt += '\nResponse language: ' + language
+                conversation = [{'role':'user', 'content':message}]
+                if not self._fits_context(prompt, conversation, []):
+                    return finish('This creation request exceeds the context budget. Please shorten it.', 'budget_exhausted')
+                stats['model_calls'] = 1
+                stats['prompt_characters_sent'] = len(prompt) + len(json.dumps(conversation))
+                try:
+                    completion = self.provider.complete(prompt, conversation, [], self.config.select_model(mode),
+                        min(self.config.max_output_tokens, self.config.max_total_output_tokens))
+                except (TransportError, ValueError) as exc:
+                    stats['usage_complete'] = False
+                    return finish('Could not draft the creation: ' + str(exc), 'upstream_error')
+                for k in ('input_tokens', 'output_tokens', 'cached_input_tokens'):
+                    v = completion.usage.get(k, 0)
+                    if type(v) is int and v >= 0:
+                        stats[k] = v
+                if completion.incomplete or completion.calls or not completion.text.strip():
+                    return finish('The model did not finish a usable design. Try a simpler request or use Create to edit a design. No file was created.', 'incomplete')
+                draft = completion.text.strip()
+                try:
+                    files = create(creation, draft)
+                except (ValueError, TypeError, KeyError, OverflowError):
+                    return finish('The model returned an invalid design. Try a simpler request or use Create to edit a design. No file was created.', 'unavailable')
+                answer = draft if creation == 'document' else 'Here is your generated ' + ('simple illustration' if creation == 'drawing' else 'instrumental melody') + '. Review the preview before downloading.'
+            stats['tool_calls'] = 1
+            warnings.append('Download these files before leaving or reloading this conversation. Attachments are not stored in chat history. Generated content needs review.')
+            result = finish(answer)
+            result['files'] = files
+            result['creation'] = creation
             return result
 
         if message.startswith('/scenario '):

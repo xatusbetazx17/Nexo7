@@ -80,6 +80,12 @@ def main():
             except HTTPError as exc: assert exc.code == 400
             else: raise AssertionError('Unsupported simultaneous-image analysis accepted')
             assert request('/api/history?session=vision')['messages']==[]
+            # Real chat creation with the vision model selected; files must be returned, not a refusal.
+            for prompt in ('Draw me a chicken', 'Draw me a hand', 'Draw a red ball', 'Create a Word document: a short thank-you letter to Ana.'):
+                created=request('/api/chat', {'message':prompt,'mode':'companion','private':True})
+                assert created['status']=='completed' and created.get('files'), created
+                assert created['stats']['network_requests']==0
+                report.setdefault('creations',[]).append({'prompt':prompt,'answer':created['answer'],'files':[f['name'] for f in created['files']]})
             # Reload in place to exercise unload-before-load and runtime/DLL ownership.
             request('/api/setup/switch', {'cpu_only':True}); ready()
             result=request('/api/relay', {'message':'Return only JSON with name Ana and age 30.'})

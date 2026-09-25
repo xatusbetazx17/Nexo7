@@ -7,6 +7,23 @@ history.replaceState(null, "", location.pathname);
 let session = sessionStorage.getItem("nexo-session") || crypto.randomUUID();
 sessionStorage.setItem("nexo-session", session);
 let conversation = [], busy = false;
+const chatFileUrls=[];
+function clearChatFiles(){for(const url of chatFileUrls)URL.revokeObjectURL(url);chatFileUrls.length=0;}
+window.addEventListener('pagehide',clearChatFiles);
+function showChatFiles(article,files){
+  const panel=node('div','','chat-files');
+  for(const file of files){
+    const allowed=['image/png','image/svg+xml','audio/wav','audio/midi','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if(!allowed.includes(file.mime))continue;
+    const bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));
+    const url=URL.createObjectURL(new Blob([bytes],{type:file.mime}));chatFileUrls.push(url);
+    if(file.mime==='image/png'){const img=document.createElement('img');img.src=url;img.alt='Generated illustration';img.className='creative-preview';panel.append(img);}
+    if(file.mime==='audio/wav'){const audio=document.createElement('audio');audio.src=url;audio.controls=true;panel.append(audio);}
+    const a=node('a','Download '+file.name,'creative-download');a.href=url;a.download=file.name;panel.append(a);
+  }
+  panel.append(node('small','Download to keep these files; previews are not saved in chat history.'));
+  article.append(panel);
+}
 
 function error(message="") { $("error").textContent = message; $("error").hidden = !message; }
 async function api(path, method="GET", body) {
@@ -23,6 +40,7 @@ function message(role, text, result, question="") {
   article.append(node("div", role === "user" ? "YOU" : "NEXO 7", "message-label"));
   article.append(node("div", text, "message-text"));
   if (result) {
+    if(result.files?.length)showChatFiles(article,result.files);
     const detailsBox=node('details','','response-details');
     detailsBox.append(node('summary',result.sources.length?'Sources and response details':'Response details and more actions'));
     if(result.companion){
@@ -60,6 +78,9 @@ function message(role, text, result, question="") {
     if(desktopMode && ["completed","incomplete"].includes(result.status)){
       const actions=node("div","","message-actions");
       const create=node("button","Create file","quiet");
+      const word=node('button','Download Word','quiet');
+      word.onclick=async()=>{word.disabled=true;try{const file=await api('/api/export/document','POST',{title:'Nexo document',content:text});showChatFiles(article,[file]);}catch(exc){error(exc.message);}finally{word.disabled=false;}};
+      actions.append(word);
       create.onclick=()=>{const code=text.match(/```[^\n]*\n([\s\S]*?)```/);$("artifact-content").value=code?code[1]:text;showWorkspace();
         try{const spec=JSON.parse($('artifact-content').value);if(spec.shapes||spec.notes){$('creative-kind').value=spec.shapes?'drawing':'music';resetCreative();$('creative-spec').value=JSON.stringify(spec,null,2);syncCreativeControls();reveal($('creative-studio'));return;}}catch{}
         reveal($('artifact-form'));};actions.append(create);
@@ -100,7 +121,7 @@ async function initialize(first=true) {
     $("privacy-note").textContent = config.provider === "openai" ? "Your queries and relevant excerpts will be sent to OpenAI. Local history is not encrypted." : "Memory and history stay on this computer, without encryption. PubMed needs an Internet connection.";
     if (!config.persist_history) { $("private").checked=true; $("private").disabled=true; }
     const data=await api("/api/history?session="+encodeURIComponent(session));
-    $("messages").replaceChildren(); conversation=data.messages; for(const m of conversation) message(m.role,m.content);
+    clearChatFiles();$("messages").replaceChildren(); conversation=data.messages; for(const m of conversation) message(m.role,m.content);
     await loadDocuments(); await loadLearning(); await loadWebSources();
     desktopMode=Boolean(config.desktop);$("workspace-tab").hidden=!desktopMode; $("setup-tab").hidden=!desktopMode; $("quit").hidden=!desktopMode;
     if(first && desktopMode) {showSetup(); clearTimeout(setupTimer); pollSetup();}
@@ -137,7 +158,7 @@ $("allow-internet").onchange=()=>{$("mode").onchange();if($("allow-internet").ch
 $("research-suggestion").onclick=()=>{$("chat-options").open=true;$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
 function view(memory) {if(memory){loadLearning().catch(exc=>error(exc.message));loadWebSources().catch(exc=>error(exc.message));}hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
 $("chat-tab").onclick=()=>view(false);$("memory-tab").onclick=()=>view(true);
-$("new").onclick=()=>{if(busy)return;$("chat-images").value="";$("allow-internet").checked=false;$("mode").value="companion";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
+$("new").onclick=()=>{if(busy)return;$("chat-images").value="";$("allow-internet").checked=false;$("mode").value="companion";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];clearChatFiles();$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
 $("export").onclick=()=>{const blob=new Blob([JSON.stringify({app:"Nexo 7",exported_at:new Date().toISOString(),conversation},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="nexo7-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
 $("forget").onclick=async()=>{if(busy||!confirm("Clear local history for this conversation? Exported copies and provider data are managed separately."))return;try{await api("/api/history/"+encodeURIComponent(session),"DELETE");$("new").click();}catch(exc){error(exc.message);}};
 async function loadDocuments(){

@@ -1,3 +1,13 @@
+# v0.15.0 — Create files directly in chat
+
+- Ordinary English/Spanish drawing requests reach the renderer before the conversation model can refuse or search the web.
+- Exact simple chicken/hand requests use labeled built-in illustrations; other subjects use a bounded, validated model-generated scene. This is simple shape art, not diffusion or photorealistic generation.
+- Images appear in chat with PNG and SVG downloads. Short music requests can return WAV previews and MIDI downloads.
+- Document/letter/report requests draft content and export DOCX plus plain text. Existing replies have a Download Word action.
+- No new model weights or GPU requirement; existing context/output/memory limits remain. Invalid or truncated designs produce a visible failure, not a fake image.
+- Download attachments before closing or reloading: chat history stores text only. No automatic file uploads or filesystem writes.
+- Added routing, valid-file and failure tests; browser chat-preview checks; real LiquidAI creation checks in Windows/Linux release gates.
+
 # v0.14.1 — Laptop layout refinement
 
 - Keeps imagined-scenario answers concise to reduce truncation on small models.

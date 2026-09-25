@@ -77,7 +77,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.14.1", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.15.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,

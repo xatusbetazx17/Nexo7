@@ -1,3 +1,15 @@
+# Create directly in chat (v0.15)
+
+In Automatic chat, try **Draw me a chicken**, **Draw me a hand**, **Draw a red ball**, **Create a Word document with a thank-you letter**, or **Make a short melody**. Spanish drawing/document requests are also recognized. Explicit `/draw`, `/document` and `/music` prefixes are available when automatic routing does not recognize your phrasing.
+
+Drawings show a PNG preview and PNG/SVG download links. Music shows a WAV player and WAV/MIDI links. Documents return Word-compatible DOCX and plain text. You can also choose **Download Word** on a normal completed chat reply. This does not add native Excel, PowerPoint or PDF generation.
+
+The chicken and hand examples are hand-authored built-in illustrations, labeled as such. Other drawings and scores are drafted by your selected model and validated before rendering. Small models can produce poor designs or invalid JSON; Nexo reports a failure when validation fails. No second model, image-generation weights or GPU is loaded. Model quality and resource limits still apply. Word content is a draft and needs review.
+
+Files are generated in memory and are not automatically saved or uploaded. **Download before leaving or reloading the conversation**; history retains text, not the binary attachments. Rendering and DOCX export work offline; drafting uses your configured provider (a remote provider still sends the prompt to that provider).
+
+The advanced editor below remains available for manual control.
+
 # Creative Studio
 
 Open **My workspace → Creative Studio** in the desktop app on Windows or Linux.
