@@ -1,3 +1,15 @@
+# v0.14.0 — Everyday chat and what-if questions
+
+- New light/dark interface with Chat, Create, Library and Settings; technical controls and response diagnostics are expandable.
+- Online search and literature modes now apply to one message, returning to Automatic afterward.
+- Common hypothetical English/Spanish prompts use a scenario discussion path, including when an old Web mode is selected. Explicit online-search requests are preserved.
+- Scenario prompts distinguish fictional assumptions from real claims; incomplete stories do not establish injuries, damage or repair prices.
+- Offline What-if calculator computes toy projectile motion and decimal paint/labor subtotals from explicit inputs, with formulas and limitations visible.
+- Simpler creative controls and direct transfer of drawing/score JSON responses to the preview editor.
+- Added routing/math regression tests, real Chromium layout checks and native-model scenario smoke coverage. Model weights are unchanged; general reasoning accuracy is not guaranteed.
+
+See [Everyday chat and what-if questions](SCENARIOS-AND-INTERFACE.md).
+
 # v0.13.0 — Offline drawing and music
 
 - Fixed compact low-memory web prompts skipping source-synthesis instructions before returning. A small model can still produce incomplete or inaccurate answers.

@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.13.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.14.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -170,3 +170,7 @@ reasoning or factual accuracy; the new checkpoint officially supports English.
 ## Offline drawing and music
 
 Version 0.13 adds [Creative Studio](docs/CREATIVE-STUDIO.md): editable simple drawings with PNG/SVG downloads and short synthesized instrumental music with WAV/MIDI downloads. Open My workspace to preview a working example without a model or GPU. Chat can draft the editable JSON, with quality depending on the loaded model. This does not add photorealistic image generation or sung vocals.
+
+## Everyday chat and what-if questions
+
+[Version 0.14](docs/SCENARIOS-AND-INTERFACE.md) simplifies navigation and separates imagined scenarios from online searches. The offline What-if calculator uses explicit inputs for toy flight paths and paint/labor subtotals. These features improve routing and provide checked formulas; they do not retrain the underlying model or guarantee correct reasoning.

@@ -23,16 +23,18 @@ function message(role, text, result, question="") {
   article.append(node("div", role === "user" ? "YOU" : "NEXO 7", "message-label"));
   article.append(node("div", text, "message-text"));
   if (result) {
+    const detailsBox=node('details','','response-details');
+    detailsBox.append(node('summary',result.sources.length?'Sources and response details':'Response details and more actions'));
     if(result.companion){
       const steps=node('details','');steps.append(node('summary','How Nexo handled this request'));
       for(const step of result.companion.steps)steps.append(node('p',step.action+': '+step.result));
       if(result.sources.length)steps.append(node('p',result.companion.evidence.domains.length+' source domains. Agreement and truth are not automatically verified.'));
-      article.append(steps);
+      detailsBox.append(steps);
     }
     const s=result.stats;
     const line = `${s.model_calls} calls · ${s.input_tokens+s.output_tokens} reported tokens · ${(s.elapsed_ms/1000).toFixed(2)} s${s.cache_hit ? " · Cache" : ""}${s.provider === "openai" && s.estimated_cost_usd !== null ? " · Estimated API $" + s.estimated_cost_usd.toFixed(6) : ""}`;
-    article.append(node("div", line, "metrics"));
-    if(s.web_reused||s.network_requests)article.append(node("div",`${s.network_requests||0} search requests · ${s.web_reused?"Saved sources reused":"New excerpts retrieved"}${s.web_saved?" · Saved locally":""}`,"metrics"));
+    detailsBox.append(node("div", line, "metrics"));
+    if(s.web_reused||s.network_requests)detailsBox.append(node("div",`${s.network_requests||0} search requests · ${s.web_reused?"Saved sources reused":"New excerpts retrieved"}${s.web_saved?" · Saved locally":""}`,"metrics"));
     if (result.sources.length) {
       const details=document.createElement("details"); details.append(node("summary",`${result.sources.length} retrieved sources`));
       for (const source of result.sources) {
@@ -48,30 +50,40 @@ function message(role, text, result, question="") {
         if (source.retraction_flag) p.append(node("strong"," · Retraction notice"));
         details.append(p);
       }
-      article.append(details);
+      detailsBox.append(details);
     }
     if(question && !result.sources.length && result.mode!=="web"){
       const lookup=node("button","Look up this topic online","quiet");
       lookup.onclick=()=>{$("mode").value="web";$("mode").onchange();$("prompt").value=question.slice(0,500);$("prompt").focus();};
-      article.append(lookup);
+      detailsBox.append(lookup);
     }
     if(desktopMode && ["completed","incomplete"].includes(result.status)){
-      const actions=node("div","","language-controls");
+      const actions=node("div","","message-actions");
       const create=node("button","Create file","quiet");
-      create.onclick=()=>{const code=text.match(/```[^\n]*\n([\s\S]*?)```/);$("artifact-content").value=code?code[1]:text;showWorkspace();};actions.append(create);
+      create.onclick=()=>{const code=text.match(/```[^\n]*\n([\s\S]*?)```/);$("artifact-content").value=code?code[1]:text;showWorkspace();
+        try{const spec=JSON.parse($('artifact-content').value);if(spec.shapes||spec.notes){$('creative-kind').value=spec.shapes?'drawing':'music';resetCreative();$('creative-spec').value=JSON.stringify(spec,null,2);syncCreativeControls();reveal($('creative-studio'));return;}}catch{}
+        reveal($('artifact-form'));};actions.append(create);
       if(!result.private && question && result.status==="completed") {
         const correct=node("button","Correct / teach","quiet");
-        correct.onclick=()=>{clearLearningSource();view(true);$("learn-question").value=question.slice(0,2000);$("learn-answer").value=text.slice(0,8000);$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-panel").scrollIntoView();};actions.append(correct);
+        correct.onclick=()=>{clearLearningSource();view(true);$("learn-question").value=question.slice(0,2000);$("learn-answer").value=text.slice(0,8000);$("learn-consent").checked=false;$("share-consent").checked=false;$("contribution-preview").replaceChildren();reveal($("learning-panel"));};detailsBox.append(correct);
         for(const [rating,label] of [["useful","Save as useful example"],["incorrect","Mark incorrect"]]){
           const feedback=node("button",label,"quiet");feedback.onclick=async()=>{
             if(rating==="useful"&&!confirm("Save this question and answer as a searchable example? This does not verify its accuracy or retrain the model."))return;
             try{await api("/api/feedback","POST",{question,answer:text,rating});feedback.disabled=true;feedback.textContent=rating==="useful"?"Example saved":"Marked; answer cache cleared";await loadDocuments();}catch(exc){error(exc.message);}
-          };actions.append(feedback);
+          };detailsBox.append(feedback);
         }
       }
       article.append(actions);
     }
-    for(const warning of result.warnings) article.append(node("p",warning,"warning"));
+    if(result.scenario){
+      const calc=node('button','Calculate with explicit assumptions','quiet');calc.onclick=()=>reveal($('scenario-panel'));article.append(calc);
+    }
+    if(['no_evidence','unavailable'].includes(result.status)&&question){
+      const local=node('button','Ask in conversation instead','quiet');local.onclick=()=>{$('mode').value='companion';$('mode').onchange();$('prompt').value=question;$('prompt').focus();};article.append(local);
+    }
+    if(!['completed'].includes(result.status))article.append(node('p',result.status==='incomplete'?'This answer was cut short. You can ask for a shorter answer.':'This request needs attention; see the message above.','response-status'));
+    for(const warning of result.warnings) detailsBox.append(node("p",warning,"warning"));
+    article.append(detailsBox);
   }
   $("messages").append(article);
   article.scrollIntoView({behavior:"smooth",block:"end"});
@@ -79,7 +91,7 @@ function message(role, text, result, question="") {
 async function initialize(first=true) {
   try {
     const config=await api("/api/status"); $("login").hidden=true;
-    $("provider").textContent = config.provider === "demo" ? "Demo · no AI model" : `Configured: ${config.provider} · ${config.model}`;
+    $("provider").textContent = config.provider === "demo" ? "Demo · no AI model" : `${["native","ollama"].includes(config.provider)?"Local":"Online"} · ${config.model}`;
     const preferences=await api("/api/preferences");
     $("model-choice").value=preferences.model_choice;$("personality").value=preferences.personality;$("adapt-tone").checked=preferences.adapt_tone;$("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
     const language = preferences.response_language || config.response_language || "auto";
@@ -115,13 +127,14 @@ $("composer").onsubmit=async event=>{
     if(attached.length)$("chat-images").value="";
     message("assistant",result.answer,result,text);conversation.push({role:"assistant",content:result.answer,sources:result.sources,stats:result.stats});
   } catch(exc) {error(exc.message);}
-  finally {$("allow-internet").checked=false;clearInterval(progress);busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
+  finally {$("allow-internet").checked=false;if(["web","research"].includes($("mode").value))$("mode").value="companion";$("mode").onchange();clearInterval(progress);busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
 };
 $("prompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("composer").requestSubmit();}};
 $("language").onchange=()=>sessionStorage.setItem("nexo-language",$("language").value);
 for(const button of document.querySelectorAll("[data-prompt]")) button.onclick=()=>{$("prompt").value=button.dataset.prompt;$("prompt").focus();};
-$("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research";$("web-controls").hidden=!["web","companion"].includes($("mode").value);$("prompt").maxLength=["research","web"].includes($("mode").value)?500:8000;};
-$("research-suggestion").onclick=()=>{$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
+$("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research";$("web-controls").hidden=!($("mode").value==="web"||($("mode").value==="companion"&&$("allow-internet").checked));$("prompt").maxLength=["research","web"].includes($("mode").value)?500:8000;};
+$("allow-internet").onchange=()=>{$("mode").onchange();if($("allow-internet").checked)$("chat-options").open=true;};
+$("research-suggestion").onclick=()=>{$("chat-options").open=true;$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
 function view(memory) {if(memory){loadLearning().catch(exc=>error(exc.message));loadWebSources().catch(exc=>error(exc.message));}hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
 $("chat-tab").onclick=()=>view(false);$("memory-tab").onclick=()=>view(true);
 $("new").onclick=()=>{if(busy)return;$("chat-images").value="";$("allow-internet").checked=false;$("mode").value="companion";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
@@ -164,6 +177,7 @@ async function pollSetup() {
     const tg=await api("/api/telegram");$("telegram-status").textContent=tg.phase+(tg.error?": "+tg.error:"");
     const state=await api("/api/setup"); setupBusy=state.phase==="preparing";
     $("setup-phase").textContent=state.phase==="ready"?"Ready to chat":state.phase==="preparing"?"Preparing your model…":state.phase==="error"?"Setup needs attention":"Waiting";
+    if(state.error)$("setup-details").open=true;
     $("setup-log").textContent=state.logs.join("\n")||"No downloads have started.";
     $("setup-log").scrollTop=$("setup-log").scrollHeight;
     $("setup-error").textContent=state.error||"";
@@ -274,9 +288,9 @@ async function loadWebSources(){
   if(safeWebLink(source.url)){const link=node("a","Open original source ↗");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";details.append(link);}
   const remove=node("button","Delete","quiet");remove.onclick=async()=>{try{await api("/api/web/"+source.id,"DELETE");await loadWebSources();}catch(exc){$("web-status").textContent=exc.message;}};
   const contribute=node('button','Contribute a note','quiet');
-  contribute.onclick=()=>{noteSource=source.id;$("note-source").textContent='Reference: '+source.title+' · '+source.url;$("note-question").value='';$("note-answer").value='';$("note-rights").value='';resetNote();$("search-contribution").scrollIntoView();};
+  contribute.onclick=()=>{noteSource=source.id;$("note-source").textContent='Reference: '+source.title+' · '+source.url;$("note-question").value='';$("note-answer").value='';$("note-rights").value='';resetNote();reveal($("search-contribution"));};
   const review=node('button','Review for local learning','quiet');
-  review.onclick=()=>{setLearningSource(source);$("learn-question").value='';$("learn-answer").value='';$("share-consent").checked=false;$("contribution-preview").replaceChildren();$("learning-panel").scrollIntoView();};
+  review.onclick=()=>{setLearningSource(source);$("learn-question").value='';$("learn-answer").value='';$("share-consent").checked=false;$("contribution-preview").replaceChildren();reveal($("learning-panel"));};
   card.append(details,review,contribute,remove);$("web-sources").append(card);
  }
 }
@@ -399,7 +413,7 @@ const creativeExamples={
 };
 let creativeUrls=[];
 function clearCreative(){for(const url of creativeUrls)URL.revokeObjectURL(url);creativeUrls=[];$('creative-output').replaceChildren();}
-function resetCreative(){clearCreative();$('creative-spec').value=JSON.stringify(creativeExamples[$('creative-kind').value],null,2);$('creative-status').textContent='Edit the example, then render. Music: MIDI pitches 36–96, starts/durations in beats, up to 30 seconds. Drawing: up to 1024 × 1024 pixels.';}
+function resetCreative(){clearCreative();$('creative-spec').value=JSON.stringify(creativeExamples[$('creative-kind').value],null,2);syncCreativeControls();$('creative-status').textContent='Edit the example, then render. Music: MIDI pitches 36–96, starts/durations in beats, up to 30 seconds. Drawing: up to 1024 × 1024 pixels.';}
 $('creative-kind').onchange=resetCreative;
 $('creative-example').onclick=resetCreative;
 $('creative-use').onclick=()=>{let text=$('artifact-content').value.trim();text=text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');$('creative-spec').value=text;$('creative-status').textContent='Copied from file editor. Review and render.';};
@@ -428,3 +442,38 @@ $('creative-render').onclick=async()=>{
 };
 window.addEventListener('pagehide',clearCreative);
 resetCreative();
+
+
+function reveal(element){
+ for(let current=element;current;current=current.parentElement)if(current.tagName==='DETAILS')current.open=true;
+ element.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function syncCreativeControls(){
+ const music=$('creative-kind').value==='music';$('easy-music').hidden=!music;$('easy-drawing').hidden=music;
+ try{const spec=JSON.parse($('creative-spec').value);if(music){$('music-tempo').value=spec.bpm||110;$('music-sound').value=spec.instrument||'soft';}else $('drawing-color').value=spec.background||'#ffffff';}catch{}
+}
+for(const id of ['music-tempo','music-sound','drawing-color'])$(id).onchange=()=>{
+ try{const spec=JSON.parse($('creative-spec').value);if($('creative-kind').value==='music'){spec.bpm=Number($('music-tempo').value);spec.instrument=$('music-sound').value;}else spec.background=$('drawing-color').value;$('creative-spec').value=JSON.stringify(spec,null,2);}catch{$('creative-status').textContent='Reset the example or correct the design JSON before changing controls.';}
+};
+$('creative-spec').onchange=syncCreativeControls;
+$('create-suggestion').onclick=()=>{if(desktopMode){showWorkspace();reveal($('creative-studio'));}else error('Creative Studio is available in the Windows/Linux desktop edition.');};
+$('open-scenario').onclick=()=>reveal($('scenario-panel'));
+$('open-math').onclick=()=>reveal($('math-panel'));
+$('scenario-kind').onchange=()=>{$('scenario-flight').hidden=$('scenario-kind').value!=='flight';$('scenario-cost').hidden=$('scenario-kind').value!=='cost';$('scenario-result').replaceChildren();};
+$('scenario-form').onsubmit=async event=>{
+ event.preventDefault();const output=$('scenario-result');output.replaceChildren();
+ try{
+  const num=id=>{if(!$(id).value.trim())throw Error('Enter each quantity before calculating.');const n=Number($(id).value);if(!Number.isFinite(n))throw Error('Use finite numbers.');return n;};
+  const kind=$('scenario-kind').value;
+  const body=kind==='flight'?{kind,speed_m_s:num('scenario-speed'),angle_degrees:num('scenario-angle'),height_m:num('scenario-height')}:{kind,area_m2:num('scenario-area'),rate_per_m2:num('scenario-rate'),labor_hours:num('scenario-hours'),hourly_rate:num('scenario-hourly'),materials:num('scenario-materials')};
+  const data=await api('/api/scenario','POST',body);
+  const labels={flight_seconds:'Flight time (seconds)',horizontal_distance_m:'Horizontal distance (m)',maximum_height_m:'Maximum height (m)',paint:'Paint',labor:'Labor',materials:'Materials',subtotal:'Subtotal'};
+  for(const [key,value] of Object.entries(data.result))output.append(node('p',`${labels[key]||key}: ${value}`));
+  const details=node('details','');details.open=true;details.append(node('summary','Assumptions and calculation'));
+  for(const item of data.assumptions)details.append(node('p',item));for(const formula of data.formulas)details.append(node('p',formula));output.append(details);
+ }catch(exc){output.append(node('p',exc.message,'warning'));}
+};
+function setTheme(theme){document.documentElement.dataset.theme=theme;$('theme-toggle').textContent=theme==='dark'?'Light appearance':'Dark appearance';try{localStorage.setItem('nexo-theme',theme);}catch{}}
+let savedTheme='light';try{savedTheme=localStorage.getItem('nexo-theme')||'light';}catch{}setTheme(savedTheme==='dark'?'dark':'light');
+$('theme-toggle').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+$('mode').onchange();

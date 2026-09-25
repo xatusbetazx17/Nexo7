@@ -26,6 +26,15 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   d.getElementById('try-demo').click();
   assert(d.getElementById('setup-view').hidden);
   assert.equal(d.getElementById('mode').value,'companion');
+  assert(!d.getElementById('chat-options').open);assert(d.getElementById('web-controls').hidden);
+  d.getElementById('theme-toggle').click();assert.equal(d.documentElement.dataset.theme,'dark');
+  d.getElementById('theme-toggle').click();
+  d.getElementById('open-scenario').click();assert(d.getElementById('scenario-panel').open);
+  d.getElementById('scenario-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await waitFor(()=>d.getElementById('scenario-result').textContent.includes('10.1937'));
+  d.getElementById('scenario-kind').value='cost';d.getElementById('scenario-kind').onchange();
+  d.getElementById('scenario-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await waitFor(()=>d.getElementById('scenario-result').textContent.includes('120.00'));
   d.getElementById('mode').value='research';
   d.getElementById('mode').onchange();
   d.getElementById('new').click();
@@ -148,6 +157,8 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>!d.getElementById('send').disabled);
   assert(d.getElementById('messages').textContent.includes('Devices exchange data'));
   assert.equal((await request('/api/web')).sources.length,1);
+  assert.equal(d.getElementById('mode').value,'companion');
+  d.getElementById('mode').value='web';d.getElementById('mode').onchange();
   d.getElementById('prompt').value='Network fixture';
   d.getElementById('composer').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
   await waitFor(()=>!d.getElementById('send').disabled);
@@ -187,7 +198,7 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>!d.getElementById('web-sources').textContent.includes('Network fixture'));
   assert.equal((await request('/api/web')).sources.length,0);
   assert.deepEqual(errors,[]);
-  const result={environment:'JSDOM with real local HTTP server; not a rendered-browser layout test',passed:true,checks:['English setup view','low-memory explanation','download disabled without prerequisites','demo navigation','calculator response','document import','literal HTML handling','setup navigation','persistent preferences','explicitly approved example','authenticated artifact API','workspace create/read/delete','persistent task plan UI and deletion','bounded text import','CSV analysis','reviewed learning creation','literal learning HTML','consent resets on edit','public draft without automatic upload','community pack review and import','opt-in web lookup with fixture provider','saved web reuse','personality preferences persist','local DOCX export','source-linked reviewed learning','original-note draft and consent reset','offline quadratic and linear math UI','web source deletion','offline PNG/SVG and WAV/MIDI previews and validation','no JavaScript errors']};
+  const result={environment:'JSDOM with real local HTTP server; not a rendered-browser layout test',passed:true,checks:['English setup view','low-memory explanation','download disabled without prerequisites','demo navigation','calculator response','document import','literal HTML handling','setup navigation','persistent preferences','explicitly approved example','authenticated artifact API','workspace create/read/delete','persistent task plan UI and deletion','bounded text import','CSV analysis','reviewed learning creation','literal learning HTML','consent resets on edit','public draft without automatic upload','community pack review and import','opt-in web lookup with fixture provider','saved web reuse','personality preferences persist','local DOCX export','source-linked reviewed learning','original-note draft and consent reset','offline quadratic and linear math UI','web source deletion','offline PNG/SVG and WAV/MIDI previews and validation','simple chat defaults and single-message search','theme switching','explicit what-if calculations','no JavaScript errors']};
   fs.mkdirSync(path.join(root,'reports'),{recursive:true});
   fs.writeFileSync(path.join(root,'reports/ui-integration.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result));

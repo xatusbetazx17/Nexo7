@@ -96,7 +96,11 @@ def main():
             companion=request('/api/chat',{'message':'What is a computer?','mode':'companion','private':True})
             assert companion['status']=='completed' and companion['stats']['network_requests']==0,companion
             assert companion['companion']['steps'],companion
-            device=request('/api/chat',{'message':'/device','mode':'companion','private':True})
+            imagined=request('/api/chat',{'message':'Imagine a cartoon donkey bumps into a truck and flies away. What might happen, and can you know the repair price from this story?', 'mode':'companion', 'language':'en', 'private':True})
+            assert imagined['status']=='completed' and imagined['stats']['network_requests']==0 and imagined['stats']['model_calls']==1,imagined
+            assert imagined.get('scenario'),imagined
+            result['answers'].append({'prompt':'Imagined cartoon collision, not a real incident','answer':imagined['answer'],'stats':imagined['stats'],'scope':'Routing and generation smoke; not proof of reasoning accuracy'})
+            device=request('/api/chat' ,{'message':'/device','mode':'companion','private':True})
             assert device['status']=='completed' and device['stats']['model_calls']==0 and device['device']['total_bytes']>0,device
             learning_pack={'format':'nexo-learning-v1','entries':[{'question':'What is the fictional Zorilo marker?', 'answer':'The fictional Zorilo marker is a violet triangle.', 'language':'en','kind':'correction'}]}
             request('/api/learning/import',{'pack':learning_pack,'consent':True})

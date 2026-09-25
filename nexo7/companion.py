@@ -37,12 +37,14 @@ def run(engine, message, options, allow_internet=False):
     cfg = replace(engine.config, max_model_calls=1)
     worker = Engine(cfg, engine.store, provider=engine.provider, pubmed=engine.pubmed, workspace=engine.workspace, web=engine.web)
     internet = allow_internet and cfg.research_network
-    current = bool(CURRENT.search(message))
+    from .scenarios import hypothetical, explicit_lookup
+    imagined = hypothetical(message) and not explicit_lookup(message)
+    current = not imagined and bool(CURRENT.search(message))
     learned = engine.learning.matching(message) if engine.store.preferences()['use_learning'] else []
-    route = 'web' if current and internet else 'balanced' if learned or MEMORY.search(message) or re.search(r'\b(create|write|build|crea|escribe|programa)\b', message, re.I) else 'chat'
+    route = 'scenario' if imagined else 'web' if current and internet else 'balanced' if learned or MEMORY.search(message) or re.search(r'\b(create|write|build|crea|escribe|programa)\b', message, re.I) else 'chat'
     exact = next((e for e in engine.learning.entries() if ' '.join(e['question'].casefold().split()) == ' '.join(message.casefold().split())
                   and options['language'] in ('auto', e['language'])), None) if engine.store.preferences()['use_learning'] else None
-    if exact and not exact.get('provenance') and not current and not message.startswith('/'):
+    if exact and not imagined and not exact.get('provenance') and not current and not message.startswith('/'):
         result = local_result(exact['answer'])
         result['warnings'].append('Reused your reviewed example; not independently fact-checked.')
         steps.append({'action': 'Reuse reviewed answer', 'result': 'Exact question and compatible language; no model call'})
@@ -93,7 +95,7 @@ def run(engine, message, options, allow_internet=False):
     else:
         steps.append({'action': 'Choose response path', 'result': route})
         result = worker.chat(message, mode=route, _defer_save=True, **options)
-        if (route != 'web' and internet and engine.config.max_model_calls >= 2
+        if (route not in ('web', 'scenario') and internet and engine.config.max_model_calls >= 2
                 and result['stats']['tool_calls'] < cfg.max_tool_calls and result['status'] == 'completed' and UNKNOWN.search(result['answer'])
                 and len(message) <= 500 and max(result['stats']['output_tokens'], cfg.max_output_tokens) <= cfg.max_total_output_tokens - 64):
             previous = result

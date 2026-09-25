@@ -31,6 +31,9 @@
     "offline quadratic and linear math UI",
     "web source deletion",
     "offline PNG/SVG and WAV/MIDI previews and validation",
+    "simple chat defaults and single-message search",
+    "theme switching",
+    "explicit what-if calculations",
     "no JavaScript errors"
   ]
 }

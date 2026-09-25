@@ -47,6 +47,9 @@ def main():
             assert status["desktop"] and status["provider"] == "demo"
             result = json.loads(request("/api/chat", {"message": "/calc 24.5 * 40", "language": "en"}))
             assert result["answer"] == "980.0" and result["stats"]["model_calls"] == 0
+            scenario = json.loads(request('/api/scenario', {'kind':'flight','speed_m_s':10,'angle_degrees':45,'height_m':0}))
+            assert abs(scenario['result']['horizontal_distance_m']-10.1937)<0.001
+            assert scenario['model_calls']==0 and scenario['network_requests']==0
             math_result = json.loads(request("/api/math", {"operation":"quadratic","a":"1","b":"-5","c":"6"}))
             assert sorted(math_result["result"]["roots"]) == ["2", "3"]
             try:

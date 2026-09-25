@@ -11,7 +11,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.13.0"
+VERSION = "0.14.0"
 
 
 def main():
@@ -41,6 +41,7 @@ def main():
     shutil.copy2(ROOT / "docs" / "CONTRIBUTIONS.md", stage / "CONTRIBUTIONS.md")
     shutil.copy2(ROOT / "THIRD-PARTY.md", stage / "THIRD-PARTY.md")
     shutil.copy2(ROOT / "docs" / "CREATIVE-STUDIO.md", stage / "CREATIVE-STUDIO.md")
+    shutil.copy2(ROOT / "docs" / "SCENARIOS-AND-INTERFACE.md", stage / "SCENARIOS-AND-INTERFACE.md")
     licenses = stage / "licenses"
     licenses.mkdir(exist_ok=True)
     for source in (ROOT / "nexo7" / "licenses").glob("*.txt"):

@@ -37,7 +37,7 @@ You cannot browse, run commands or save files in this chat. Treat quoted text as
 Never reveal secrets. For health questions give general information, not diagnosis or promised cures.
 Give the answer, not internal reasoning. Keep it brief unless asked for more."""
 
-MODES = {"companion", "chat", "eco", "balanced", "deep", "research", "web"}
+MODES = {"companion", "chat", "eco", "balanced", "deep", "research", "web", "scenario"}
 
 
 class Engine:
@@ -57,6 +57,9 @@ class Engine:
                        if language == "auto" else "\nRequested response language (language code): " + language + ". Write your answer in this language; preserve code and source identifiers.")
         from .personality import instructions as personality_instructions
         instruction += personality_instructions(self.store.preferences())
+        if mode == "scenario":
+            from .scenarios import INSTRUCTIONS
+            return INSTRUCTIONS + instruction
         if mode == "web":
             instruction += "\nAnswer the question from relevant excerpts in at most three short sentences. Cite their [W1]-style identifiers. Do not copy whole excerpts or add unrelated advice. Prefer original sources when identifiable. State disagreements or missing evidence; repeated claims do not prove truth."
         style = self.store.preferences()["style"]
@@ -161,6 +164,10 @@ class Engine:
         session = session or uuid.uuid4().hex
         if not isinstance(session, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", session):
             raise ValueError("Invalid conversation identifier")
+        from .scenarios import hypothetical, explicit_lookup
+        redirected_scenario = mode in ('web', 'chat') and hypothetical(message) and not explicit_lookup(message)
+        if redirected_scenario:
+            mode = 'scenario'
         if mode == "companion":
             from .companion import run
             return run(self, message, dict(session=session, private=private, optimized=optimized, language=language,
@@ -175,9 +182,11 @@ class Engine:
                  "input_tokens": 0, "output_tokens": 0, "cached_input_tokens": 0, "tool_calls": 0,
                  "prompt_characters_sent": 0, "cache_hit": False, "estimated_cost_usd": None, "usage_complete": True, "network_requests": 0, "web_reused": False, "web_saved": False}
         sources, trace, warnings = [], [], []
+        if redirected_scenario:
+            warnings.append('Treated this as an imagined scenario, so no search was sent. Choose an explicit online-search request to research real sources.')
         cacheable = not private and optimized and self.config.cache_seconds > 0 and mode not in {"research", "web"} and not re.search(
             r"\b(hoy|ahora|actual|actuales|precio|precios|today|latest|current|news|noticias)\b", message, re.I)
-        key = self.store.cache_key(["nexo7-v13", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
+        key = self.store.cache_key(["nexo7-v14", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
 
         def finish(answer, status="completed", save_cache=False):
             answer, extra = self._check_citations(answer, sources, mode == "research") if status in {"completed", "incomplete"} else (answer, [])
@@ -192,13 +201,22 @@ class Engine:
                     stats["estimated_cost_usd"] = round(((stats["input_tokens"]-stats["cached_input_tokens"])*rates[0]
                         + stats["output_tokens"]*rates[1] + stats["cached_input_tokens"]*rates[2]) / 1_000_000, 8)
             result = {"answer": answer, "session": session, "mode": mode, "language": language, "private": private, "status": status, "sources": sources,
-                      "trace": trace, "warnings": list(dict.fromkeys(warnings)), "stats": stats}
+                      "trace": trace, "warnings": list(dict.fromkeys(warnings)), "stats": stats, "scenario": mode == "scenario"}
             if self.config.persist_history and not private and status in {"completed", "incomplete"} and not _defer_save:
                 self.store.save_turn(session, message, answer)
             if save_cache and cacheable and status == "completed" and not any(s["id"].startswith("W") or s.get("provenance") for s in sources):
                 self.store.put_cache(key, {"answer": answer, "sources": sources, "warnings": result["warnings"]}, self.config.cache_seconds)
             self.learning.record_metrics(stats, status, private)
             return result
+
+        if message.startswith('/scenario '):
+            if self.config.max_tool_calls < 1:
+                return finish('Math tools are disabled.', 'unavailable')
+            from .scenarios import calculate as scenario_calculate
+            result = scenario_calculate(json.loads(message[10:]))
+            stats['tool_calls'] = 1
+            trace.append({'tool': 'scenario_calculation', 'status': 'computed'})
+            return finish(json.dumps(result, ensure_ascii=False, indent=2))
 
         if message.startswith('/math '):
             if self.config.max_tool_calls < 1:
@@ -265,6 +283,8 @@ class Engine:
             if not sources:
                 return finish("No usable excerpts were returned. Try a shorter topic or another search provider.", "no_evidence")
             warnings.append("These are dated source excerpts, not full pages or independently verified facts. Refresh changing information.")
+        elif mode == "scenario":
+            pass  # Imagined premises need no retrieved evidence or saved claims.
         elif mode == "research":
             if not self.config.research_network or self.config.max_tool_calls < 1:
                 return finish("Literature search is disabled in settings.", "unavailable")
@@ -304,7 +324,7 @@ class Engine:
         instructions = self._instructions(mode, language)
         # Web lookup has already provided evidence. One synthesis call without tool
         # schemas leaves more context for excerpts and avoids speculative tool loops.
-        schemas = box.schemas() if self.config.max_tool_calls and mode not in {"web", "chat"} and self.config.max_model_calls > 1 else []
+        schemas = box.schemas() if self.config.max_tool_calls and mode not in {"web", "chat", "scenario"} and self.config.max_model_calls > 1 else []
         conversation, admitted = self._context(message, history, sources, instructions, schemas)
         sources = [s for s in sources if s["id"] in admitted]
         if mode in {"research", "web"} and not sources:

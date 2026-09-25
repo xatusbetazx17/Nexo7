@@ -7,6 +7,29 @@ on:
 permissions:
   contents: read
 jobs:
+  interface:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: python -m pip install -r requirements-runtime.txt
+      - run: npm install --prefix "$RUNNER_TEMP/nexo-ui" --no-save playwright@1.62.1
+      - name: Browser layout and interaction checks
+        env:
+          NEXO_PLAYWRIGHT_MODULE: ${{ runner.temp }}/nexo-ui/node_modules/playwright
+          NEXO_CHROME: /usr/bin/google-chrome
+        run: node scripts/ui_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: interface-review
+          path: reports/browser
+          if-no-files-found: warn
   build:
     strategy:
       fail-fast: false
@@ -52,7 +75,7 @@ jobs:
           if-no-files-found: error
   publish:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, interface]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -66,7 +89,7 @@ jobs:
       - name: Publish preview release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.13.0' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.14.0' }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; native builds remain available as workflow artifacts."
