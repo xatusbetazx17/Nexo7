@@ -22,7 +22,7 @@ class SetupController:
     def snapshot(self):
         with self.lock:
             return {**self.state, "logs": list(self.state["logs"]),
-                    "ready": self.config.provider in {"native", "ollama"}}
+                    "ready": self.state["phase"] == "ready" and self.config.provider in {"native", "ollama"}}
 
     def emit(self, text):
         with self.lock:
@@ -41,23 +41,30 @@ class SetupController:
             self.state["report"] = report
         return report
 
-    def start(self, *, cpu_only=False, language="auto"):
+    def start(self, *, cpu_only=False, language="auto", switch=False):
         if type(cpu_only) is not bool:
             raise ValueError("cpu_only must be a boolean")
         language = Config(response_language=language).response_language
         if not self.operation.acquire(blocking=False):
             raise ValueError("A setup or chat operation is already running")
         with self.lock:
-            if self.config.provider in {"native", "ollama"}:
+            if self.config.provider in {"native", "ollama"} and not (switch and self.owns_runtime and self.config.provider == "native"):
                 self.operation.release()
                 raise ValueError("The local model is already ready. Restart Nexo to change hardware settings.")
             self.cancel.clear()
             self.state.update(phase="preparing", logs=[], error=None)
+        preferences = dict(self.preferences)
         def work():
             try:
+                if self.owns_runtime:
+                    self.emit("Unloading current model before switching…")
+                    stop_native(self.config)
+                    with self.lock:
+                        self.config = Config(database=self.config.database)
+                        self.owns_runtime = False
                 self.emit("Checking native runtime and available memory…")
                 config, plan = start_native(self.config.database, cpu_only=cpu_only,
-                                          emit=self.emit, cancel=self.cancel, performance=self.preferences["performance"], model_choice=self.preferences.get("model_choice","automatic"))
+                                          emit=self.emit, cancel=self.cancel, performance=preferences["performance"], model_choice=preferences.get("model_choice","automatic"))
                 with self.lock:
                     self.config = replace(config, response_language=language)
                     self.owns_runtime = True

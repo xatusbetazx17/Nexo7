@@ -119,11 +119,16 @@ def native_plan(cpu_only=False, performance='balanced', model_choice='automatic'
     use_cpu = cpu_only or hw.system == 'Linux' or hw.gpu_hint != 'nvidia' or hw.gpu_index != 0
     plan = plan_local(hw, cpu_only=use_cpu, performance=performance, native=True)
     if performance == 'fast': plan['profiles'] = [p for p in plan['profiles'] if p['model'] == 'qwen3.5:0.8b']
-    if model_choice not in ('automatic','qwen2.5:1.5b'):raise ValueError('Unknown model choice')
+    if model_choice not in ('automatic','qwen2.5:1.5b','lfm2-vl:450m'):raise ValueError('Unknown model choice')
     if model_choice == 'qwen2.5:1.5b':
         if plan['ram_limit_bytes'] < 3_000_000_000:raise ValueError('This candidate needs a 3 GB model budget plus host headroom. Keep Automatic on lower-memory devices.')
         plan['profiles'] = [dict(model=model_choice,minimum_budget=3_000_000_000,max_download=1_200_000_000,context_tokens=4096)]
         plan['low_memory'] = True
+    if model_choice == 'lfm2-vl:450m':
+        plan['profiles'] = [dict(model=model_choice,minimum_budget=1_500_000_000,max_download=400_000_000,context_tokens=4096)]
+        plan['low_memory'] = True
+        plan['backend'] = 'cpu'
+        use_cpu = True
     plan['model_choice'] = model_choice
     plan['runtime'] = 'native'
     plan['backend'] = 'vulkan' if plan['backend'] == 'nvidia' and not use_cpu else 'cpu'
@@ -132,7 +137,7 @@ def native_plan(cpu_only=False, performance='balanced', model_choice='automatic'
     plan['guard_scope'] += '; excludes app/browser, OS, dedicated VRAM and disk storage'
     for profile in plan['profiles']:
         profile['context_tokens'] = min(profile['context_tokens'], 6144)
-        profile['download_bytes'] = CATALOG['models'][profile['model']]['size']
+        profile['download_bytes'] = CATALOG['models'][profile['model']]['size'] + CATALOG['models'][profile['model']].get('projector',{}).get('size',0)
     return plan
 
 
@@ -193,6 +198,10 @@ def start_native(database, *, cpu_only=False, emit=print, cancel=None, performan
             model = CATALOG['models'][profile['model']]
             emit('Preparing '+profile['model']+' with '+backend.upper()+'; '+current['guard_scope'])
             model_path = download(model, root / 'models' / model['filename'], emit, cancel)
+            if model.get('license') == 'LFM-1.0':
+                shutil.copyfile(Path(__file__).parent / 'licenses' / 'LIQUID-LFM-1.0.txt', root / 'models' / 'LIQUID-LFM-1.0.txt')
+            projector = model.get('projector')
+            projector_path = download(projector, root / 'models' / projector['filename'], emit, cancel) if projector else None
             # Recheck available host RAM after downloads and immediately before loading.
             refreshed = get_plan(backend == 'cpu')
             if profile['minimum_budget'] > refreshed['ram_limit_bytes']: continue
@@ -205,6 +214,7 @@ def start_native(database, *, cpu_only=False, emit=print, cancel=None, performan
                        '-c',str(profile['context_tokens']), '-b','128', '-ub','64', '-np','1', '-n','512', '-lm','none',
                        '-ngl','99' if backend == 'vulkan' else '0', '--fit','off','--reasoning','off',
                        '--cache-ram','0','--ctx-checkpoints','0','--no-webui','--no-agent','--no-ui-mcp-proxy','--no-slots','--log-disable']
+            if projector_path: command += ['--mmproj',str(projector_path),'--no-mmproj-offload','--image-min-tokens','64','--image-max-tokens','256']
             if backend == 'vulkan': command += ['--device','Vulkan0']
             runtime = None
             try:

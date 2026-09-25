@@ -27,6 +27,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     learning = Learning(store)
     from .task_agent import TaskAgent
     agent = TaskAgent(store, workspace) if workspace else None
+    from .telegram_bridge import BridgeController
+    telegram = BridgeController(Path(config.database).resolve().parent / "access.json") if controller else None
     import_slots = threading.BoundedSemaphore(1)
 
     class Handler(BaseHTTPRequestHandler):
@@ -74,14 +76,16 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.11.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.12.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
                     "research_network": active.research_network, "response_language": active.response_language,
                     "local_ram_limit_bytes": active.local_ram_limit_bytes if active.provider in {"native", "ollama"} else None,
                     "local_backend": active.local_backend if active.provider in {"native", "ollama"} else None,
-                    "desktop": controller is not None})
+                    "vision": active.provider == "native" and active.model == "lfm2-vl:450m", "desktop": controller is not None})
+            if path == "/api/telegram" and telegram:
+                return self._send(200, telegram.snapshot())
             if path == "/api/tasks" and agent:
                 return self._send(200, {"tasks":agent.list()})
             if path == "/api/setup" and controller:
@@ -121,7 +125,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 requests.append(now)
             try:
                 size = int(self.headers.get("Content-Length", "-1"))
-                if not 0 <= size <= (6_800_000 if urlsplit(self.path).path == "/api/import" else 500000):
+                if not 0 <= size <= (10_800_000 if urlsplit(self.path).path in ("/api/vision", "/api/relay") else 6_800_000 if urlsplit(self.path).path == "/api/import" else 500000):
                     return self._send(413, {"error": "Request too large or missing Content-Length"})
                 if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
                     return self._send(415, {"error": "application/json is required"})
@@ -129,6 +133,20 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == '/api/telegram/chats' and telegram:
+                    return self._send(200, telegram.discover(body))
+                if path == '/api/telegram/start' and telegram:
+                    if controller.config.provider != 'native':raise ValueError('Start a local model first')
+                    return self._send(202, telegram.start(body))
+                if path == '/api/telegram/stop' and telegram:
+                    return self._send(202, telegram.stop())
+                if path in ('/api/vision', '/api/relay') and controller:
+                    if not controller.operation.acquire(blocking=False):return self._send(429, {'error':'Another local model operation is running'})
+                    try:
+                        from .vision import reply
+                        result = reply(controller.config, body, require_images=path == '/api/vision')
+                    finally:controller.operation.release()
+                    return self._send(200, result)
                 if path == '/api/tasks/plan' and agent:
                     if not controller.operation.acquire(blocking=False):return self._send(429,{'error':'Another model operation is running'})
                     try:result=agent.plan(body.get('goal'),Engine(controller.config,store,workspace=workspace,web=web_research))
@@ -144,6 +162,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                         if not controller.operation.acquire(blocking=False):return self._send(429, {'error':'Another model/setup operation is running'})
                         try:result=agent.run(identifier,Engine(controller.config,store,workspace=workspace,web=web_research))
                         finally:controller.operation.release()
+                    elif action=='edit':result=agent.edit(identifier,body.get('content'),body.get('expected_hash'))
+                    elif action=='feedback':result=agent.feedback(identifier,body.get('text'))
                     elif action=='apply':result=agent.apply(identifier,body.get('proposal_id'))
                     elif action=='rollback':result=agent.rollback(identifier)
                     elif action=='cancel':result=agent.cancel(identifier)
@@ -204,6 +224,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     if type(body.get("cpu_only", False)) is not bool:
                         raise ValueError("cpu_only must be a boolean")
                     return self._send(200, controller.check(body.get("cpu_only", False)))
+                if controller and path == "/api/setup/switch":
+                    return self._send(202, controller.start(cpu_only=body.get("cpu_only", False), language=body.get("language", "auto"), switch=True))
                 if controller and path == "/api/setup/start":
                     return self._send(202, controller.start(cpu_only=body.get("cpu_only", False),
                                                            language=body.get("language", "auto")))
@@ -276,5 +298,6 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             return sock, address
 
     server = LocalServer(("127.0.0.1", port), Handler)
+    server.telegram_controller = telegram
     server.access_token = token
     return server

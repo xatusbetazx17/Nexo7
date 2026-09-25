@@ -21,7 +21,7 @@ def digest(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
-def validate(name,content,required,function_tests=None):
+def validate(name,content,required,function_tests=None,criteria=None):
     checks=[]
     checks.append({'check':'nonempty bounded content','passed':isinstance(content,str) and 0<len(content.encode())<=8000})
     if not checks[0]['passed']:return {'passed':False,'checks':checks}
@@ -41,6 +41,9 @@ def validate(name,content,required,function_tests=None):
             from .pure_checks import check
             checks.extend(check(content,function_tests))
         except (ValueError,SyntaxError,ArithmeticError,RecursionError) as exc:checks.append({'check':'bounded pure-function tests','passed':False,'error':str(exc)[:200]})
+    if criteria:
+        from .task_contracts import validate_html
+        checks.extend(validate_html(content,criteria))
     for text in required:checks.append({'check':'required text: '+text,'passed':text in content})
     return {'passed':all(c['passed'] for c in checks),'checks':checks,'scope':'Content, syntax, required text and any supplied pure-expression cases only. No arbitrary code executed; these checks do not prove general behavior or factual accuracy.'}
 
@@ -91,7 +94,9 @@ class TaskAgent:
             from .pure_checks import specifications
             tests=specifications(step.get('function_tests',[]))
             if tests and not name.endswith('.py'):raise ValueError('Function test cases require a Python file')
-            names.add(name.casefold());checked.append(dict(name=name,instruction=instruction.strip(),required=required,function_tests=tests,state='pending',attempts=0))
+            from .task_contracts import criteria
+            contract = criteria(step.get('criteria', []), name)
+            names.add(name.casefold());checked.append(dict(criteria=contract,name=name,instruction=instruction.strip(),required=required,function_tests=tests,state='pending',attempts=0))
         if preview:return {"goal":goal.strip(),"steps":checked,"notice":"Suggested plan only. Edit the steps and checks before saving; no files changed."}
         with self.lock:
             if len(self.list())>=50:raise ValueError('Delete an old task first; limit 50 tasks')
@@ -157,6 +162,8 @@ class TaskAgent:
                 if Path(step['name']).suffix.lower() in ('.md','.txt'):
                     instruction+=' The current output is a prose document, not the source code shown as reference. Write only the document text.'
                 if step.get('validation') and not step['validation']['passed']:task_text+='\nFix the previous failed attempt:\n'+request['previous_attempt']+'\nCheck failures: '+json.dumps(request['correction'])
+                if step.get('criteria'):task_text+='\nRequired structural checks: '+', '.join(step['criteria'])
+                if step.get('feedback'):task_text+='\nUser correction: '+step['feedback']
                 if step['function_tests']:
                     task_text+='\nRequired Python format: each function body is exactly one return expression. Omit docstrings, input validation, if statements, raise statements, calls and usage examples. Test inputs and expected results: '+json.dumps(step['function_tests'])
                 conversation=[{'role':'user','content':task_text}]
@@ -166,7 +173,7 @@ class TaskAgent:
                 text=response.text.strip()
                 fenced=re.fullmatch(r'```[^\n]*\n([\s\S]*?)\n?```',text)
                 content=fenced[1] if fenced else text
-                result=validate(step['name'],content,step['required'],step['function_tests'])
+                result=validate(step['name'],content,step['required'],step['function_tests'],step.get('criteria', []))
                 if response.incomplete or response.calls:
                     result['passed']=False;result['checks'].append({'check':'complete response without unexpected tool calls','passed':False})
                 step['candidate']=content[:8000]
@@ -186,13 +193,40 @@ class TaskAgent:
             with self.lock:self.save(job)
         return job
 
+    def edit(self, identifier, content, expected_hash):
+        with self.lock:
+            job = self.get(identifier)
+            if job.get('requires_reconciliation') or job['state'] not in ('blocked', 'awaiting_review'):
+                raise ValueError('Generate a step before editing its proposal')
+            step = next(s for s in job['steps'] if s['state'] != 'applied')
+            if 'before' not in step or step.get('candidate_hash') != expected_hash:
+                raise ValueError('Proposal changed; reload it before editing')
+            result = validate(step['name'], content, step['required'], step['function_tests'], step.get('criteria', []))
+            if not result['passed']:raise ValueError('Edited proposal failed checks: ' + json.dumps(result['checks'])[:250])
+            step.update(candidate=content, candidate_hash=digest(content), state='review', validation=result,
+                        proposal_id=uuid.uuid4().hex, diff=''.join(difflib.unified_diff(step['before'].splitlines(True),content.splitlines(True),fromfile='before',tofile='edited proposal'))[:20000])
+            job['state']='awaiting_review';job['error']=None
+            self.event(job,'User edited proposal; checks passed. Review and apply separately.');self.save(job)
+            return job
+
+    def feedback(self, identifier, text):
+        if not isinstance(text, str) or not 1 <= len(text.strip()) <= 600:raise ValueError('Correction needs 1–600 characters')
+        with self.lock:
+            job=self.get(identifier)
+            if job.get('requires_reconciliation') or job['state'] not in ('blocked','awaiting_review','ready'):raise ValueError('Task cannot accept a correction now')
+            step=next(s for s in job['steps'] if s['state']!='applied')
+            step['feedback']=text.strip();step['state']='pending';step.pop('proposal_id',None)
+            job['state']='blocked';job['error']=None
+            self.event(job,'User correction saved. Attempt and token limits retained.');self.save(job)
+            return job
+
     def apply(self,identifier,proposal_id):
         with self.lock,self.workspace.lock:
             job=self.get(identifier)
             if job['state']!='awaiting_review':raise ValueError('No pending proposal')
             step=next(s for s in job['steps'] if s['state']=='review')
             if not isinstance(proposal_id,str) or proposal_id!=step['proposal_id']:raise ValueError('Proposal changed; review the current diff')
-            report=validate(step['name'],step['candidate'],step['required'],step['function_tests'])
+            report=validate(step['name'],step['candidate'],step['required'],step['function_tests'],step.get('criteria', []))
             if not report['passed']:raise ValueError('Proposal no longer passes its checks')
             current=self.target(step['name'])
             if (current['id'] if current else None)!=step['file_id'] or digest(current['content'] if current else '')!=step['base_hash']:raise ValueError('Target changed since generation. Cancel this task and create a fresh plan')
@@ -203,7 +237,7 @@ class TaskAgent:
                 else:item=self.workspace.create(step['name'],step['candidate'])
                 saved=self.workspace.read(item['id'])
                 if digest(saved['content'])!=digest(step['candidate']):raise ValueError('Saved content does not match proposal')
-                step.update(file_id=item['id'],state='applied',after_hash=digest(saved['content']),validation=validate(step['name'],saved['content'],step['required'],step['function_tests']))
+                step.update(file_id=item['id'],state='applied',after_hash=digest(saved['content']),validation=validate(step['name'],saved['content'],step['required'],step['function_tests'],step.get('criteria', [])))
                 step.pop('proposal_id',None)
                 self.event(job,'Verified saved content and declared checks for '+step['name']+'; behavior not independently tested')
                 job['state']='completed' if all(s['state']=='applied' for s in job['steps']) else 'ready'

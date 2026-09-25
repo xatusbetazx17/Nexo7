@@ -47,7 +47,7 @@ def grade(name,text):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--model',choices=['qwen3.5:0.8b','qwen3.5:2b','qwen2.5:1.5b'],required=True)
+    parser.add_argument('--model',choices=['qwen3.5:0.8b','qwen3.5:2b','qwen2.5:1.5b','lfm2-vl:450m'],required=True)
     parser.add_argument('--budget-gb',type=float,default=3)
     parser.add_argument('--data-dir',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)

@@ -11,7 +11,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.11.0"
+VERSION = "0.12.0"
 
 
 def main():
@@ -42,6 +42,9 @@ def main():
     shutil.copy2(ROOT / "THIRD-PARTY.md", stage / "THIRD-PARTY.md")
     licenses = stage / "licenses"
     licenses.mkdir(exist_ok=True)
+    for source in (ROOT / "nexo7" / "licenses").glob("*.txt"):
+        shutil.copy2(source, licenses / source.name)
+    shutil.copy2(ROOT / "docs" / "VISION-TELEGRAM.md", stage / "VISION-TELEGRAM.md")
     from importlib.metadata import distribution
     package = distribution("pyinstaller")
     for entry in package.files or []:
@@ -50,6 +53,9 @@ def main():
     for entry in distribution("pypdf").files or []:
         if str(entry).endswith("licenses/LICENSE"):
             shutil.copy2(distribution("pypdf").locate_file(entry), licenses / "PYPDF-LICENSE.txt")
+    for entry in distribution("Pillow").files or []:
+        if "licenses/" in str(entry) and str(entry).endswith(("LICENSE", "LICENSE.txt")):
+            shutil.copy2(distribution("Pillow").locate_file(entry), licenses / ("PILLOW-" + Path(str(entry)).name))
     for candidate in (Path(sysconfig.get_path("stdlib")) / "LICENSE.txt", Path(sys.base_prefix) / "LICENSE.txt"):
         if candidate.exists():
             shutil.copy2(candidate, licenses / "PYTHON-LICENSE.txt")

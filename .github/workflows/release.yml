@@ -41,6 +41,10 @@ jobs:
         run: python scripts/smoke_native.py --simulate-4gb --output reports/native-4gb-smoke.json
       - name: Optional candidate with guarded 8 GB simulation and real task workflow
         run: python scripts/smoke_native.py --simulate-8gb --candidate --output reports/native-candidate-smoke.json
+      - name: Real packaged LiquidAI image inference and model switching
+        run: python scripts/smoke_vision.py --binary dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
+      - name: Real LiquidAI vision with simulated 4 GB total and 2.5 GB available
+        run: python scripts/smoke_vision.py --simulate-4gb --output reports/native-vision-4gb-smoke.json
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
@@ -62,7 +66,7 @@ jobs:
       - name: Publish preview release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.11.0' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.12.0' }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; native builds remain available as workflow artifacts."

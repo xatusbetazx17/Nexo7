@@ -113,6 +113,8 @@ class NativeProvider(OllamaProvider):
         body = {"model": model, "messages": [{"role":"system", "content":instructions}] + conversation,
                 "stream":False, "max_tokens":min(max_tokens,self.config.max_output_tokens),
                 "temperature":0.2, "chat_template_kwargs":{"enable_thinking":False}, "cache_prompt":False}
+        if model == "lfm2-vl:450m":
+            body.update(temperature=0.1, min_p=0.15, repeat_penalty=1.05)
         if tools:
             body["tools"] = [{"type":"function", "function":{k:v for k,v in t.items() if k not in {"type","strict"}}} for t in tools]
             body["parallel_tool_calls"] = False

@@ -100,3 +100,24 @@ native runtime; the candidate does not bypass memory checks.
 The next quality milestone is a larger, independently reviewed held-out suite
 and reliable tool selection for word problems—not a claim that larger downloads
 or more agent loops automatically make answers correct.
+
+## v0.12: correct a proposal and declare HTML checks
+
+Task templates fill in editable plans for a single-page website, a tested numeric
+Python function or a checklist. The optional fifth step column contains
+comma-separated HTML criteria: `html_structure`, `inline_style`, `inline_script`.
+These checks parse tags and require an HTML document skeleton or nonempty inline
+blocks. They do not execute JavaScript or prove layout, accessibility or behavior.
+Commented-out tags do not count. Criteria are stored with the step and rechecked
+before and after applying the reviewed proposal.
+
+For a generated or blocked step, edit its proposed content directly and click
+**Validate edited proposal**. It must pass the same declared checks, then receive
+separate review/application. Editing invalidates the old proposal token and
+retains the original file hash, preventing overwrite of a subsequently changed
+file. A manual correction does not consume inference tokens or reset budgets.
+
+**Save correction** supplies feedback for the next generation attempt. It
+invalidates a pending approval and retains attempt/token/time limits. If all
+attempts are exhausted, edit manually or create a revised task. This is a bounded
+workflow, not unrestricted self-modifying code or a full autonomous terminal.

@@ -1,0 +1,103 @@
+{
+  "packaged": false,
+  "platform": "linux",
+  "simulated_4gb": true,
+  "answers": [
+    {
+      "answer": "The rectangle is red.",
+      "status": "completed",
+      "private": true,
+      "sources": [],
+      "mode": "vision",
+      "warnings": [
+        "Images and this reply are not saved in history or learning. Review visual details; small text may be lost when resized.",
+        "This LiquidAI checkpoint officially supports English; other languages are not guaranteed."
+      ],
+      "images": [
+        {
+          "width": 320,
+          "height": 240
+        }
+      ],
+      "stats": {
+        "provider": "native",
+        "model": "lfm2-vl:450m",
+        "model_calls": 1,
+        "input_tokens": 136,
+        "output_tokens": 6,
+        "elapsed_ms": 545.11,
+        "cache_hit": false,
+        "network_requests": 0
+      }
+    },
+    {
+      "answer": "The circle is blue.",
+      "status": "completed",
+      "private": true,
+      "sources": [],
+      "mode": "vision",
+      "warnings": [
+        "Images and this reply are not saved in history or learning. Review visual details; small text may be lost when resized.",
+        "This LiquidAI checkpoint officially supports English; other languages are not guaranteed."
+      ],
+      "images": [
+        {
+          "width": 320,
+          "height": 240
+        }
+      ],
+      "stats": {
+        "provider": "native",
+        "model": "lfm2-vl:450m",
+        "model_calls": 1,
+        "input_tokens": 136,
+        "output_tokens": 6,
+        "elapsed_ms": 537.3,
+        "cache_hit": false,
+        "network_requests": 0
+      }
+    }
+  ],
+  "plan": {
+    "hardware": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "total_bytes": 4000000000,
+      "available_bytes": 2500000000,
+      "cpu_threads": 9,
+      "gpu_hint": "cpu",
+      "memory_source": "procfs + visible cgroup v2 limits",
+      "gpu_free_bytes": 0,
+      "gpu_total_bytes": 0,
+      "gpu_index": 0
+    },
+    "ram_limit_bytes": 1500000000,
+    "absolute_ram_ceiling_bytes": 16000000000,
+    "reserved_host_bytes": 1000000000,
+    "backend": "cpu",
+    "threads": 4,
+    "profiles": [
+      {
+        "model": "lfm2-vl:450m",
+        "minimum_budget": 1500000000,
+        "max_download": 400000000,
+        "context_tokens": 4096,
+        "download_bytes": 323197440
+      }
+    ],
+    "low_memory": true,
+    "performance": "fast",
+    "gpu_index": 0,
+    "video_budget_bytes": null,
+    "video_budget_enforced": false,
+    "guard_scope": "Linux virtual address space per model process; excludes app/browser, OS, dedicated VRAM and disk storage",
+    "model_choice": "lfm2-vl:450m",
+    "runtime": "native",
+    "enforced_limit_bytes": 1500000000,
+    "selected_model": "lfm2-vl:450m",
+    "guard": "linux_virtual_address_space"
+  },
+  "relay_reply": "{\n  \"name\": \"Ana\",\n  \"age\": 30\n}",
+  "passed": true,
+  "scope": "Two single-image color checks, rejection of unsupported simultaneous-image requests, stateless relay and model reload. Not general visual, OCR or reasoning accuracy. Telegram sends were mocked in unit tests only."
+}

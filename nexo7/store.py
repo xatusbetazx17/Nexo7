@@ -49,7 +49,7 @@ class Store:
             values = {**self.preferences(), **updates}
             if values["performance"] not in {"fast", "balanced", "quality"} or values["style"] not in {"concise", "detailed", "accessible"}:
                 raise ValueError("Invalid preference value")
-            if values["model_choice"] not in ("automatic","qwen2.5:1.5b"):
+            if values["model_choice"] not in ("automatic","qwen2.5:1.5b","lfm2-vl:450m"):
                 raise ValueError("Unknown model choice")
             from .personality import PERSONALITIES
             if values["personality"] not in PERSONALITIES:

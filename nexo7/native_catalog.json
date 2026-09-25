@@ -62,6 +62,24 @@
       "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
       "repository": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
       "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9"
+    },
+    "lfm2-vl:450m": {
+      "url": "https://huggingface.co/LiquidAI/LFM2-VL-450M-GGUF/resolve/7cf9679aa137039135e342aa77014f7b5f2bef73/LFM2-VL-450M-Q4_0.gguf",
+      "sha256": "1fbf4797e8669cdeabd97fa1d31ab046907cb1fc78b1c3d4bda1ba879574e5d7",
+      "size": 219307424,
+      "filename": "LFM2-VL-450M-Q4_0.gguf",
+      "repository": "LiquidAI/LFM2-VL-450M-GGUF",
+      "revision": "7cf9679aa137039135e342aa77014f7b5f2bef73",
+      "projector": {
+        "url": "https://huggingface.co/LiquidAI/LFM2-VL-450M-GGUF/resolve/7cf9679aa137039135e342aa77014f7b5f2bef73/mmproj-LFM2-VL-450M-Q8_0.gguf",
+        "sha256": "a6a813fae4ba3f90852a990fdd4786a017dba0e80e599a366853ba539ee2b5ef",
+        "size": 103890016,
+        "filename": "mmproj-LFM2-VL-450M-Q8_0.gguf",
+        "repository": "LiquidAI/LFM2-VL-450M-GGUF",
+        "revision": "7cf9679aa137039135e342aa77014f7b5f2bef73"
+      },
+      "vision": true,
+      "license": "LFM-1.0"
     }
   }
 }

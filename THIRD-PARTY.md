@@ -35,3 +35,28 @@ that repository's model card. Its file hash and download size are pinned in
 The task-agent implementation was written independently after reviewing the
 architecture described by Emir Code (https://github.com/daristanapeyvan/emircode).
 No Emir Code source files were copied or incorporated.
+
+## LiquidAI vision, Pillow and adapted task criteria (v0.12)
+
+The optional LiquidAI/LFM2-VL-450M-GGUF Q4_0 weights and Q8_0 projector are pinned
+at revision `7cf9679aa137039135e342aa77014f7b5f2bef73`, verified independently by
+SHA-256, and downloaded only when selected. They use the **LFM Open License v1.0**,
+not MIT/Apache. Its commercial-use conditions include a $10 million annual revenue
+threshold; see the complete bundled `licenses/LIQUID-LFM-1.0.txt` (source location
+`nexo7/licenses/LIQUID-LFM-1.0.txt`). The license is copied next to cached weights.
+The model officially supports English and is not represented as a universal upgrade.
+
+Pillow 12.3.0 is used for bounded local image normalization under its HPND license;
+its license is included in portable builds. This does not change model licensing.
+
+`nexo7/task_contracts.py` is a Python adaptation of the HTML criteria in Emir Code
+TaskContract/TaskValidator at commit `49cb13b`. Copyright (c) 2026 Agah Emir and
+Emir Code Contributors, MIT; full notice is bundled in `licenses/EMIRCODE-MIT.txt`
+(source: `nexo7/licenses/EMIRCODE-MIT.txt`). It uses parsing instead of substring
+checks and never executes generated JavaScript.
+
+`nexo7/telegram_bridge.py` and `nexo7/vision.py` adapt the feature design of the
+Telegram script supplied by the user on 2026-09-24: local PNG conversion,
+multimodal content, mention/reply triggers, albums and custom rules. They use
+Nexo's own bounded transport and local endpoint. No aiohttp/python-telegram-bot
+code is bundled, and no Telegram connection is required to use the desktop app.

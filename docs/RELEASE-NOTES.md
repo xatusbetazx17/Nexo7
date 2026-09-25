@@ -1,3 +1,13 @@
+# v0.12.0 — local vision and optional Telegram
+
+- Add the requested LiquidAI LFM2-VL 450M Q4_0 model with a verified Q8_0 projector and its license. Keep existing automatic chat profiles.
+- Switch models after unloading the old process; recheck memory and preserve OS guards.
+- Analyze bounded image attachments locally, one at a time. A separate decoder worker resizes and removes metadata. Images are not automatically saved.
+- Add opt-in desktop Telegram start/stop, chat-ID discovery, explicit chat allowlists, mention/reply/album support and a stateless local endpoint. Command-line users can enable custom image reaction rules. No Telegram messages were sent in development.
+- Adapt Emir Code's HTML acceptance criteria, add task templates, manual proposal correction and feedback without resetting budgets.
+- Preserve existing chat, tools, documents, learning and contribution features. This release integrates existing weights; it does not train a stronger universal model.
+- Include real image smoke tests and raw text diagnostics. LiquidAI recognized simple colors separately but failed multiple text tasks and simultaneous-image interpretation; batches are therefore analyzed separately. See VISION-TELEGRAM.md for scope and limitations.
+
 # Nexo 7 0.11.0 — persistent workspace tasks and measured model comparison
 
 - Model-assisted draft plans, persistent 1–4 step tasks, bounded retries and compact file ledger.

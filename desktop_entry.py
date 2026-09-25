@@ -11,6 +11,12 @@ if __name__ == '__main__':
         if "--native-worker" in sys.argv:
             from nexo7.native_worker import main as worker_main
             worker_main()
+        elif "--telegram" in sys.argv:
+            from nexo7.telegram_bridge import main as telegram_main
+            telegram_main()
+        elif "--image-worker" in sys.argv:
+            from nexo7.vision import worker_main
+            worker_main()
         elif "--document-worker" in sys.argv:
             from nexo7.documents import worker_main
             worker_main()

@@ -84,3 +84,25 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(plan['steps'][0]['name'],'readme.md');self.assertEqual(self.agent.list(),[]);self.assertEqual(self.workspace.list(),[])
         self.provider.complete.return_value=Completion('[{"name":"../escape.py","instruction":"write"}]')
         with self.assertRaises(ValueError):self.agent.plan('Write a guide',self.engine)
+    def test_manual_correction_preserves_budget_invalidates_old_proposal_and_checks_base(self):
+        job=self.create();self.provider.complete.return_value=Completion('def square(n):\n return n*n')
+        job=self.agent.run(job['id'],self.engine);old=job['steps'][0]['proposal_id'];reserved=job['tokens_reserved']
+        edited=self.agent.edit(job['id'],'def square(n):\n return n**2',job['steps'][0]['candidate_hash'])
+        self.assertEqual(edited['tokens_reserved'],reserved)
+        with self.assertRaises(ValueError):self.agent.apply(job['id'],old)
+        with self.assertRaises(ValueError):self.agent.edit(job['id'],'invalid !',edited['steps'][0]['candidate_hash'])
+        with self.assertRaises(ValueError):self.agent.edit(job['id'],'def square(n): return n*n','stale')
+        self.agent.feedback(job['id'],'Keep the function concise')
+        self.assertEqual(self.agent.get(job['id'])['steps'][0]['attempts'],1)
+        with self.assertRaises(ValueError):self.agent.apply(job['id'],edited['steps'][0]['proposal_id'])
+    def test_html_contract_rejects_commented_tags_and_survives_review(self):
+        from nexo7.task_contracts import validate_html
+        criteria=['html_structure','inline_style','inline_script']
+        bogus='<!-- <!doctype html><html><head><style>body{color:red}</style></head><body><script>alert(1)</script></body></html> -->'
+        self.assertFalse(any(c['passed'] for c in validate_html(bogus,criteria)))
+        valid='<!doctype html><html><head><style>body{color:red}</style></head><body><h1>Hi</h1><script>const x=1;</script></body></html>'
+        self.assertTrue(all(c['passed'] for c in validate_html(valid,criteria)))
+        job=self.create([{'name':'index.html','instruction':'Build a website','criteria':criteria}]);self.provider.complete.side_effect=[Completion(bogus),Completion(valid)]
+        job=self.agent.run(job['id'],self.engine);self.assertEqual(job['state'],'awaiting_review')
+        job=self.agent.apply(job['id'],job['steps'][0]['proposal_id']);self.assertEqual(job['state'],'completed')
+        self.assertEqual(job['steps'][0]['criteria'],criteria)

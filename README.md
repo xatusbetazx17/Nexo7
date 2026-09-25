@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.11.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.12.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -154,3 +154,15 @@ Version 0.10 adds a smaller native profile (4 GB installed **and at least 2.5 GB
 ## Persistent workspace agent
 
 Version 0.11 adds local model-assisted task planning, bounded generation/correction, persistent steps, reviewed diffs, conditional atomic edits, file verification and rollback. Optional tests check pure scalar Python functions without executing arbitrary code. Existing learning, documents, search and memory guards remain. See [task-agent guide and model comparison](docs/TASK-AGENT.md). An optional Qwen2.5 1.5B candidate is available when a 3 GB model budget fits; it is not a universal quality upgrade.
+
+## Local images and optional Telegram (v0.12)
+
+Choose **LiquidAI LFM2-VL 450M** in Setup for bounded local image questions, and
+switch back to automatic chat models when needed. Two attachments are analyzed
+separately. Telegram can be started and stopped from Setup with explicit allowed
+chat IDs; it cannot read your saved knowledge or workspace.
+
+Task templates, editable proposals and declared HTML checks extend the reviewed
+workspace workflow. See [images, Telegram, measured limits and licenses](docs/VISION-TELEGRAM.md)
+and [task editing](docs/TASK-AGENT.md). These features do not establish superior
+reasoning or factual accuracy; the new checkpoint officially supports English.

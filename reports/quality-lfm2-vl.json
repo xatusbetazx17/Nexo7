@@ -1,0 +1,96 @@
+{
+  "model": "lfm2-vl:450m",
+  "budget_bytes": 3000000000,
+  "case_count": 10,
+  "scope": "CPU, 4096 context; literal diagnostic grading, not a benchmark of factual accuracy in general",
+  "cases": [
+    {
+      "id": "definition_en",
+      "prompt": "What is a chicken? Answer in one simple sentence.",
+      "answer": "A chicken is a bird that lays eggs.",
+      "passed": null,
+      "error": null,
+      "seconds": 0.15
+    },
+    {
+      "id": "definition_es",
+      "prompt": "¿Qué es una gallina? Responde en una oración sencilla.",
+      "answer": "Una gallina es un pez que se alimenta de las semillas y los frutos de las plantas, y se encuentra en la familia de los pescados.",
+      "passed": null,
+      "error": null,
+      "seconds": 0.328
+    },
+    {
+      "id": "deduction",
+      "prompt": "All zorps are blue. Luma is a zorp. What color is Luma? Answer just the color.",
+      "answer": "Blue",
+      "passed": true,
+      "error": null,
+      "seconds": 0.091
+    },
+    {
+      "id": "ordering",
+      "prompt": "Ana is older than Ben. Ben is older than Cam. Who is youngest? Answer just the name.",
+      "answer": "Ben",
+      "passed": false,
+      "error": null,
+      "seconds": 0.094
+    },
+    {
+      "id": "arithmetic",
+      "prompt": "A box has 6 bags with 7 marbles each. You remove 5 marbles. How many remain? Answer just the number.",
+      "answer": "3",
+      "passed": false,
+      "error": null,
+      "seconds": 0.096
+    },
+    {
+      "id": "arithmetic_es",
+      "prompt": "Hay 5 cajas con 8 libros cada una. Se regalan 6 libros. ¿Cuántos quedan? Responde solo el número.",
+      "answer": "Hay 40 libros en total (5 cajas x 8 libros). Si se devuelven 6 libros, entonces 40 - 6 = 34 libros quedan.",
+      "passed": false,
+      "error": null,
+      "seconds": 0.336
+    },
+    {
+      "id": "unknown",
+      "prompt": "What is the current population of the fictional planet Xorvila? If it cannot be known, say UNKNOWN.",
+      "answer": "The current population of the fictional planet Xorvila is unknown.",
+      "passed": false,
+      "error": null,
+      "seconds": 0.186
+    },
+    {
+      "id": "json",
+      "prompt": "Return only JSON with name Ana and age 30. Use keys name and age.",
+      "answer": "{\n  \"name\": \"Ana\",\n  \"age\": 30\n}",
+      "passed": true,
+      "error": null,
+      "seconds": 0.191
+    },
+    {
+      "id": "code",
+      "prompt": "Write only Python code defining square(n) that returns n*n.",
+      "answer": "```python\ndef square(n):\n    return n * n\n```",
+      "passed": true,
+      "error": null,
+      "seconds": 0.166
+    },
+    {
+      "id": "instruction",
+      "prompt": "Reply with exactly these two words: amber maple",
+      "answer": "Amber maple is a type of maple tree that produces a sweet-tart flavor, often used in desserts and beverages.",
+      "passed": false,
+      "error": null,
+      "seconds": 0.209
+    }
+  ],
+  "guard": "linux_virtual_address_space",
+  "enforced_limit_bytes": 3000000000,
+  "passed_count": 3,
+  "automatically_scored_cases": 8,
+  "manual_review_required": [
+    "definition_en",
+    "definition_es"
+  ]
+}

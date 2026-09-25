@@ -97,12 +97,22 @@ async function initialize(first=true) {
 $("connect").onclick=()=>{token=$("token").value;sessionStorage.setItem("nexo-token",token);error();initialize();};
 $("composer").onsubmit=async event=>{
   event.preventDefault(); if(busy) return;
-  const text=$("prompt").value.trim(); if(!text) return;
+  const attached=Array.from($("chat-images").files||[]);const text=$("prompt").value.trim()||(attached.length?"Describe the image briefly.":""); if(!text) return;
   busy=true;$("send").disabled=true;$("send").textContent="Working…";error();
   const started=Date.now(); const progress=setInterval(()=>{$("send").textContent=`Working… ${Math.floor((Date.now()-started)/1000)}s`;},1000);
   message("user",text);conversation.push({role:"user",content:text});$("prompt").value="";
   try {
+    if(attached.length){
+      const images=await imagePayload(attached);
+      for(let i=0;i<images.length;i++){
+        const result=await api('/api/vision','POST',{message:text,images:[images[i]],language:$('language').value});
+        message('assistant',(images.length>1?'Image '+(i+1)+' (analyzed separately):\n':'')+result.answer,result,text);
+        conversation.push({role:'assistant',content:result.answer,stats:result.stats});
+      }
+      $('chat-images').value='';return;
+    }
     const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked,allow_internet:$("allow-internet").checked});
+    if(attached.length)$("chat-images").value="";
     message("assistant",result.answer,result,text);conversation.push({role:"assistant",content:result.answer,sources:result.sources,stats:result.stats});
   } catch(exc) {error(exc.message);}
   finally {$("allow-internet").checked=false;clearInterval(progress);busy=false;$("send").disabled=false;$("send").textContent="Send ↑";$("prompt").focus();}
@@ -114,7 +124,7 @@ $("mode").onchange=()=>{$("research-notice").hidden=$("mode").value!=="research"
 $("research-suggestion").onclick=()=>{$("mode").value="research";$("mode").onchange();$("prompt").value="sleep and cognition systematic review";$("prompt").focus();};
 function view(memory) {if(memory){loadLearning().catch(exc=>error(exc.message));loadWebSources().catch(exc=>error(exc.message));}hideSetup();$("workspace-view").hidden=true;$("workspace-tab").classList.remove("active");$("chat-view").hidden=memory;$("memory-view").hidden=!memory;$("chat-tab").classList.toggle("active",!memory);$("memory-tab").classList.toggle("active",memory);$("page-title").textContent=memory?"My knowledge.":"Let’s talk.";}
 $("chat-tab").onclick=()=>view(false);$("memory-tab").onclick=()=>view(true);
-$("new").onclick=()=>{if(busy)return;$("allow-internet").checked=false;$("mode").value="companion";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
+$("new").onclick=()=>{if(busy)return;$("chat-images").value="";$("allow-internet").checked=false;$("mode").value="companion";$("mode").onchange();session=crypto.randomUUID();sessionStorage.setItem("nexo-session",session);conversation=[];$("messages").replaceChildren();$("welcome").hidden=false;error();view(false);};
 $("export").onclick=()=>{const blob=new Blob([JSON.stringify({app:"Nexo 7",exported_at:new Date().toISOString(),conversation},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="nexo7-conversation.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
 $("forget").onclick=async()=>{if(busy||!confirm("Clear local history for this conversation? Exported copies and provider data are managed separately."))return;try{await api("/api/history/"+encodeURIComponent(session),"DELETE");$("new").click();}catch(exc){error(exc.message);}};
 async function loadDocuments(){
@@ -151,12 +161,13 @@ function displayReport(report) {
 }
 async function pollSetup() {
   try {
+    const tg=await api("/api/telegram");$("telegram-status").textContent=tg.phase+(tg.error?": "+tg.error:"");
     const state=await api("/api/setup"); setupBusy=state.phase==="preparing";
     $("setup-phase").textContent=state.phase==="ready"?"Ready to chat":state.phase==="preparing"?"Preparing your model…":state.phase==="error"?"Setup needs attention":"Waiting";
     $("setup-log").textContent=state.logs.join("\n")||"No downloads have started.";
     $("setup-log").scrollTop=$("setup-log").scrollHeight;
     $("setup-error").textContent=state.error||"";
-    $("cancel-setup").hidden=!setupBusy; $("cpu-only").disabled=setupBusy||state.ready;
+    $("cancel-setup").hidden=!setupBusy; $("cpu-only").disabled=setupBusy;$("switch-model").disabled=setupBusy;
     $("check-system").disabled=setupBusy; $("start-local").disabled=setupBusy||state.ready||!state.report?.requirements_ok;
     if(state.report) displayReport(state.report);
     if(state.ready && previousPhase!=="ready") {
@@ -313,7 +324,16 @@ async function loadTasks(){
    if(job.requires_reconciliation)details.append(node('h4','Before application'),node('pre',step.before||'(new file)'));
    if(job.state==='blocked'&&step.candidate)details.append(node('h4','Last generated attempt'),node('pre',step.candidate));
    if(step.state==='review'){details.open=true;details.append(node('pre',step.diff||'(No text changes)'),node('h4','Full proposed file'),node('pre',step.candidate));}
+   if(!job.requires_reconciliation&&['blocked','awaiting_review'].includes(job.state)&&step.state!=='applied'&&typeof step.before==='string'){
+    const edit=node('textarea','');edit.value=step.candidate||'';edit.rows=8;edit.maxLength=8000;edit.setAttribute('aria-label','Edit proposal for '+step.name);
+    const save=node('button','Validate edited proposal','quiet');save.onclick=async()=>{if(taskBusy)return;taskBusy=true;try{await api('/api/tasks/'+job.id+'/edit','POST',{content:edit.value,expected_hash:step.candidate_hash||null});await loadTasks();}catch(exc){$('task-status').textContent=exc.message;}finally{taskBusy=false;await loadTasks();}};
+    details.append(edit,save);
+   }
    card.append(details);
+  }
+  if(!job.requires_reconciliation&&['ready','blocked','awaiting_review'].includes(job.state)){
+   const feedback=node('input','');feedback.placeholder='Correction for the next attempt';feedback.maxLength=600;
+   const save=node('button','Save correction','quiet');save.onclick=async()=>{if(taskBusy)return;taskBusy=true;try{await api('/api/tasks/'+job.id+'/feedback','POST',{text:feedback.value});await loadTasks();}catch(exc){$('task-status').textContent=exc.message;}finally{taskBusy=false;await loadTasks();}};card.append(feedback,save);
   }
   if(job.error)card.append(node('p',job.error,'warning'));
   const ledger=document.createElement('details');ledger.append(node('summary','Task history'));
@@ -335,10 +355,31 @@ async function loadTasks(){
 }
 $("reload-tasks").onclick=()=>loadTasks().catch(exc=>$("task-status").textContent=exc.message);
 $("task-form").onsubmit=async event=>{event.preventDefault();try{
- const steps=$("task-steps").value.trim().split(/\r?\n/).filter(s=>s.trim()).map(line=>{const parts=line.split('|').map(x=>x.trim());if(parts.length<2||parts.length>4)throw Error('Use filename | instruction | optional required text');return {name:parts[0],instruction:parts[1],required:parts[2]?parts[2].split(';;').map(x=>x.trim()):[],function_tests:parts[3]?JSON.parse(parts[3]):[]};});
+ const steps=$("task-steps").value.trim().split(/\r?\n/).filter(s=>s.trim()).map(line=>{const parts=line.split('|').map(x=>x.trim());if(parts.length<2||parts.length>5)throw Error('Use filename | instruction | optional required text');return {name:parts[0],instruction:parts[1],required:parts[2]?parts[2].split(';;').map(x=>x.trim()):[],function_tests:parts[3]?JSON.parse(parts[3]):[],criteria:parts[4]?parts[4].split(',').map(x=>x.trim()):[]};});
  await api('/api/tasks','POST',{goal:$("task-goal").value,steps});$("task-status").textContent='Plan saved. Generate the first step when ready.';await loadTasks();
 }catch(exc){$("task-status").textContent=exc.message;}};
 
 $("suggest-task-steps").onclick=async()=>{if(taskBusy)return;taskBusy=true;$("suggest-task-steps").disabled=true;$("task-status").textContent='Suggesting a plan…';try{
- const plan=await api('/api/tasks/plan','POST',{goal:$("task-goal").value});$("task-steps").value=plan.steps.map(s=>s.name+' | '+s.instruction+' | '+s.required.join(';;')).join('\n');$("task-status").textContent=plan.notice;
+ const plan=await api('/api/tasks/plan','POST',{goal:$("task-goal").value});$("task-steps").value=plan.steps.map(s=>s.name+' | '+s.instruction+' | '+s.required.join(';;')+' | '+JSON.stringify(s.function_tests||[])+' | '+(s.criteria||[]).join(',')).join('\n');$("task-status").textContent=plan.notice;
 }catch(exc){$("task-status").textContent=exc.message;}finally{taskBusy=false;$("suggest-task-steps").disabled=false;}};
+
+async function imagePayload(files){
+ if(files.length>2||files.some(f=>f.size>4000000))throw Error('Attach at most two images of 4 MB each.');
+ return Promise.all(files.map(file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(Error('Could not read image'));reader.readAsDataURL(file);})));
+}
+$('clear-images').onclick=()=>{$('chat-images').value='';$('image-status').textContent='Attachments cleared.';};
+$('chat-images').onchange=()=>{$('image-status').textContent=Array.from($('chat-images').files).map(f=>f.name).join(', ')+' · local vision; images are not saved.';};
+$('switch-model').onclick=async()=>{try{await savePreferences();await api('/api/setup/switch','POST',{cpu_only:$('cpu-only').checked,language:$('language').value});clearTimeout(setupTimer);pollSetup();}catch(exc){$('preferences-status').textContent=exc.message;}};
+$('task-template').onchange=()=>{
+ const templates={web:['Create a simple styled personal homepage','index.html | Create a concise complete HTML page with a heading and embedded CSS. | <h1 | [] | html_structure,inline_style'],python:['Create a tested square function','square.py | Define square(n) returning n*n. | | [{"function":"square","args":[3],"expected":9},{"function":"square","args":[-4],"expected":16}]'],notes:['Write a daily study checklist','checklist.md | Write five concise study checklist items. |']};
+ const t=templates[$('task-template').value];if(t){$('task-goal').value=t[0];$('task-steps').value=t[1];}
+};
+
+$('telegram-form').onsubmit=async event=>{event.preventDefault();try{
+ const parts=$('telegram-chats').value.split(',').map(x=>x.trim());if(parts.some(x=>!/^[-]?\d+$/.test(x)))throw Error('Enter numeric chat IDs.');
+ const state=await api('/api/telegram/start','POST',{token:$('telegram-token').value,chat_ids:parts.map(Number),consent:$('telegram-consent').checked});
+ $('telegram-token').value='';$('telegram-consent').checked=false;$('telegram-status').textContent=state.phase;
+}catch(exc){$('telegram-status').textContent=exc.message;}};
+$('telegram-stop').onclick=async()=>{try{const s=await api('/api/telegram/stop','POST',{});$('telegram-status').textContent=s.phase;}catch(exc){$('telegram-status').textContent=exc.message;}};
+
+$('telegram-discover').onclick=async()=>{try{const r=await api('/api/telegram/chats','POST',{token:$('telegram-token').value,consent:$('telegram-consent').checked});$('telegram-status').textContent=r.chats.map(c=>c.id+' ('+c.type+')').join(', ')+' — '+r.notice;}catch(exc){$('telegram-status').textContent=exc.message;}};

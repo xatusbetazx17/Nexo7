@@ -67,6 +67,10 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>useful.disabled);
   assert((await request('/api/documents')).documents.some(x=>x.source.includes('user-approved')));
   d.getElementById('workspace-tab').click();
+  d.getElementById('task-template').value='web';d.getElementById('task-template').onchange();
+  assert(d.getElementById('task-steps').value.includes('html_structure,inline_style'));
+  assert(d.getElementById('model-choice').querySelector('option[value="lfm2-vl:450m"]'));
+  assert(d.getElementById('chat-images'));
   d.getElementById('task-goal').value='Write a project guide';
   d.getElementById('task-steps').value='guide.md | Write a short guide | Guide';
   d.getElementById('task-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
