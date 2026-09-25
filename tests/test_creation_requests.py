@@ -3,17 +3,37 @@ from contextlib import closing
 import io
 import json
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import zipfile
 from PIL import Image
 from nexo7.config import Config
-from nexo7.creation_requests import intent
+from nexo7.creation_requests import intent, create
 from nexo7.engine import Engine
-from nexo7.providers import Completion
+from nexo7.providers import Completion, NativeProvider
 from nexo7.store import Store
 
 
 class CreationTests(unittest.TestCase):
+    def test_native_drawing_constrains_output_and_still_uses_memory_guard(self):
+        with closing(Store(':memory:')) as store, \
+             patch('nexo7.native_runtime.verify_native',return_value=(Mock(key='fixture'),'http://127.0.0.1:1')), \
+             patch('nexo7.hardware.detect_hardware',return_value=Mock(available_bytes=2_000_000_000)), \
+             patch('nexo7.providers.fetch_json',return_value={'choices':[{'message':{'content':'{"background":"#ffffff","shapes":[{"type":"ellipse","box":[50,50,450,450],"color":"#ff0000"}]}'},'finish_reason':'stop'}]}) as fetch:
+            config=Config(provider='native',model='lfm2-vl:450m')
+            result=Engine(config,store,provider=NativeProvider(config)).chat('Draw a red ball',mode='companion',private=True)
+            self.assertEqual(result['status'],'completed')
+            payload=fetch.call_args.kwargs['payload']
+            self.assertEqual(payload['response_format']['schema']['required'],['background','shapes'])
+            self.assertEqual(payload['temperature'],0)
+            self.assertLessEqual(payload['max_tokens'],config.max_output_tokens)
+
+    def test_circle_vocabulary_is_validated_after_normalization(self):
+        files=create('drawing',json.dumps({'background':'white','shapes':[{'type':'circle','center':[256,256],'radius':100,'fill':'red'}]}))
+        image=Image.open(io.BytesIO(base64.b64decode(files[0]['data'])))
+        self.assertEqual(image.getpixel((256,256)),(255,0,0))
+        with self.assertRaises(ValueError):
+            create('drawing',json.dumps({'shapes':[{'type':'circle','center':[0,0],'radius':100}]}))
+
     def test_screenshot_requests_work_without_model_or_web(self):
         for prompt in ('Draw me a chicken?', 'Draw me a hand', 'Dibujame una gallina', 'Dibuja una mano'):
             with self.subTest(prompt=prompt), closing(Store(':memory:')) as store:

@@ -101,7 +101,15 @@ class OllamaProvider:
 
 
 class NativeProvider(OllamaProvider):
-    def _complete(self, instructions, conversation, tools, model, max_tokens):
+    def complete_structured(self, instructions, conversation, model, max_tokens, schema):
+        if not self._slot.acquire(blocking=False):
+            raise ValueError('A local query is running; wait for it to finish')
+        try:
+            return self._complete(instructions, conversation, [], model, max_tokens, schema=schema)
+        finally:
+            self._slot.release()
+
+    def _complete(self, instructions, conversation, tools, model, max_tokens, schema=None):
         from .native_runtime import verify_native
         runtime, url = verify_native(self.config)
         from .hardware import detect_hardware
@@ -115,6 +123,9 @@ class NativeProvider(OllamaProvider):
                 "temperature":0.2, "chat_template_kwargs":{"enable_thinking":False}, "cache_prompt":False}
         if model == "lfm2-vl:450m":
             body.update(temperature=0.1, min_p=0.15, repeat_penalty=1.05)
+        if schema is not None:
+            body['response_format'] = {'type':'json_object', 'schema':schema}
+            body['temperature'] = 0
         if tools:
             body["tools"] = [{"type":"function", "function":{k:v for k,v in t.items() if k not in {"type","strict"}}} for t in tools]
             body["parallel_tool_calls"] = False

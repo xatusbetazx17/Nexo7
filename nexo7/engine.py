@@ -214,7 +214,7 @@ class Engine:
             return result
 
         if creation:
-            from .creation_requests import builtin, create, instructions
+            from .creation_requests import builtin, create, instructions, schema
             if self.config.max_tool_calls < 1:
                 return finish('File creation tools are disabled.', 'unavailable')
             spec = builtin(message) if creation == 'drawing' else None
@@ -233,8 +233,12 @@ class Engine:
                 stats['model_calls'] = 1
                 stats['prompt_characters_sent'] = len(prompt) + len(json.dumps(conversation))
                 try:
-                    completion = self.provider.complete(prompt, conversation, [], self.config.select_model(mode),
-                        min(self.config.max_output_tokens, self.config.max_total_output_tokens))
+                    from .providers import NativeProvider
+                    output_limit = min(self.config.max_output_tokens, self.config.max_total_output_tokens)
+                    if isinstance(self.provider, NativeProvider) and schema(creation) is not None:
+                        completion = self.provider.complete_structured(prompt, conversation, self.config.select_model(mode), output_limit, schema(creation))
+                    else:
+                        completion = self.provider.complete(prompt, conversation, [], self.config.select_model(mode), output_limit)
                 except (TransportError, ValueError) as exc:
                     stats['usage_complete'] = False
                     return finish('Could not draft the creation: ' + str(exc), 'upstream_error')

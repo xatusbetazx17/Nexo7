@@ -6,6 +6,21 @@ from .creative import render, file
 from .doc_export import export_document
 
 
+def schema(kind):
+    """Native constrained decoding; renderer validation remains authoritative."""
+    if kind == 'drawing':
+        return {'type':'object','properties':{
+            'background':{'type':'string','pattern':'^#[0-9a-fA-F]{6}$'},
+            'shapes':{'type':'array','minItems':1,'maxItems':4,'items':{
+                'type':'object','properties':{
+                    'type':{'type':'string','enum':['ellipse','rect','line']},
+                    'box':{'type':'array','minItems':4,'maxItems':4,'items':{'type':'integer','minimum':0,'maximum':512}},
+                    'color':{'type':'string','pattern':'^#[0-9a-fA-F]{6}$'}},
+                'required':['type','box','color'],'additionalProperties':False}}},
+            'required':['background','shapes'],'additionalProperties':False}
+    return None
+
+
 def intent(text):
     text = folded(text).strip(' ¿?!.')
     text = re.sub(r'^(?:please |por favor |can you |could you |would you |puedes |podrias )+', '', text)
