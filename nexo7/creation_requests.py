@@ -86,7 +86,7 @@ def builtin(text):
 
 def create(kind, text):
     if kind == 'document':
-        if re.search(r"\b(?:i (?:cannot|can't|am unable to)|no puedo)\b", text[:200], re.I):
+        if re.search(r"\b(?:i (?:cannot|can't|am unable to) (?:create|generate|save|produce) (?:a |an |the |this )?(?:word|docx|document|file)|no puedo (?:crear|generar|guardar) (?:un |el |este )?(?:documento|archivo))\b", text[:200], re.I):
             raise ValueError('The model returned a refusal instead of document content')
         title = text.splitlines()[0].lstrip('# ').strip()[:160] or 'Nexo document'
         return [export_document({'title':title, 'content':text}),

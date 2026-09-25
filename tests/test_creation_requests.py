@@ -68,6 +68,9 @@ class CreationTests(unittest.TestCase):
             provider.complete.return_value=Completion("I cannot create a document.")
             result=engine.chat('Create a Word document',mode='companion',private=True)
             self.assertNotIn('files',result);self.assertEqual(result['status'],'unavailable')
+            provider.complete.return_value=Completion("Dear Ana, I cannot attend tomorrow. Best wishes.")
+            result=engine.chat('Write a letter declining an invitation',mode='companion',private=True)
+            self.assertEqual(result['status'],'completed');self.assertIn('files',result)
 
     def test_routing_does_not_hijack_questions_or_negation(self):
         for text in ('What is a drawing?', 'Do not draw a chicken', 'How can I make a document?', 'What does draw mean?', 'Draw conclusions from this report'):
