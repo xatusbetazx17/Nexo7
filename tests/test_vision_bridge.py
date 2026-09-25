@@ -152,3 +152,19 @@ class TelegramLifecycleTests(unittest.TestCase):
             controller.start({'consent':True,'token':token,'chat_ids':[10]});self.assertTrue(started.wait(2))
             self.assertNotIn(token,str(controller.snapshot()));controller.stop();controller.thread.join(2)
         self.assertEqual(controller.snapshot()['phase'],'off')
+
+
+class SetupReadinessTests(unittest.TestCase):
+    def test_ready_is_not_visible_until_preference_save_and_operation_release(self):
+        saving=threading.Event();finish=threading.Event()
+        def save(values):saving.set();finish.wait(3);return values
+        controller=SetupController('/tmp/fixture.sqlite',save_preferences=save)
+        cfg=Config(provider='native',model='lfm2-vl:450m',database='/tmp/fixture.sqlite')
+        with patch('nexo7.setup.start_native',return_value=(cfg,{'hardware':{}})):
+            try:
+                controller.start();self.assertTrue(saving.wait(2))
+                self.assertFalse(controller.snapshot()['ready'])
+                self.assertFalse(controller.operation.acquire(blocking=False))
+            finally:finish.set();controller.thread.join(3)
+        self.assertTrue(controller.snapshot()['ready'])
+        self.assertTrue(controller.operation.acquire(blocking=False));controller.operation.release()

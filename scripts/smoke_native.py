@@ -45,6 +45,7 @@ def main():
                 f"runtime.detect_hardware=lambda: (lambda hw: replace(hw,total_bytes=min(hw.total_bytes,{total}),available_bytes=min(hw.available_bytes,{available})))(original()); "
                 "from nexo7.desktop import main; main()"]
         process=subprocess.Popen(command+['--no-open','--data-dir',str(root)],cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+        request=None
         try:
             deadline=time.monotonic()+45
             access=root/'access.json'
@@ -140,7 +141,11 @@ def main():
             request('/api/shutdown',{});process.wait(timeout=30);assert process.returncode==0
             result['passed']=True
         finally:
-            if process.poll() is None:process.kill();process.wait(timeout=10)
+            if request and process.poll() is None:
+                try:request("/api/shutdown",{})
+                except Exception:pass
+            try:process.wait(timeout=30)
+            except subprocess.TimeoutExpired:process.kill();process.wait(timeout=10)
             process.stderr.close()
     output=Path(args.output);output.parent.mkdir(parents=True,exist_ok=True);output.write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n')
     print(json.dumps(result,ensure_ascii=False))

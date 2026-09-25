@@ -1,6 +1,7 @@
 # v0.12.0 — local vision and optional Telegram
 
 - Add the requested LiquidAI LFM2-VL 450M Q4_0 model with a verified Q8_0 projector and its license. Keep existing automatic chat profiles.
+- Report setup ready only after the model operation lock is released, preventing a first-request busy error.
 - Switch models after unloading the old process; recheck memory and preserve OS guards.
 - Analyze bounded image attachments locally, one at a time. A separate decoder worker resizes and removes metadata. Images are not automatically saved.
 - Add opt-in desktop Telegram start/stop, chat-ID discovery, explicit chat allowlists, mention/reply/album support and a stateless local endpoint. Command-line users can enable custom image reaction rules. No Telegram messages were sent in development.

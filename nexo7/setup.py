@@ -68,7 +68,7 @@ class SetupController:
                 with self.lock:
                     self.config = replace(config, response_language=language)
                     self.owns_runtime = True
-                    self.state.update(phase="ready", report={"requirements_ok": True, "plan": plan,
+                    self.state.update(report={"requirements_ok": True, "plan": plan,
                                                              "hardware": plan["hardware"], "error": None})
                 if self.save_preferences:
                     self.preferences = self.save_preferences({"cpu_only": cpu_only, "response_language": language})
@@ -78,7 +78,10 @@ class SetupController:
                     self.state.update(phase="error", error=str(exc)[:500])
                 self.emit("Setup stopped. Demo mode remains available.")
             finally:
-                self.operation.release()
+                with self.lock:
+                    self.operation.release()
+                    if self.state["phase"] == "preparing" and self.owns_runtime:
+                        self.state["phase"] = "ready"
         self.thread = threading.Thread(target=work, name="nexo-setup", daemon=True)
         self.thread.start()
         return self.snapshot()
