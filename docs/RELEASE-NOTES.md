@@ -1,5 +1,6 @@
 # v0.13.0 — Offline drawing and music
 
+- Fixed compact low-memory web prompts skipping source-synthesis instructions before returning. A small model can still produce incomplete or inaccurate answers.
 - Creative Studio in My workspace renders simple shape illustrations to PNG and SVG.
 - Short instrumental scores render to playable WAV and editable MIDI, with soft, bell and synth sounds.
 - Includes a superhero cloud drawing and a melody example; optional chat drafting prepares an editable JSON design.

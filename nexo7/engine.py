@@ -57,6 +57,8 @@ class Engine:
                        if language == "auto" else "\nRequested response language (language code): " + language + ". Write your answer in this language; preserve code and source identifiers.")
         from .personality import instructions as personality_instructions
         instruction += personality_instructions(self.store.preferences())
+        if mode == "web":
+            instruction += "\nAnswer the question from relevant excerpts in at most three short sentences. Cite their [W1]-style identifiers. Do not copy whole excerpts or add unrelated advice. Prefer original sources when identifiable. State disagreements or missing evidence; repeated claims do not prove truth."
         style = self.store.preferences()["style"]
         if self.config.provider == 'native' and (self.config.local_ram_limit_bytes < 2_500_000_000 or self.config.model in ('qwen2.5:1.5b','lfm2-vl:450m')) and mode != 'chat':
             return ("You are Nexo 7. Answer briefly and accurately. Admit uncertainty; never invent facts, capabilities or completed actions. "
@@ -67,8 +69,6 @@ class Engine:
                     "Use at most three short sentences unless writing requested document text or code." + instruction)
         if mode == "chat":
             return CHAT_SYSTEM + instruction
-        if mode == "web":
-            instruction += "\nAnswer the question from relevant excerpts in at most three short sentences. Cite their [W1]-style identifiers. Do not copy whole excerpts or add unrelated advice. Prefer original sources when identifiable. State disagreements or missing evidence; repeated claims do not prove truth."
         return SYSTEM + (RESEARCH if mode == "research" else "") + ("\nPrefer a brief, direct answer." if mode == "eco" or (mode == "balanced" and style == "concise") else "") + ("\nProvide a detailed explanation with assumptions, available sources and useful checks." if mode == "deep" or (mode == "balanced" and style == "detailed") else "") + ("\nUse everyday words, explain unfamiliar terms, and give a small example when useful. Match the requested language without assuming the user knows English." if style == "accessible" else "") + instruction
 
     def _fits_context(self, instructions, conversation, schemas):
@@ -177,7 +177,7 @@ class Engine:
         sources, trace, warnings = [], [], []
         cacheable = not private and optimized and self.config.cache_seconds > 0 and mode not in {"research", "web"} and not re.search(
             r"\b(hoy|ahora|actual|actuales|precio|precios|today|latest|current|news|noticias)\b", message, re.I)
-        key = self.store.cache_key(["nexo7-v12", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
+        key = self.store.cache_key(["nexo7-v13", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
 
         def finish(answer, status="completed", save_cache=False):
             answer, extra = self._check_citations(answer, sources, mode == "research") if status in {"completed", "incomplete"} else (answer, [])
