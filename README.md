@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.14.1.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.15.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
