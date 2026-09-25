@@ -247,8 +247,11 @@ class Engine:
                 draft = completion.text.strip()
                 try:
                     files = create(creation, draft)
-                except (ValueError, TypeError, KeyError, OverflowError):
-                    return finish('The model returned an invalid design. Try a simpler request or use Create to edit a design. No file was created.', 'unavailable')
+                except (ValueError, TypeError, KeyError, OverflowError) as exc:
+                    failed = finish('The model returned an invalid design. Try a simpler request or use Create to edit a design. No file was created.', 'unavailable')
+                    failed['creation_error'] = str(exc)[:300]
+                    failed['creation_draft'] = draft[:12000]
+                    return failed
                 answer = draft if creation == 'document' else 'Here is your generated ' + ('simple illustration' if creation == 'drawing' else 'instrumental melody') + '. Review the preview before downloading.'
             stats['tool_calls'] = 1
             warnings.append('Download these files before leaving or reloading this conversation. Attachments are not stored in chat history. Generated content needs review.')

@@ -93,4 +93,34 @@ def create(kind, text):
                 file('Nexo-document.txt', 'text/plain', text.encode('utf-8'))]
     clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', text.strip(), flags=re.I)
     spec = json.loads(clean)
+    if kind == 'drawing' and isinstance(spec, dict):
+        # Common equivalent shape vocabulary from small models; all normalized
+        # values still pass the renderer's strict coordinate/count/type limits.
+        from .creative import number
+        from PIL import ImageColor
+        def normalized_color(value):
+            if isinstance(value, str) and re.fullmatch(r'[a-zA-Z]{1,24}', value):
+                try:
+                    rgb = ImageColor.getrgb(value)
+                    return '#%02x%02x%02x' % rgb
+                except ValueError:
+                    pass
+            return value
+        if 'background' in spec:
+            spec['background'] = normalized_color(spec['background'])
+        shapes = spec.get('shapes')
+        if isinstance(shapes, list) and len(shapes) <= 128:
+            for shape in shapes:
+                if not isinstance(shape, dict):
+                    continue
+                shape['color'] = normalized_color(shape.get('color', shape.get('fill', '#000000')))
+                if shape.get('type') == 'rectangle':
+                    shape['type'] = 'rect'
+                if shape.get('type') == 'circle':
+                    center = shape.get('center', [shape.get('cx'), shape.get('cy')])
+                    if not isinstance(center, list) or len(center) != 2:
+                        raise ValueError('Circle center must contain x and y')
+                    x, y = [number(v, 0, 1024, 'center') for v in center]
+                    radius = number(shape.get('radius', shape.get('r')), 1, 512, 'radius')
+                    shape['type'], shape['box'] = 'ellipse', [round(x-radius), round(y-radius), round(x+radius), round(y+radius)]
     return render({'kind':kind, 'spec':spec})['files']
