@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.12.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.13.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -166,3 +166,7 @@ Task templates, editable proposals and declared HTML checks extend the reviewed
 workspace workflow. See [images, Telegram, measured limits and licenses](docs/VISION-TELEGRAM.md)
 and [task editing](docs/TASK-AGENT.md). These features do not establish superior
 reasoning or factual accuracy; the new checkpoint officially supports English.
+
+## Offline drawing and music
+
+Version 0.13 adds [Creative Studio](docs/CREATIVE-STUDIO.md): editable simple drawings with PNG/SVG downloads and short synthesized instrumental music with WAV/MIDI downloads. Open My workspace to preview a working example without a model or GPU. Chat can draft the editable JSON, with quality depending on the loaded model. This does not add photorealistic image generation or sung vocals.

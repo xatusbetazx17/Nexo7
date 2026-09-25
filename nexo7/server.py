@@ -30,6 +30,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     from .telegram_bridge import BridgeController
     telegram = BridgeController(Path(config.database).resolve().parent / "access.json") if controller else None
     import_slots = threading.BoundedSemaphore(1)
+    creative_slots = threading.BoundedSemaphore(1)
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "Nexo7"
@@ -45,7 +46,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
-            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
             self.end_headers()
             try:
                 self.wfile.write(data)
@@ -76,7 +77,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.12.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.13.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -169,6 +170,15 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     elif action=='cancel':result=agent.cancel(identifier)
                     else:raise ValueError('Unknown task action')
                     return self._send(200,result)
+                if path == "/api/creative" and controller:
+                    if not creative_slots.acquire(blocking=False):
+                        return self._send(429, {"error": "Another creative render is running"})
+                    try:
+                        from .creative import render
+                        result = render(body)
+                    finally:
+                        creative_slots.release()
+                    return self._send(200, result)
                 if path == "/api/export/document":
                     from .doc_export import export_document
                     return self._send(200, export_document(body))

@@ -15,7 +15,7 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
  await waitFor(()=>fs.existsSync(directory+'/access.json'));
  access=JSON.parse(fs.readFileSync(directory+'/access.json','utf8'));
  const dom=await JSDOM.fromURL(access.url,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,virtualConsole,
- beforeParse(w){w.fetch=(url,opts)=>fetch(new URL(url,access.url),opts);w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;}});
+ beforeParse(w){w.URL.createObjectURL=()=> 'blob:nexo-test';w.URL.revokeObjectURL=()=>{};w.fetch=(url,opts)=>fetch(new URL(url,access.url),opts);w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;}});
  const w=dom.window,d=w.document;
  try {
   await waitFor(()=>d.getElementById('setup-view')&&!d.getElementById('setup-view').hidden);
@@ -67,6 +67,18 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>useful.disabled);
   assert((await request('/api/documents')).documents.some(x=>x.source.includes('user-approved')));
   d.getElementById('workspace-tab').click();
+  d.getElementById('creative-render').click();
+  await waitFor(()=>d.querySelector('#creative-output img'));
+  assert.equal(d.querySelectorAll('#creative-output a').length,2);
+  d.getElementById('creative-kind').value='music';d.getElementById('creative-kind').onchange();
+  d.getElementById('creative-render').click();
+  await waitFor(()=>d.querySelector('#creative-output audio'));
+  assert.equal(d.querySelectorAll('#creative-output a')[1].download,'music.mid');
+  d.getElementById('creative-spec').value='{}';d.getElementById('creative-render').click();
+  await waitFor(()=>d.getElementById('creative-status').textContent.includes('notes'));
+  assert(!d.getElementById('creative-render').disabled);
+  const creativeUnauthorized=await fetch(new URL('/api/creative',access.url),{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  assert.equal(creativeUnauthorized.status,401);
   d.getElementById('task-template').value='web';d.getElementById('task-template').onchange();
   assert(d.getElementById('task-steps').value.includes('html_structure,inline_style'));
   assert(d.getElementById('model-choice').querySelector('option[value="lfm2-vl:450m"]'));
@@ -175,7 +187,7 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   await waitFor(()=>!d.getElementById('web-sources').textContent.includes('Network fixture'));
   assert.equal((await request('/api/web')).sources.length,0);
   assert.deepEqual(errors,[]);
-  const result={environment:'JSDOM with real local HTTP server; not a rendered-browser layout test',passed:true,checks:['English setup view','low-memory explanation','download disabled without prerequisites','demo navigation','calculator response','document import','literal HTML handling','setup navigation','persistent preferences','explicitly approved example','authenticated artifact API','workspace create/read/delete','persistent task plan UI and deletion','bounded text import','CSV analysis','reviewed learning creation','literal learning HTML','consent resets on edit','public draft without automatic upload','community pack review and import','opt-in web lookup with fixture provider','saved web reuse','personality preferences persist','local DOCX export','source-linked reviewed learning','original-note draft and consent reset','offline quadratic and linear math UI','web source deletion','no JavaScript errors']};
+  const result={environment:'JSDOM with real local HTTP server; not a rendered-browser layout test',passed:true,checks:['English setup view','low-memory explanation','download disabled without prerequisites','demo navigation','calculator response','document import','literal HTML handling','setup navigation','persistent preferences','explicitly approved example','authenticated artifact API','workspace create/read/delete','persistent task plan UI and deletion','bounded text import','CSV analysis','reviewed learning creation','literal learning HTML','consent resets on edit','public draft without automatic upload','community pack review and import','opt-in web lookup with fixture provider','saved web reuse','personality preferences persist','local DOCX export','source-linked reviewed learning','original-note draft and consent reset','offline quadratic and linear math UI','web source deletion','offline PNG/SVG and WAV/MIDI previews and validation','no JavaScript errors']};
   fs.mkdirSync(path.join(root,'reports'),{recursive:true});
   fs.writeFileSync(path.join(root,'reports/ui-integration.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result));

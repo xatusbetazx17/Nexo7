@@ -1,3 +1,15 @@
+# v0.13.0 — Offline drawing and music
+
+- Creative Studio in My workspace renders simple shape illustrations to PNG and SVG.
+- Short instrumental scores render to playable WAV and editable MIDI, with soft, bell and synth sounds.
+- Includes a superhero cloud drawing and a melody example; optional chat drafting prepares an editable JSON design.
+- Previews, explicit downloads, validation errors and a reset example work without a model or GPU.
+- Rendering performs no network requests and uses no AI tokens. Existing model, memory, Telegram and task features remain available.
+- Bounded canvas, score length and polyphony; one creative render at a time. No generated code execution or automatic uploading.
+- Functional tests cover files, UI and packaged rendering. Small-model creative quality is not guaranteed; no photorealistic images or vocals are included.
+
+See [Creative Studio](CREATIVE-STUDIO.md) for instructions and limits.
+
 # v0.12.0 — local vision and optional Telegram
 
 - Add the requested LiquidAI LFM2-VL 450M Q4_0 model with a verified Q8_0 projector and its license. Keep existing automatic chat profiles.

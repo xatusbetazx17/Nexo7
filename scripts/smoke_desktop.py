@@ -57,6 +57,11 @@ def main():
             exported = json.loads(request('/api/export/document', {'title':'Local report','content':'# Summary\nWorks offline.'}))
             import base64
             assert base64.b64decode(exported['data']).startswith(b'PK')
+            drawing = json.loads(request('/api/creative', {'kind':'drawing','spec':{'shapes':[{'type':'ellipse','box':[20,20,200,200],'color':'#ff0000'}]}}))
+            assert base64.b64decode(drawing['files'][0]['data']).startswith(b'\x89PNG')
+            music = json.loads(request('/api/creative', {'kind':'music','spec':{'notes':[{'pitch':60,'start':0,'duration':1}]}}))
+            assert base64.b64decode(music['files'][0]['data']).startswith(b'RIFF')
+            assert base64.b64decode(music['files'][1]['data']).startswith(b'MThd')
             task = json.loads(request('/api/tasks', {'goal':'Write a guide','steps':[{'name':'guide.md','instruction':'Write a guide'}]}))
             assert task['state']=='ready'
             assert any(j['id']==task['id'] for j in json.loads(request('/api/tasks'))['tasks'])

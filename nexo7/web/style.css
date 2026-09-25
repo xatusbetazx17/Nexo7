@@ -10,3 +10,5 @@
 #learning-entries button {margin:8px}
 #web-sources pre,.message details pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}
 #web-sources .document-card {display:block}
+
+.creative-preview{display:block;max-width:100%;height:auto;max-height:512px;margin:1rem 0}.creative-download{display:inline-block;margin:1rem 1rem 1rem 0}#creative-output audio{display:block;max-width:100%;margin:1rem 0}

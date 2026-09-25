@@ -383,3 +383,48 @@ $('telegram-form').onsubmit=async event=>{event.preventDefault();try{
 $('telegram-stop').onclick=async()=>{try{const s=await api('/api/telegram/stop','POST',{});$('telegram-status').textContent=s.phase;}catch(exc){$('telegram-status').textContent=exc.message;}};
 
 $('telegram-discover').onclick=async()=>{try{const r=await api('/api/telegram/chats','POST',{token:$('telegram-token').value,consent:$('telegram-consent').checked});$('telegram-status').textContent=r.chats.map(c=>c.id+' ('+c.type+')').join(', ')+' — '+r.notice;}catch(exc){$('telegram-status').textContent=exc.message;}};
+
+// Creative files remain in browser memory until the user downloads them.
+const creativeExamples={
+ drawing:{width:512,height:512,background:'#8ed6ff',shapes:[
+  {type:'rect',box:[150,270,375,415],color:'#ed455a'},
+  {type:'ellipse',box:[95,190,295,340],color:'#ffffff'},
+  {type:'ellipse',box:[195,145,355,325],color:'#ffffff'},
+  {type:'ellipse',box:[275,205,435,340],color:'#ffffff'},
+  {type:'ellipse',box:[220,240,236,262],color:'#223344'},
+  {type:'ellipse',box:[300,240,316,262],color:'#223344'},
+  {type:'line',box:[240,289,265,305],color:'#223344',stroke:5},
+  {type:'line',box:[265,305,290,289],color:'#223344',stroke:5}]},
+ music:{bpm:110,instrument:'soft',notes:[60,64,67,72,69,67,64,60].map((pitch,i)=>({pitch,start:i,duration:0.9,velocity:80}))}
+};
+let creativeUrls=[];
+function clearCreative(){for(const url of creativeUrls)URL.revokeObjectURL(url);creativeUrls=[];$('creative-output').replaceChildren();}
+function resetCreative(){clearCreative();$('creative-spec').value=JSON.stringify(creativeExamples[$('creative-kind').value],null,2);$('creative-status').textContent='Edit the example, then render. Music: MIDI pitches 36–96, starts/durations in beats, up to 30 seconds. Drawing: up to 1024 × 1024 pixels.';}
+$('creative-kind').onchange=resetCreative;
+$('creative-example').onclick=resetCreative;
+$('creative-use').onclick=()=>{let text=$('artifact-content').value.trim();text=text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');$('creative-spec').value=text;$('creative-status').textContent='Copied from file editor. Review and render.';};
+$('creative-draft').onclick=()=>{
+ const kind=$('creative-kind').value,idea=$('creative-request').value.trim();
+ if(!idea){$('creative-status').textContent='Describe what you want first.';return;}
+ const rules=kind==='drawing'?'Use width and height 512, #RRGGBB colors, and at most 64 shapes. Shapes: ellipse or rect with box [x1,y1,x2,y2] and color; line with box, color and stroke 1–32; text with x,y,text,size,color. All coordinates inside the canvas.':'Use bpm 40–240, instrument soft/bell/synth, and at most 64 notes. Each note has integer MIDI pitch 36–96, start beat >=0, duration 0.125–8 beats, velocity 1–127. Total duration <=30 seconds, at most eight simultaneous notes. Do not overlap the same pitch.';
+ view(false);$('mode').value='balanced';$('mode').onchange();
+ $('prompt').value=`Create an editable ${kind} design for Nexo Creative Studio. Return only valid JSON, no explanation. ${rules}\nExample schema: ${JSON.stringify(creativeExamples[kind])}\nUser idea: ${idea}`;
+ $('prompt').focus();
+};
+$('creative-render').onclick=async()=>{
+ const button=$('creative-render');button.disabled=true;$('creative-status').textContent='Rendering locally…';clearCreative();
+ try{
+  const spec=JSON.parse($('creative-spec').value);
+  const result=await api('/api/creative','POST',{kind:$('creative-kind').value,spec});
+  for(const file of result.files){
+   const bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));
+   const url=URL.createObjectURL(new Blob([bytes],{type:file.mime}));creativeUrls.push(url);
+   if(file.mime==='image/png'){const preview=document.createElement('img');preview.src=url;preview.alt='Rendered drawing';preview.className='creative-preview';$('creative-output').append(preview);}
+   if(file.mime==='audio/wav'){const preview=document.createElement('audio');preview.controls=true;preview.src=url;preview.setAttribute('aria-label','Synthesized music preview');$('creative-output').append(preview);}
+   const link=node('a','Download '+file.name);link.href=url;link.download=file.name;link.className='creative-download';$('creative-output').append(link);
+  }
+  $('creative-status').textContent=result.notice;
+ }catch(exc){$('creative-status').textContent=exc.message;}finally{button.disabled=false;}
+};
+window.addEventListener('pagehide',clearCreative);
+resetCreative();
