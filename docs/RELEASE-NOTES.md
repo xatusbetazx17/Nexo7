@@ -1,5 +1,6 @@
 # v0.14.1 — Laptop layout refinement
 
+- Keeps imagined-scenario answers concise to reduce truncation on small models.
 - Keeps the initial Send button visible at 1366 × 768, with a Chromium regression check.
 - Clarifies that scenario replies use the configured model, which may be local or remote.
 - Includes the v0.14 features listed below.
