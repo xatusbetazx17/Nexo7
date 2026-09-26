@@ -20,6 +20,11 @@ jobs:
       - run: npm ci --prefix mobile --ignore-scripts
       - run: npm run build --prefix mobile
       - run: npm install --prefix "$RUNNER_TEMP/nexo-ui" --no-save playwright@1.62.1
+      - name: Check simple English and Spanish answers
+        env:
+          NEXO_PLAYWRIGHT_MODULE: ${{ runner.temp }}/nexo-ui/node_modules/playwright
+          NEXO_CHROME: /usr/bin/google-chrome
+        run: node scripts/mobile_probe.cjs
       - name: Mobile transfer, CPU inference and offline use
         env:
           NEXO_PLAYWRIGHT_MODULE: ${{ runner.temp }}/nexo-ui/node_modules/playwright
