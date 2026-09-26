@@ -58,21 +58,24 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: nexo7/image_runtime
-          key: diffusion-cpu-noavx-${{ runner.os }}-2f886889-v2
+          key: diffusion-cpu-adaptive-${{ runner.os }}-2f886889-v3
+          restore-keys: diffusion-cpu-noavx-${{ runner.os }}-2f886889-v2
       - uses: actions/cache@v4
         with:
           path: build/image-model-cache
           key: dreamshaper8-q4-taesd-${{ runner.os }}-a59b0154
-      - name: Build CPU image engine without AVX requirement
+      - name: Build baseline and adaptive CPU image engines
         run: python scripts/build_image_runtime.py
       - uses: actions/cache/save@v4
         with:
           path: nexo7/image_runtime
-          key: diffusion-cpu-noavx-${{ runner.os }}-2f886889-v2
+          key: diffusion-cpu-adaptive-${{ runner.os }}-2f886889-v3
       - name: Build and test native executable
         run: python scripts/build_desktop.py
       - name: Real diffusion with 4 GB available RAM
         run: python scripts/smoke_images.py --simulate-4gb-free
+      - name: Real baseline CPU draft with 4 GB available RAM
+        run: python scripts/smoke_images.py --simulate-4gb-free --baseline
       - name: Real diffusion in packaged application
         run: python scripts/smoke_images.py --binary dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
       - uses: actions/upload-artifact@v4

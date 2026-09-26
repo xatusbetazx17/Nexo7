@@ -271,7 +271,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                         from .creation_requests import intent
                         prompt=body.get('message')
                         if isinstance(prompt,str) and intent(prompt)=='drawing':
-                            return self._send(202,{'image_job':images.begin({'prompt':prompt,'size':body.get('image_size',512),'style':body.get('image_style','photo')})})
+                            return self._send(202,{'image_job':images.begin({'prompt':prompt,'size':body.get('image_size',256),'steps':body.get('image_steps',2),'style':body.get('image_style','photo')})})
                     chat_lock = controller.operation if controller else slots
                     if not chat_lock.acquire(blocking=False):
                         return self._send(429, {"error": "The assistant is busy; wait for the current operation"})

@@ -17,10 +17,10 @@ The desktop app temporarily unloads its owned native chat model, runs one image 
 
 - 256px draft requires at least 2.75 GB **available** after chat unloads.
 - 512px requires at least 3.75 GB **available** after chat unloads.
-- Choose 4 steps for speed or 8 steps for another quality/speed tradeoff. More steps do not guarantee a better picture.
+- The default is a 256px, 2-step quick draft. Choose 512px and 4 or 8 steps for more detail at a higher compute cost. More steps do not guarantee a better picture.
 - Cancel stops the worker. Jobs stop after 15 minutes. A low-memory failure suggests reducing resolution or closing other apps.
 
-An 8 GB laptop with about 4 GB free may qualify, but its CPU speed still matters. A 4 GB installed machine may not have enough free RAM for diffusion. The Dell Pentium N5030 has not been physically benchmarked. Baseline builds do not require AVX/AVX2/BMI2; this release does not use GPU acceleration for images. Faster PCs can finish sooner, but this is not a performance guarantee.
+An 8 GB laptop with about 4 GB free may qualify, but its CPU speed still matters. A 4 GB installed machine may not have enough free RAM for diffusion. The Dell Pentium N5030 has not been physically benchmarked. A verified CPU probe selects an AVX2/FMA/F16C engine only when CPU instructions and OS vector state are supported. Other machines use the baseline engine without AVX/AVX2/BMI2. This release does not use GPU acceleration for images. Faster PCs can finish sooner, but this is not a performance guarantee.
 
 ## Components and licenses
 
@@ -32,6 +32,6 @@ License texts are bundled under `nexo7/licenses`; model use remains subject to t
 
 ## Building from source
 
-Install Git, CMake and a C++ compiler (MSVC on Windows, GCC on Linux), plus the Python runtime requirements. Run `python scripts/build_image_runtime.py` before `python scripts/build_desktop.py`. The build pins the upstream engine and bundles a verified static CPU executable. The optional weights are downloaded through the desktop controls.
+Install Git, CMake and a C++ compiler (MSVC on Windows, GCC on Linux), plus the Python runtime requirements. Run `python scripts/build_image_runtime.py` before `python scripts/build_desktop.py`. The build pins the upstream engine and bundles two verified static CPU executables plus a baseline CPU-capability probe. The optional weights are downloaded through the desktop controls.
 
-Release checks generate real 512px images on Windows and Linux, including a simulated 4 GB available-memory budget. Images and worker-limit receipts are retained as workflow review artifacts. These checks establish execution under the tested conditions, not universal prompt accuracy or laptop speed.
+Release checks generate real 512px images on Windows and Linux, including a simulated 4 GB available-memory budget, plus a real 256px draft with the baseline CPU engine forced. Images and worker-limit receipts are retained as workflow review artifacts. These checks establish execution under the tested conditions, not universal prompt accuracy or laptop speed.

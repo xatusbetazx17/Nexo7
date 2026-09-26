@@ -1,17 +1,37 @@
 from dataclasses import replace
+import hashlib
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import Mock, patch
 from PIL import Image
 from nexo7.config import Config
 from nexo7.hardware import Hardware
-from nexo7.image_generation import CATALOG, ImageGenerator, memory_plan, validate
+from nexo7.image_generation import CATALOG, ImageGenerator, memory_plan, runtime_path, validate
 from nexo7.setup import SetupController
 
 
 class DiffusionTests(unittest.TestCase):
+    def test_cpu_selection_checks_probe_and_binary_hashes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            def entry(name):
+                (root/name).write_bytes(name.encode())
+                return {'filename':name,'sha256':hashlib.sha256(name.encode()).hexdigest()}
+            info={'format':2,'commit':CATALOG['engine_commit'],'probe':entry('probe'),
+                  'variants':{'baseline':entry('baseline'),'avx2':entry('avx2')}}
+            (root/'manifest.json').write_text(json.dumps(info))
+            with patch('nexo7.image_generation.RUNTIME_ROOT',root),patch('nexo7.image_generation.subprocess.run',return_value=Mock(stdout='avx2\n')) as run:
+                self.assertEqual(runtime_path().name,'avx2')
+                run.reset_mock();self.assertEqual(runtime_path(force_baseline=True).name,'baseline');run.assert_not_called()
+                run.side_effect=subprocess.TimeoutExpired('probe',5)
+                self.assertEqual(runtime_path().name,'baseline')
+                run.side_effect=None
+                (root/'avx2').write_bytes(b'tampered')
+                with self.assertRaisesRegex(ValueError,'verification'):runtime_path()
+
     def test_limits_and_available_ram(self):
         for body in ({'prompt':''},{'prompt':'x','size':1024},{'prompt':'x','steps':99},{'prompt':'x','seed':True},{'prompt':'x','style':'unknown'}):
             with self.assertRaises(ValueError):validate(body)

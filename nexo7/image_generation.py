@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import subprocess
 import tempfile
 import threading
 import time
@@ -14,32 +15,46 @@ from .hardware import detect_hardware
 from .native_runtime import NativeProcess, digest, download, start_native, stop_native
 
 CATALOG = json.loads(Path(__file__).with_name('image_catalog.json').read_text())
+RUNTIME_ROOT=Path(__file__).parent/'image_runtime'
 STYLES = {'photo':'photograph, natural lighting, detailed, ', 'art':'digital painting, detailed illustration, ',
           'anime':'anime illustration, ', 'none':''}
 
 
-def runtime_path():
-    root = Path(__file__).parent / 'image_runtime'
-    executable = root / ('sd-cli.exe' if os.name == 'nt' else 'sd-cli')
+def runtime_path(force_baseline=False):
+    root = RUNTIME_ROOT
     manifest = root / 'manifest.json'
-    if not executable.is_file() or not manifest.is_file():
+    if not manifest.is_file():
         raise ValueError('This build has no image engine. Install the Windows/Linux desktop release, or run scripts/build_image_runtime.py for a source checkout.')
     info = json.loads(manifest.read_text())
-    if info.get('commit') != CATALOG['engine_commit'] or digest(executable) != info.get('sha256'):
+    if info.get('commit') != CATALOG['engine_commit'] or info.get('format')!=2:
         raise ValueError('Image engine verification failed. Reinstall the desktop release.')
-    if os.name!='nt':executable.chmod(0o700)
-    return executable
+    def verified(entry):
+        name=entry.get('filename','')
+        if not name or Path(name).name!=name:raise ValueError('Invalid image engine manifest.')
+        path=root/name
+        if not path.is_file() or digest(path)!=entry.get('sha256'):raise ValueError('Image engine verification failed. Reinstall the desktop release.')
+        if os.name!='nt':path.chmod(0o700)
+        return path
+    variant='baseline'
+    if not force_baseline:
+        probe=verified(info['probe'])
+        try:
+            result=subprocess.run([str(probe)],capture_output=True,text=True,timeout=5,check=True,
+                                  creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+            if result.stdout.strip()=='avx2':variant='avx2'
+        except (OSError,subprocess.SubprocessError):pass
+    return verified(info['variants'][variant])
 
 
 def validate(body):
     prompt = body.get('prompt')
     if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= 1000 or any(ord(c)<32 and c not in '\n\t' for c in prompt):
         raise ValueError('Describe the image using 1–1000 characters.')
-    size, steps, style = body.get('size',512), body.get('steps',4), body.get('style','photo')
+    size, steps, style = body.get('size',256), body.get('steps',2), body.get('style','photo')
     if type(size) is not int or size not in (256,512):
         raise ValueError('Image size must be 256 or 512 pixels.')
-    if type(steps) is not int or steps not in (4,8):
-        raise ValueError('Choose 4 or 8 image-generation steps.')
+    if type(steps) is not int or steps not in (2,4,8):
+        raise ValueError('Choose 2, 4 or 8 image-generation steps.')
     if not isinstance(style,str) or style not in STYLES:
         raise ValueError('Choose photo, art, anime or none.')
     seed=body.get('seed',-1)
@@ -116,6 +131,7 @@ class ImageGenerator:
                     notice='Image model installed. Generation works offline. English prompts work best.'
                 else:
                     plan=memory_plan(options['size'])
+                    plan['cpu_variant']='avx2' if 'avx2' in executable.name else 'baseline'
                     with self.lock:self.state['plan']=plan
                     self.emit('Generating on CPU. This can take several minutes on a modest PC. You can cancel.')
                     with tempfile.TemporaryDirectory(prefix='nexo-image-') as tmp:
@@ -132,7 +148,7 @@ class ImageGenerator:
                             deadline=time.monotonic()+900
                             while worker.process.poll() is None:
                                 if self.cancel.wait(.2):raise ValueError('Image generation cancelled.')
-                                if time.monotonic()>deadline:raise ValueError('Image generation exceeded 15 minutes. Try 256px and 4 steps.')
+                                if time.monotonic()>deadline:raise ValueError('Image generation exceeded 15 minutes. Try 256px and 2 steps.')
                             if self.cancel.is_set():raise ValueError('Image generation cancelled.')
                             if worker.process.returncode or not output.is_file():
                                 with self.lock:self.state['diagnostic']=worker.output_tail()
@@ -144,7 +160,10 @@ class ImageGenerator:
                                 clean=io.BytesIO();img.convert('RGB').save(clean,format='PNG')
                             files=[file('Nexo-image.png','image/png',clean.getvalue())]
                             notice='Generated offline with DreamShaper 8 LCM. Download to keep the image. Faces, hands, lettering and prompt accuracy can be imperfect.'
-                        finally:worker.close()
+                        finally:
+                            worker.close()
+                            if not files:
+                                with self.lock:self.state['diagnostic']=worker.output_tail()
             except Exception as exc:
                 error=str(exc)[:500];cancelled=self.cancel.is_set()
             finally:

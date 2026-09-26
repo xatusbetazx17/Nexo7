@@ -148,7 +148,7 @@ $("composer").onsubmit=async event=>{
       }
       $('chat-images').value='';return;
     }
-    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked,allow_internet:$("allow-internet").checked,image_mode:$("diffusion-use").checked?"diffusion":"illustration",image_size:Number($("diffusion-size").value),image_style:$("diffusion-style").value});
+    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked,allow_internet:$("allow-internet").checked,image_mode:$("diffusion-use").checked?"diffusion":"illustration",image_size:Number($("diffusion-size").value),image_steps:Number($("diffusion-steps").value),image_style:$("diffusion-style").value});
     if(result.image_job){
       $('diffusion-chat-cancel').hidden=false;
       try{const state=await waitDiffusion(result.image_job.id);if(state.phase!=='completed')throw Error(state.message);message('assistant',state.message);showChatFiles($('messages').lastElementChild,state.files);}finally{$('diffusion-chat-cancel').hidden=true;}
