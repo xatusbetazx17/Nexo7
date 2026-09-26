@@ -515,9 +515,19 @@ function diffusionStatus(state){
  $('diffusion-install').disabled=running;$('diffusion-generate').disabled=running||!state.installed;
  $('diffusion-cancel').hidden=!running;
 }
+let watchedDiffusion=null;
+function showDiffusionResult(state){
+ if(state.phase==='completed'&&state.files?.length&&$('diffusion-output').dataset.job!==state.id){
+  clearDiffusionFiles();$('diffusion-output').replaceChildren();showChatFiles($('diffusion-output'),state.files,diffusionUrls);$('diffusion-output').dataset.job=state.id;
+ }
+}
 async function refreshDiffusion(){
  const state=await api('/api/images');diffusionStatus(state);
  $('diffusion-use').checked=state.installed&&localStorage.getItem('nexo-diffusion')!=='false';
+ showDiffusionResult(state);
+ if(['installing','generating'].includes(state.phase)&&watchedDiffusion!==state.id){
+  watchedDiffusion=state.id;waitDiffusion(state.id).then(showDiffusionResult).catch(e=>{$('diffusion-status').textContent=e.message;}).finally(()=>{watchedDiffusion=null;});
+ }
  return state;
 }
 async function waitDiffusion(id){
@@ -528,6 +538,6 @@ $('diffusion-use').onchange=()=>localStorage.setItem('nexo-diffusion',String($('
 $('diffusion-install').onclick=async()=>{try{const job=await api('/api/images/install','POST',{});const state=await waitDiffusion(job.id);if(state.phase==='completed'){localStorage.setItem('nexo-diffusion','true');$('diffusion-use').checked=true;}}catch(e){$('diffusion-status').textContent=e.message;}};
 $('diffusion-generate').onclick=async()=>{try{
  const job=await api('/api/images/start','POST',{prompt:$('diffusion-prompt').value,size:Number($('diffusion-size').value),steps:Number($('diffusion-steps').value),style:$('diffusion-style').value});
- const state=await waitDiffusion(job.id);if(state.phase==='completed'){clearDiffusionFiles();$('diffusion-output').replaceChildren();showChatFiles($('diffusion-output'),state.files,diffusionUrls);}
+ const state=await waitDiffusion(job.id);showDiffusionResult(state);
 }catch(e){$('diffusion-status').textContent=e.message;}};
 for(const id of ['diffusion-cancel','diffusion-chat-cancel'])$(id).onclick=()=>api('/api/images/cancel','POST',{}).catch(e=>error(e.message));

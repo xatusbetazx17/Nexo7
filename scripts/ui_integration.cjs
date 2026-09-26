@@ -65,6 +65,11 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
    assert(response.ok,route+' '+response.status);return response.json();
   };
   assert.equal((await request('/api/preferences')).performance,'fast');
+  const images=await request('/api/images');assert.equal(images.installed,false);
+  d.getElementById('diffusion-open').click();await waitFor(()=>!d.getElementById('workspace-view').hidden);
+  assert(d.getElementById('diffusion-generate').disabled);assert(!d.getElementById('diffusion-use').checked);
+  d.getElementById('diffusion-install').click();await waitFor(()=>d.getElementById('diffusion-status').textContent.includes('no image engine'));
+  assert.equal((await request('/api/images')).phase,'idle');
   assert.equal((await request('/api/preferences')).personality,'friendly');
   assert.equal((await request('/api/preferences')).adapt_tone,true);
   const word=await request('/api/export/document','POST',{title:'Offline notes',content:'# Review\nA local document.'});

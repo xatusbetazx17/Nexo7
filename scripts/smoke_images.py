@@ -53,10 +53,26 @@ def main():
             assert state['phase']=='completed',state
             for source in models.iterdir():
                 if not (cache/source.name).exists():shutil.copy2(source,cache/source.name)
+            if args.binary:
+                request('/api/preferences',{'model_choice':'lfm2-vl:450m','performance':'fast','cpu_only':True})
+                request('/api/setup/start',{'cpu_only':True})
+                deadline=time.monotonic()+600
+                while True:
+                    setup=request('/api/setup')
+                    if setup['phase']=='ready':break
+                    if setup['phase']=='error' or time.monotonic()>deadline:raise AssertionError(setup)
+                    time.sleep(1)
             prompt='A portrait photograph of an adult woman with curly hair, soft natural light' if args.simulate_4gb_free else 'A photograph of a red fox in a sunlit forest, detailed fur'
             job=request('/api/chat',{'message':'Draw '+prompt,'mode':'companion','private':True,'image_mode':'diffusion','image_size':512})
             assert job.get('image_job'),job
             state=wait();assert state['phase']=='completed',state
+            if args.binary:
+                setup=request('/api/setup')
+                assert setup['phase']=='ready',setup
+                answer=request('/api/chat',{'message':'Say hello.','mode':'companion','private':True})
+                assert request('/api/status')['provider']=='native'
+                assert answer.get('answer') and answer.get('status')=='completed',answer
+                (output/'chat-restored.json').write_text(json.dumps(answer,indent=2))
             assert state['guard']['enforced_limit']<=4_000_000_000,state['guard']
             if args.simulate_4gb_free:assert state['guard']['enforced_limit']<=3_250_000_000
             name=('portrait-4gb-free' if args.simulate_4gb_free else 'fox-packaged')
@@ -66,6 +82,16 @@ def main():
                 assert max(ImageStat.Stat(img).stddev)>12,'Blank or nearly uniform image'
             state.pop('files',None);(output/(name+'.json')).write_text(json.dumps(state,indent=2))
             print(json.dumps({'passed':True,'platform':sys.platform,'packaged':bool(args.binary),'elapsed_seconds':state['elapsed_seconds'],'guard':state['guard']}))
+            if args.simulate_4gb_free:
+                request('/api/images/start',{'prompt':'A red fox','size':512,'steps':8})
+                deadline=time.monotonic()+30
+                while 'guard' not in request('/api/images'):
+                    if time.monotonic()>deadline:raise AssertionError('Cancellation test worker did not start')
+                    time.sleep(.2)
+                request('/api/images/cancel',{})
+                cancelled=wait()
+                assert cancelled['phase']=='cancelled' and not cancelled['files'],cancelled
+                (output/'cancellation.json').write_text(json.dumps(cancelled,indent=2))
         finally:
             if request and process.poll() is None:
                 try:request('/api/shutdown',{})

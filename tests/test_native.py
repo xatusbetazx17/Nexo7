@@ -49,6 +49,14 @@ class NativeTests(unittest.TestCase):
         runtime=NativeProcess([sys.executable,'-c','import time;time.sleep(60)'],1_000_000_000,'')
         runtime.close()
         self.assertIsNotNone(runtime.process.poll())
+    def test_diagnostic_capture_is_bounded_and_does_not_block(self):
+        runtime=NativeProcess([sys.executable,'-c',"print('x'*100000);print('engine-finished')"],1_000_000_000,'',capture_output=True)
+        try:
+            self.assertEqual(runtime.process.wait(timeout=20),0)
+            tail=runtime.output_tail()
+            self.assertLessEqual(len(tail),8000)
+            self.assertIn('engine-finished',tail)
+        finally:runtime.close()
     def test_cancel_does_not_create_download(self):
         with tempfile.TemporaryDirectory() as tmp:
             cancel=threading.Event();cancel.set()

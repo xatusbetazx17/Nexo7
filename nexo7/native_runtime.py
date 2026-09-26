@@ -147,12 +147,12 @@ def worker_command():
 
 
 class NativeProcess:
-    def __init__(self, command, limit, key):
+    def __init__(self, command, limit, key, *, capture_output=False):
         env = dict(os.environ); env['MALLOC_ARENA_MAX'] = '2'
         self.process = subprocess.Popen(worker_command(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, env=env,
                                         creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-        self.process.stdin.write((json.dumps({'command':command,'limit':limit,'key':key})+'\n').encode())
+        self.process.stdin.write((json.dumps({'command':command,'limit':limit,'key':key,'capture_output':capture_output})+'\n').encode())
         self.process.stdin.flush()
         receipt = queue.Queue()
         threading.Thread(target=lambda:receipt.put(self.process.stdout.readline(4096)), daemon=True).start()
@@ -166,6 +166,17 @@ class NativeProcess:
         except Exception:
             self.close(); raise ValueError(error) from None
         self.key = key
+        self.diagnostic=''
+        self.output_thread=None
+        if capture_output:
+            def read_output():
+                try:self.diagnostic=json.loads(self.process.stdout.readline(40000)).get('diagnostic','')[-8000:]
+                except (ValueError,OSError):pass
+            self.output_thread=threading.Thread(target=read_output,daemon=True)
+            self.output_thread.start()
+    def output_tail(self):
+        if self.output_thread:self.output_thread.join(timeout=2)
+        return self.diagnostic
     def close(self):
         if self.process.stdin and not self.process.stdin.closed: self.process.stdin.close()
         try: self.process.wait(timeout=8)

@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tarfile
 
 ROOT=Path(__file__).resolve().parents[1]
 COMMIT=json.loads((ROOT/'nexo7/image_catalog.json').read_text())['engine_commit']
@@ -17,7 +18,7 @@ def main():
     manifest=target/'manifest.json'
     if manifest.exists() and executable.exists():
         info=json.loads(manifest.read_text())
-        if info.get('commit')==COMMIT and hashlib.sha256(executable.read_bytes()).hexdigest()==info.get('sha256'):
+        if info.get('commit')==COMMIT and (target/'third-party-sources.tar.gz').is_file() and hashlib.sha256(executable.read_bytes()).hexdigest()==info.get('sha256'):
             return
     source=ROOT/'build/sd-source'
     if not (source/'.git').exists():
@@ -44,6 +45,12 @@ def main():
                 notices.append(str(path.relative_to(source)))
     for name in notices:
         shutil.copyfile(source/name,target/(name.replace('/','-').replace('\\','-')+'.txt'))
+    # Some header-only dependencies embed their license inside source files.
+    # Preserve those notices verbatim rather than guessing their boundaries.
+    with tarfile.open(target/'third-party-sources.tar.gz','w:gz') as archive:
+        archive.add(source/'thirdparty',arcname='thirdparty')
+        archive.add(source/'ggml/src',arcname='ggml/src')
+        archive.add(source/'ggml/LICENSE',arcname='ggml/LICENSE')
     manifest.write_text(json.dumps({'commit':COMMIT,'sha256':hashlib.sha256(executable.read_bytes()).hexdigest(),
         'backend':'cpu','avx_required':False},indent=2)+'\n')
     subprocess.run([str(executable),'--help'],check=True,stdout=subprocess.DEVNULL)

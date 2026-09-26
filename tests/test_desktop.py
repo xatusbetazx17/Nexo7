@@ -99,6 +99,11 @@ class DesktopTests(unittest.TestCase):
                 request('/api/setup/start', {}, key='wrong-key')
             self.assertEqual(error.exception.code, 401)
             self.assertIsNone(self.controller.thread)
+            for path,body in (('/api/images',None),('/api/images/install',{}),('/api/images/start',{'prompt':'fox'}),('/api/images/cancel',{})):
+                with self.assertRaises(HTTPError) as error:
+                    request(path,body,key='wrong-key')
+                self.assertEqual(error.exception.code,401)
+            self.assertIsNone(self.controller.image_generator.thread)
             with request('/api/status') as response:
                 self.assertTrue(json.load(response)['desktop'])
             self.controller.operation.acquire()

@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from PIL import Image
 from nexo7.config import Config
 from nexo7.hardware import Hardware
-from nexo7.image_generation import ImageGenerator, memory_plan, validate
+from nexo7.image_generation import CATALOG, ImageGenerator, memory_plan, validate
 from nexo7.setup import SetupController
 
 
@@ -32,7 +32,7 @@ class DiffusionTests(unittest.TestCase):
             catalog={'model':{'filename':'model','size':1,'sha256':'ok','name':'test'},'decoder':{'filename':'decoder','size':1,'sha256':'ok'}}
             for name in ('model','decoder'):(generator.root/name).write_bytes(b'x')
             events=[]
-            def worker(command,limit,key):
+            def worker(command,limit,key,**kwargs):
                 events.append('render')
                 self.assertFalse(controller.owns_runtime)
                 Image.new('RGB',(256,256),'red').save(command[command.index('-o')+1])
@@ -61,3 +61,23 @@ class DiffusionTests(unittest.TestCase):
                 generator.controller.operation.acquire()
                 with self.assertRaisesRegex(ValueError,'Wait'):generator.begin({},install=True)
                 generator.controller.operation.release()
+
+    def test_cancel_and_worker_failure_release_resources(self):
+        for cancel in (True,False):
+            with self.subTest(cancel=cancel),tempfile.TemporaryDirectory() as tmp:
+                generator=ImageGenerator(SetupController(Path(tmp)/'db'))
+                worker=Mock();worker.process.returncode=1
+                worker.process.poll.return_value=None if cancel else 1
+                worker.receipt={'enforced_limit':2_000_000_000}
+                def start(*args,**kwargs):
+                    if cancel:generator.cancel.set()
+                    return worker
+                with patch.object(generator,'installed',return_value=True),patch('nexo7.image_generation.runtime_path',return_value=Path('/fixture/sd-cli')), \
+                     patch('nexo7.image_generation.digest',side_effect=lambda path:next(e['sha256'] for e in CATALOG.values() if isinstance(e,dict) and e['filename']==path.name)), \
+                     patch('nexo7.image_generation.memory_plan',return_value={'ram_limit_bytes':2_000_000_000,'threads':2}), \
+                     patch('nexo7.image_generation.NativeProcess',side_effect=start):
+                    generator.begin({'prompt':'fox','size':256});generator.thread.join(3)
+                    self.assertEqual(generator.snapshot()['phase'],'cancelled' if cancel else 'error')
+                    self.assertEqual(generator.snapshot()['files'],[])
+                    worker.close.assert_called_once()
+                    self.assertTrue(generator.controller.operation.acquire(blocking=False));generator.controller.operation.release()

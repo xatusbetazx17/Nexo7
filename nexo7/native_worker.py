@@ -82,8 +82,9 @@ def run_worker():
     env['LLAMA_API_KEY'] = spec.get('key', '')
     env['MALLOC_ARENA_MAX'] = '2'
     if sys.platform == 'win32': ctypes.windll.kernel32.SetDllDirectoryW(None)
-    child = subprocess.Popen(spec['command'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, env=env,
+    capture=spec.get('capture_output',False)
+    child = subprocess.Popen(spec['command'], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
+                             stderr=subprocess.STDOUT if capture else subprocess.DEVNULL, env=env,
                              creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0)
     print(json.dumps({'guard': guard, 'limit': limit, 'enforced_limit': enforced_limit, 'pid': child.pid}), flush=True)
     def watch_parent():
@@ -95,7 +96,17 @@ def run_worker():
             try: child.wait(timeout=5)
             except subprocess.TimeoutExpired: child.kill()
     threading.Thread(target=watch_parent, daemon=True).start()
-    raise SystemExit(child.wait())
+    tail=bytearray()
+    if capture:
+        while True:
+            chunk=child.stdout.read(4096)
+            if not chunk:break
+            tail.extend(chunk)
+            if len(tail)>8000:del tail[:-8000]
+        child.stdout.close()
+    code=child.wait()
+    if capture:print(json.dumps({'diagnostic':tail.decode('utf-8','replace')}),flush=True)
+    raise SystemExit(code)
 
 def main():
     try:

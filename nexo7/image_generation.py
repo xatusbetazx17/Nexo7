@@ -75,7 +75,10 @@ class ImageGenerator:
 
     def snapshot(self):
         with self.lock:
-            return {**self.state,'installed':self.installed(),'download_bytes':sum(CATALOG[k]['size'] for k in ('model','decoder')),
+            installed=self.installed()
+            state=dict(self.state)
+            if state['phase']=='idle' and installed:state['message']='Image model installed. Describe an image to generate offline.'
+            return {**state,'installed':installed,'download_bytes':sum(CATALOG[k]['size'] for k in ('model','decoder')),
                     'model':CATALOG['model']['name'],'engine_available':(Path(__file__).parent/'image_runtime'/'manifest.json').is_file()}
 
     def emit(self, message):
@@ -123,7 +126,7 @@ class ImageGenerator:
                                  '-o',str(output),'-W',str(options['size']),'-H',str(options['size']),
                                  '--steps',str(options['steps']),'--cfg-scale','1.0','--sampling-method','lcm',
                                  '--seed',str(options['seed']),'-t',str(plan['threads']),'--diffusion-fa','--rng','cpu']
-                        worker=NativeProcess(command,plan['ram_limit_bytes'],'')
+                        worker=NativeProcess(command,plan['ram_limit_bytes'],'',capture_output=True)
                         try:
                             with self.lock:self.state['guard']=worker.receipt
                             deadline=time.monotonic()+900
@@ -132,7 +135,8 @@ class ImageGenerator:
                                 if time.monotonic()>deadline:raise ValueError('Image generation exceeded 15 minutes. Try 256px and 4 steps.')
                             if self.cancel.is_set():raise ValueError('Image generation cancelled.')
                             if worker.process.returncode or not output.is_file():
-                                raise ValueError('The image engine could not finish within its resource limits. Try 256px, close other apps, or restart Nexo.')
+                                with self.lock:self.state['diagnostic']=worker.output_tail()
+                                raise ValueError(f'The image engine stopped (exit {worker.process.returncode}). Try 256px, close other apps, or reinstall the image model. Technical details are available from the local image status API.')
                             if output.stat().st_size>8_000_000:raise ValueError('Image output exceeded the size limit.')
                             from PIL import Image
                             with Image.open(output) as img:

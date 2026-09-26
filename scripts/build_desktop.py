@@ -50,6 +50,7 @@ def main():
     shutil.copy2(ROOT / "docs" / "SCENARIOS-AND-INTERFACE.md", stage / "SCENARIOS-AND-INTERFACE.md")
     licenses = stage / "licenses"
     licenses.mkdir(exist_ok=True)
+    shutil.copy2(image_runtime/'third-party-sources.tar.gz',licenses/'IMAGE-ENGINE-NOTICES-AND-SOURCES.tar.gz')
     for source in (ROOT / "nexo7" / "licenses").glob("*.txt"):
         shutil.copy2(source, licenses / source.name)
     shutil.copy2(ROOT / "docs" / "VISION-TELEGRAM.md", stage / "VISION-TELEGRAM.md")
