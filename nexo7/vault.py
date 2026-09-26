@@ -43,7 +43,7 @@ class Vault:
     def unlock(self,phrase):
         with self.lock:
             if self.path.exists():
-                if self.path.stat().st_size>100_000:raise ValueError('Invalid vault file')
+                if self.path.stat().st_size>1_000_000:raise ValueError('Invalid vault file')
                 try:
                     envelope=json.loads(self.path.read_bytes())
                     if envelope['format']!='nexo-vault-v1':raise ValueError()
@@ -58,7 +58,9 @@ class Vault:
     def _save(self):
         if self._key is None:raise ValueError('Unlock the connector vault first')
         nonce=secrets.token_bytes(12)
-        cipher=AESGCM(self._key).encrypt(nonce,json.dumps(self._data).encode(),AAD)
+        raw=json.dumps(self._data).encode()
+        if len(raw)>700_000:raise ValueError('Encrypted vault storage limit reached; remove an old draft')
+        cipher=AESGCM(self._key).encrypt(nonce,raw,AAD)
         atomic_private(self.path,json.dumps({'format':'nexo-vault-v1','salt':b64(self._salt),'nonce':b64(nonce),'ciphertext':b64(cipher)}).encode())
     def get(self,name):
         with self.lock:

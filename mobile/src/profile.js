@@ -14,6 +14,13 @@ export async function validate(p){
  if(!Array.isArray(p.documents)||p.documents.length>200)throw Error('Profile limit: 200 notes');
  for(const d of p.documents)if(!d||typeof d.title!=='string'||!d.title.trim()||d.title.length>160||typeof d.content!=='string'||!d.content.trim()||d.content.length>200000||typeof d.source!=='string'||d.source.length>500)throw Error('Invalid note');
  if(!['neutral','friendly','coach','playful'].includes(p.preferences?.personality||'neutral'))throw Error('Invalid personality');
+ p.persona=validatePersona(p.persona||{});
+ if(!Array.isArray(p.episodes||[])||(p.episodes||[]).length>500)throw Error('Experience limit: 500');
+ p.episodes=p.episodes||[];
+ for(const x of p.episodes)if(!x||typeof x.what!=='string'||!x.what.trim()||x.what.length>800||typeof x.people!=='string'||x.people.length>160||!['experience','decision','milestone','activity'].includes(x.kind)||typeof x.pinned!=='boolean'||![x.occurred,x.expires].every(v=>typeof v==='number'&&v>0&&v<32503680000)||!Number.isInteger(x.occurrences)||x.occurrences<1||x.occurrences>1000000)throw Error('Invalid experience');
+ p.notifications=p.notifications||[];
+ if(!Array.isArray(p.notifications)||p.notifications.length>100)throw Error('Notification limit: 100');
+ for(const x of p.notifications)if(!x||typeof x.id!=='string'||x.id.length>100||typeof x.title!=='string'||x.title.length>150||typeof x.body!=='string'||x.body.length>4000||typeof x.created!=='number'||!Number.isFinite(x.created)||![true,false,0,1].includes(x.seen))throw Error('Invalid notification');
  if(!Array.isArray(p.reminders)||p.reminders.length>100)throw Error('Invalid reminders');
  for(const r of p.reminders)if(typeof r.text!=='string'||!r.text.trim()||r.text.length>500||typeof r.due!=='number'||!(r.due>0&&r.due<32503680000))throw Error('Invalid reminder');
  return p;
@@ -26,3 +33,13 @@ export async function decrypt(envelope,phrase){
 export async function encrypt(p,phrase){await validate(p);const salt=crypto.getRandomValues(new Uint8Array(16)),nonce=crypto.getRandomValues(new Uint8Array(12));const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv:nonce,additionalData:encode.encode('nexo-transfer-v1')},await key(phrase,salt),encode.encode(JSON.stringify(p)));return {format:'nexo-transfer-v1',kdf:'PBKDF2-SHA256',iterations:600000,salt:b64(salt),nonce:b64(nonce),ciphertext:b64(new Uint8Array(ciphertext))};}
 export async function create(){const pair=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']);const pkcs=new Uint8Array(await crypto.subtle.exportKey('pkcs8',pair.privateKey)),publicKey=new Uint8Array(await crypto.subtle.exportKey('raw',pair.publicKey));return {format:'nexo-profile-v1',identity:{private_key:hex(pkcs.slice(-32)),public_key:hex(publicKey),id:'nexo:'+hex(new Uint8Array(await crypto.subtle.digest('SHA-256',publicKey)))},preferences:{personality:'friendly',style:'concise',response_language:'auto',adapt_tone:false},documents:[],reminders:[]};}
 export function storage(mode,value){return new Promise((resolve,reject)=>{const req=indexedDB.open('nexo-mobile',1);req.onupgradeneeded=()=>req.result.createObjectStore('profile');req.onerror=()=>reject(req.error);req.onsuccess=()=>{const db=req.result,tx=db.transaction('profile',mode==='get'?'readonly':'readwrite'),store=tx.objectStore('profile');const r=mode==='get'?store.get('encrypted'):mode==='delete'?store.delete('encrypted'):store.put(value,'encrypted');r.onsuccess=()=>{const result=r.result;tx.oncomplete=()=>{db.close();resolve(result);};};tx.onerror=()=>{db.close();reject(tx.error);};};});}
+
+export function validatePersona(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Invalid persona');
+ const p={name:'Nexo',user_name:'',mood:'calm',onboarded:false,remember_activity:false,retention_days:90,active_days:[],...value};
+ if(Object.keys(p).some(k=>!['name','user_name','mood','onboarded','remember_activity','retention_days','active_days'].includes(k)))throw Error('Unknown persona field');
+ for(const k of ['name','user_name'])if(typeof p[k]!=='string'||p[k].length>40||(k==='name'&&!p[k].trim())||!/^[\p{L}\p{N} _.'’\-]*$/u.test(p[k]))throw Error('Use a short name with letters, numbers and simple punctuation');
+ if(!['calm','curious','focused','cheerful'].includes(p.mood)||typeof p.onboarded!=='boolean'||typeof p.remember_activity!=='boolean'||!Number.isInteger(p.retention_days)||p.retention_days<1||p.retention_days>365)throw Error('Invalid persona settings');
+ if(!Array.isArray(p.active_days)||p.active_days.length>366||p.active_days.some(d=>typeof d!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(Date.parse(d))||new Date(d).toISOString().slice(0,10)!==d))throw Error('Invalid continuity dates');
+ return p;
+}

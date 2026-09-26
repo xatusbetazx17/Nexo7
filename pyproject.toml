@@ -17,4 +17,4 @@ nexo7-desktop = "nexo7.desktop:main"
 include = ["nexo7*"]
 
 [tool.setuptools.package-data]
-nexo7 = ["web/*", "chips/*", "voice_catalog.json", "knowledge/*", "native_catalog.json", "image_catalog.json", "image_runtime/*", "licenses/*"]
+nexo7 = ["web/*", "chips/*", "chip-discovery.json", "catalog-items/*", "voice_catalog.json", "knowledge/*", "native_catalog.json", "image_catalog.json", "image_runtime/*", "licenses/*"]

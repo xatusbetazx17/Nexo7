@@ -1,7 +1,7 @@
 name: Mobile validation
 on:
   push:
-    branches: [navi-mobile-validation]
+    branches: [navi-mobile-validation, navi-019-validation]
   workflow_dispatch:
 permissions:
   contents: read

@@ -11,7 +11,10 @@ let browser;
  const access=JSON.parse(fs.readFileSync(path.join(directory,'access.json'),'utf8'));
  browser=await chromium.launch({headless:true,executablePath:process.env.NEXO_CHROME||undefined,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
  const page=await browser.newPage({viewport:{width:1366,height:768}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(access.url);await page.locator('#try-demo').click();
+ await page.goto(access.url);await page.locator('#navi-onboarding').waitFor({state:'visible'});
+ await page.screenshot({path:path.join(output,'onboarding.png'),fullPage:true});
+ await page.locator('#onboarding-name').fill('Luna');await page.locator('#onboarding-user').fill('Test user');await page.locator('#onboarding-remember').check();await page.locator('#onboarding-form button').first().click();await page.locator('#navi-onboarding').waitFor({state:'hidden'});assert((await page.locator('#navi-welcome').innerText()).includes('Luna'));
+ await page.locator('#try-demo').click();
  await page.locator('#composer').waitFor({state:'visible'});
  assert.equal(await page.locator('#chat-options').getAttribute('open'),null);
  assert.equal(await page.locator('#web-controls').isVisible(),false);
@@ -37,6 +40,12 @@ let browser;
  await page.locator('#navi-scheduler').check();await page.locator('#navi-reminder-text').fill('Browser reminder');await page.locator('#navi-reminder-time').fill('2026-01-01T10:00');await page.locator('#navi-reminder-form button').click();await page.locator('#navi-reminders').getByText(/Browser reminder/).waitFor();
  await page.locator('#navi-chips').locator('..').evaluate(e=>e.open=true);
  await page.locator('#navi-chip-run').click();await page.locator('#navi-chip-result').filter({hasText:'2.5'}).waitFor();
+
+ await page.locator('#episodes-panel summary').click();await page.locator('#episode-what').fill('Finished the violet project');await page.locator('#episode-people').fill('Ana');await page.locator('#episode-form button').first().click();await page.locator('#episode-list').getByText('Finished the violet project',{exact:true}).waitFor();
+ await page.locator('#catalog-panel summary').click();await page.locator('#catalog-refresh').click();await page.locator('#catalog-list').getByText('study-math',{exact:true}).waitFor();
+ const vaultParent=page.locator('#navi-vault-unlock').locator('..');await vaultParent.evaluate(e=>e.open=true);await page.locator('#navi-vault-phrase').fill('a browser test vault passphrase');await page.locator('#navi-vault-unlock').click();await page.locator('#navi-vault-status').filter({hasText:/Unlocked|unlocked/}).waitFor();
+ await page.locator('#mail-panel summary').click();await page.locator('#mail-mode').selectOption('draft');await page.locator('#mail-mode-save').click();await page.locator('#mail-status').filter({hasText:'access level saved'}).waitFor();await page.locator('#mail-sender').fill('owner@example.com');await page.locator('#mail-to').fill('recipient@example.com');await page.locator('#mail-subject').fill('Local draft');await page.locator('#mail-text').fill('Not sent to any real account.');await page.locator('#mail-form button').first().click();await page.locator('#mail-list').getByText('Local draft',{exact:true}).waitFor();
+ await page.locator('#navi-vault-lock').click();assert.equal(await page.locator('#mail-list').innerText(),'');
  await page.screenshot({path:path.join(output,'navi-desktop.png'),fullPage:true});
  await page.locator('#navi-voice').check();await page.locator('#chat-tab').click();
  let recordingChecked=false;
@@ -63,6 +72,6 @@ let browser;
    if(width===390)await page.screenshot({path:path.join(output,name+'-mobile.png'),fullPage:true});
   }
  }
- assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks:['desktop and mobile layout without horizontal overflow','collapsed options','theme switch','keyboard send','what-if calculation','PNG preview','WAV/MIDI controls','real microphone capture produces a reviewed 16 kHz WAV without auto-send','Navi reminders and signed math chip','no browser JavaScript errors']},null,2));
+ assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks:['named onboarding and persistent persona','reviewed episodic memory','offline chip discovery','encrypted local draft without sending','desktop and mobile layout without horizontal overflow','collapsed options','theme switch','keyboard send','what-if calculation','PNG preview','WAV/MIDI controls','real microphone capture produces a reviewed 16 kHz WAV without auto-send','Navi reminders and signed math chip','no browser JavaScript errors']},null,2));
  console.log('Chromium UI checks passed');
 }finally{if(browser)await browser.close();child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));fs.rmSync(directory,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

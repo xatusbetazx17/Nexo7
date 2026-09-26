@@ -33,13 +33,15 @@ SCOPES = {
 }
 # Optional modules start disabled, including on existing profiles.
 DEFAULT_OFF = {'presence.use','voice.use','scheduler.use','google.calendar.read','google.gmail.read',
-               'chips.install','chips.run','transfer.export','transfer.import'}
+               'chips.install','chips.run','transfer.export','transfer.import','google.gmail.send','network.chips'}
 SCOPES.update({
  'presence.use':'Show the desktop avatar', 'voice.use':'Local microphone recognition and speech',
  'scheduler.use':'Deliver reminders and morning briefings', 'google.calendar.read':'Read Google Calendar events',
  'google.gmail.read':'Read Gmail messages (no sending or deletion)', 'chips.install':'Install or remove signed declarative chips',
  'chips.run':'Run installed third-party declarative chips', 'transfer.export':'Export encrypted Navi identity and memory',
  'transfer.import':'Import a Navi into a separate profile',
+ 'google.gmail.send':'Send one reviewed Gmail message after explicit confirmation',
+ 'network.chips':'Download selected chips from the project catalog',
 })
 # Extensions must be reviewed and added here. Unknown action names fail closed.
 ACTIONS = {
@@ -62,10 +64,14 @@ ACTIONS.update({
  'chip.math':('math.use',), 'chip.memory':('memory.read','memory.write'), 'chip.security':(),
  'transfer.export':('transfer.export','memory.read'), 'transfer.import':('transfer.import',),
  'google.revoke':(),
+ 'persona.configure':('settings.write',), 'chips.download':('network.chips',),
+ 'google.send.gmail_send':('google.gmail.send',),
 })
 for service in ('calendar','gmail'):
     for verb in ('connect','read','refresh','message'):
         ACTIONS['google.'+verb+'.'+service]=('google.'+service+'.read',)
+for verb in ('connect','read','refresh'):
+    ACTIONS['google.'+verb+'.gmail_send']=('google.gmail.send',)
 # Exact route templates: never log user IDs, filenames, query strings or payloads.
 ROUTES = {}
 def routes(method, paths, scopes=()):
@@ -104,6 +110,15 @@ routes('POST','/api/navi/chips/install /api/navi/chips/remove',('chips.install',
 routes('POST','/api/navi/chips/run')
 routes('POST','/api/navi/transfer/export',('transfer.export','memory.read'))
 routes('POST','/api/navi/transfer/import /api/navi/transfer/switch',('transfer.import',))
+
+routes('POST','/api/navi/persona /api/navi/mail/mode',('settings.write',))
+routes('POST','/api/navi/episodes/list /api/navi/episodes/preview',('memory.read',))
+routes('POST','/api/navi/episodes/save /api/navi/episodes/forget /api/navi/episodes/maintain',('memory.write',))
+routes('POST','/api/navi/mail/save /api/navi/mail/remove',('memory.write',))
+routes('POST','/api/navi/mail/list',('memory.read',))
+routes('POST','/api/navi/mail/preview /api/navi/mail/send',('google.gmail.send','memory.read'))
+routes('POST','/api/navi/catalog /api/navi/chips/export')
+routes('POST','/api/navi/catalog/download',('network.chips',))
 
 
 def route_action(method, path):

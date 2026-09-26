@@ -57,7 +57,7 @@ class Engine:
         instruction = ("\nFollow the user's requested response language; otherwise match the latest user message. Preserve code and source identifiers."
                        if language == "auto" else "\nRequested response language (language code): " + language + ". Write your answer in this language; preserve code and source identifiers.")
         from .personality import instructions as personality_instructions
-        instruction += personality_instructions(self.store.preferences())
+        instruction += personality_instructions(self.store.preferences(), self.store.continuity.persona())
         if mode == "scenario":
             from .scenarios import INSTRUCTIONS
             return INSTRUCTIONS + instruction
@@ -379,6 +379,8 @@ class Engine:
 
         box = ToolBox(self.store, self.pubmed, mode == "research" and self.config.research_network, private, self.workspace)
         instructions = self._instructions(mode, language)
+        if not private and mode not in ("research", "web"):
+            sources += self.store.continuity.matching(message)
         # Web lookup has already provided evidence. One synthesis call without tool
         # schemas leaves more context for excerpts and avoids speculative tool loops.
         schemas = box.schemas() if self.config.max_tool_calls and mode not in {"web", "chat", "scenario"} and self.config.max_model_calls > 1 else []

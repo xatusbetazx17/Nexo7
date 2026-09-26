@@ -9,6 +9,27 @@ import json
 def post(navi,path,body,server):
     operation=path.removeprefix('/api/navi/')
     state=navi.state;google=navi.google;trust=navi.store.trust
+    if operation=='persona':return navi.store.continuity.configure(body)
+    if operation=='episodes/list':return {'episodes':navi.store.continuity.list(include_expired=True)}
+    if operation=='episodes/save':return navi.store.continuity.save(body)
+    if operation=='episodes/forget':
+        if body.get('confirm') is not True:raise ValueError('Confirm forgetting this memory')
+        return navi.store.continuity.forget(body.get('id'))
+    if operation=='episodes/preview':return navi.store.continuity.maintain()
+    if operation=='episodes/maintain':
+        if body.get('confirm') is not True:raise ValueError('Review memory cleanup before applying it')
+        return navi.store.continuity.maintain(apply=True)
+    if operation=='mail/mode':return {'mode':navi.mail.mode(body.get('mode'))}
+    if operation=='mail/list':return navi.mail.list()
+    if operation=='mail/save':return navi.mail.save(body)
+    if operation=='mail/remove':
+        if body.get('confirm') is not True:raise ValueError('Confirm removing this draft')
+        return navi.mail.remove(body.get('id'))
+    if operation=='mail/preview':return navi.mail.preview(body.get('id'))
+    if operation=='mail/send':return navi.mail.send(body)
+    if operation=='catalog':return {'chips':navi.catalog.list()}
+    if operation=='catalog/download':return navi.catalog.fetch(body.get('name'))
+    if operation=='chips/export':return navi.catalog.export(body.get('name'))
     if operation=='settings':return navi.configure(body)
     if operation=='reminder':return state.add_reminder(body.get('text'),body.get('due'))
     if operation=='remove-reminder':state.remove_reminder(body.get('id'));return {'removed':True}
@@ -19,7 +40,7 @@ def post(navi,path,body,server):
         return navi.presence()
     if operation=='briefing':return navi.briefing()
     if operation=='vault/unlock':navi.vault.unlock(body.get('phrase'));return google.status()
-    if operation=='vault/lock':google.close_pending();navi.vault.lock_now();return google.status()
+    if operation=='vault/lock':navi.mail.clear();google.close_pending();navi.vault.lock_now();return google.status()
     if operation=='google/configure':return google.configure(body)
     if operation=='google/authorize':return google.authorize(body.get('service'))
     if operation=='google/toggle':return google.toggle(body.get('service'),body.get('enabled'))
@@ -44,7 +65,7 @@ def post(navi,path,body,server):
         if operation=='voice/speak':return navi.voice.speak(body)
     if operation=='transfer/export':
         if body.get('consent') is not True:raise ValueError('Confirm export of identity, personality, saved notes and reminders')
-        return export_profile(navi.store,state.reminders(pending=True),body.get('phrase'))
+        return export_profile(navi.store,state.reminders(pending=True),body.get('phrase'),state.notifications())
     if operation=='transfer/import':
         if body.get('consent') is not True:raise ValueError('Confirm import into a separate profile')
         with trust.action('transfer.import'):return import_profile(navi.root/'profiles',body.get('bundle'),body.get('phrase'))

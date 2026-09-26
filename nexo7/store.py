@@ -31,6 +31,9 @@ class Store:
         CREATE TABLE IF NOT EXISTS feedback(id INTEGER PRIMARY KEY, rating TEXT, created REAL);
         """)
 
+        from .continuity import Continuity
+        self.continuity = Continuity(self)
+
     def close(self):
         with self.lock:
             self.db.close()

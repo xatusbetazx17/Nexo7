@@ -128,7 +128,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return
             if navi and path == '/api/navi':return self._send(200,navi.snapshot())
             if navi and path == '/api/navi/presence':return self._send(200,navi.presence())
-            static = {"/navi.js":("navi.js","text/javascript; charset=utf-8"),"/recorder.js":("recorder.js","text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
+            static = {"/journey.js":("journey.js","text/javascript; charset=utf-8"),"/navi.js":("navi.js","text/javascript; charset=utf-8"),"/recorder.js":("recorder.js","text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
             if path in static:
                 name, mime = static[path]
                 return self._send(200, (web / name).read_bytes(), mime)
@@ -210,6 +210,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                             controller.cancel.set()
                         if navi and body.get('scope') in {'voice.use','models.manage'}:navi.voice.cancel.set()
                         if navi and body.get('scope') == 'presence.use':navi.configure({'settings':{'avatar':False}})
+                        if navi:navi.mail.clear()
                     return self._send(200, trust.snapshot())
                 if path == '/api/images/install' and images:
                     return self._send(202,images.begin(body,install=True))
@@ -351,6 +352,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     try:
                         active_engine = Engine(controller.config, store, workspace=workspace, web=web_research) if controller else engine
                         result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"), web_provider=body.get("web_provider", "wikipedia"), web_language=body.get("web_language", "en"), remember_web=body.get("remember_web", False), refresh_web=body.get("refresh_web", False), synthesize_web=body.get("synthesize_web", True), allow_internet=body.get("allow_internet", False))
+                        if result.get('status') == 'completed':
+                            store.continuity.completed_chat(private=result.get('private', body.get('private', False)))
                     finally:
                         chat_lock.release()
                         if navi:navi.leave()
