@@ -5,7 +5,7 @@ Nexo 0.16 adds an optional diffusion engine alongside the existing chat model. L
 ## Desktop setup (Windows and Linux x86-64)
 
 1. Install the 0.16 desktop release and open **Create → AI images**.
-2. Choose **Download image model**. This explicit, one-time Internet download is approximately 1.63 GB. Keep at least 2 GB of disk space free. Pinned file sizes and SHA-256 hashes are checked before use.
+2. Choose **Download image model**. This explicit, one-time Internet download is approximately 1.64 GB. Keep at least 2 GB of disk space free. Pinned file sizes and SHA-256 hashes are checked before use.
 3. Describe your image, choose a style, and select **Generate image**. English prompts work best. Generation itself works offline.
 4. Download the PNG to keep it. Generated images are held in memory, not automatically saved in chat history or uploaded.
 
@@ -13,7 +13,7 @@ Once installed, **AI images for drawing requests** is enabled in chat. For examp
 
 ## Memory and speed
 
-The desktop app temporarily unloads its owned native chat model, runs one image job, then tries to restore chat. Images use a separate, OS-limited CPU worker capped at 4 GB. Nexo reserves 750 MB of currently available RAM outside that worker; this is not a cap on total computer memory use.
+The desktop app temporarily unloads its owned native chat model, runs one image job, then tries to restore chat. Images use a separate, OS-limited CPU worker capped at 4 GB. Windows enforces committed memory; Linux enforces virtual address space. Nexo reserves 750 MB of currently available RAM outside that worker; file caches and total computer memory use are not capped by this setting.
 
 - 256px draft requires at least 2.75 GB **available** after chat unloads.
 - 512px requires at least 3.75 GB **available** after chat unloads.

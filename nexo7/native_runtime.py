@@ -170,7 +170,7 @@ class NativeProcess:
         self.output_thread=None
         if capture_output:
             def read_output():
-                try:self.diagnostic=json.loads(self.process.stdout.readline(40000)).get('diagnostic','')[-8000:]
+                try:self.diagnostic=json.loads(self.process.stdout.readline(65536)).get('diagnostic','')[-8000:]
                 except (ValueError,OSError):pass
             self.output_thread=threading.Thread(target=read_output,daemon=True)
             self.output_thread.start()

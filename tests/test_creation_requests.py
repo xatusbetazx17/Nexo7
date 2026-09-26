@@ -96,5 +96,7 @@ class CreationTests(unittest.TestCase):
         for text in ('What is a drawing?', 'Do not draw a chicken', 'How can I make a document?', 'What does draw mean?', 'Draw conclusions from this report'):
             self.assertIsNone(intent(text))
         self.assertEqual(intent('Please create an image of a house'),'drawing')
+        self.assertEqual(intent('Generate a photograph of a fox'),'drawing')
+        self.assertEqual(intent('Crea un retrato de una mujer'),'drawing')
         self.assertEqual(intent('Puedes dibujar un perro'),'drawing')
         self.assertEqual(intent('Escribe una carta'),'document')

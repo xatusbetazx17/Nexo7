@@ -29,7 +29,7 @@ def intent(text):
     if re.match(r'^(?:draw(?: me)?|sketch(?: me)?|paint(?: me)?|dibuja(?:me)?|dibujar|pinta(?:me)?)\b', text):
         return 'drawing'
     if re.match(r'^(?:make|create|generate|crea|creame|genera|generame|haz|hazme)\b', text):
-        if re.search(r'\b(?:image|picture|illustration|drawing|imagen|dibujo|ilustracion)\b', text[:100]):
+        if re.search(r'\b(?:image|picture|photo|photograph|portrait|illustration|drawing|imagen|foto|fotografia|retrato|dibujo|ilustracion)\b', text[:100]):
             return 'drawing'
         if re.search(r'\b(?:music|melody|musica|melodia)\b', text[:100]):
             return 'music'

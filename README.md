@@ -177,4 +177,4 @@ Version 0.13 adds [Creative Studio](docs/CREATIVE-STUDIO.md): editable simple dr
 
 ## Optional offline AI images
 
-Version 0.16 adds real diffusion-generated PNGs through **Create → AI images**, using a separate DreamShaper 8 LCM engine. Download approximately 1.63 GB once; generate offline afterward. Chat is unloaded temporarily, and image jobs have an OS memory limit of at most 4 GB. 512px requires 3.75 GB available after chat unloads. CPU generation can take minutes and image accuracy is not guaranteed. See [setup, licenses and limits](docs/AI-IMAGES.md).
+Version 0.16 adds real diffusion-generated PNGs through **Create → AI images**, using a separate DreamShaper 8 LCM engine. Download approximately 1.64 GB once; generate offline afterward. Chat is unloaded temporarily, and image jobs have an OS memory limit of at most 4 GB. 512px requires 3.75 GB available after chat unloads. CPU generation can take minutes and image accuracy is not guaranteed. See [setup, licenses and limits](docs/AI-IMAGES.md).

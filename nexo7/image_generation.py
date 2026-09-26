@@ -88,7 +88,7 @@ class ImageGenerator:
         options=None if install else validate(body)
         executable=runtime_path()
         if not install and not self.installed():
-            raise ValueError('Install AI images in Create first (about 1.63 GB). Simple illustrations remain available by turning off AI images in chat.')
+            raise ValueError('Install AI images in Create first (about 1.64 GB). Simple illustrations remain available by turning off AI images in chat.')
         if not self.controller.operation.acquire(blocking=False):
             raise ValueError('Wait for the current chat, setup or image operation to finish.')
         self.cancel.clear()
@@ -160,7 +160,9 @@ class ImageGenerator:
                             self.controller.owns_runtime=True
                             self.controller.state.update(phase='ready',error=None,report={'requirements_ok':True,'plan':plan,'hardware':plan['hardware'],'error':None})
                     except Exception:
-                        notice+=' Chat could not reload; use Settings to start it again.'
+                        recovery=' Chat could not reload; use Settings to start it again.'
+                        if error:error+=recovery
+                        else:notice+=recovery
                 with self.lock:
                     self.state.update(phase='cancelled' if cancelled else 'error' if error else 'completed',message=error or notice,files=files,
                                       options=options,elapsed_seconds=round(time.time()-self.state['started_at'],1))

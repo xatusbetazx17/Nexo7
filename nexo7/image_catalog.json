@@ -9,10 +9,10 @@
     "license": "CreativeML Open RAIL-M"
   },
   "decoder": {
-    "filename": "taesd_decoder.safetensors",
-    "url": "https://huggingface.co/madebyollin/taesd/resolve/9565f9356505d7c3537d0e15c558520ed95142ee/taesd_decoder.safetensors",
-    "size": 4895612,
-    "sha256": "f0fb51dd10d41c26612c070fa0b52ea0215a5ff90792134b4971109dd713c019",
+    "filename": "diffusion_pytorch_model.safetensors",
+    "url": "https://huggingface.co/madebyollin/taesd/resolve/9565f9356505d7c3537d0e15c558520ed95142ee/diffusion_pytorch_model.safetensors",
+    "size": 9793292,
+    "sha256": "db169d69145ec4ff064e49d99c95fa05d3eb04ee453de35824a6d0f325513549",
     "license": "MIT"
   }
 }
