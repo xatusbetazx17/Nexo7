@@ -88,7 +88,7 @@ class Navi:
     def presence(self):
         with self.lock:
             now=time.monotonic()
-            phase='thinking' if self.busy else 'listening' if now<self.listening_until else 'happy' if now<self.happy_until else 'sleeping' if now-self.last_activity>180 else 'idle'
+            phase='thinking' if self.busy or self.controller.operation.locked() else 'listening' if now<self.listening_until else 'happy' if now<self.happy_until else 'sleeping' if now-self.last_activity>180 else 'idle'
         return {'state':phase,'enabled':self.state.settings()['avatar'] and self.store.trust.allowed('presence.show'),
                 'unread':sum(not n['seen'] for n in self.state.notifications()),'error':self.error}
     def start_overlay(self):

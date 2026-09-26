@@ -148,6 +148,12 @@ jobs:
           NEXO_PLAYWRIGHT_MODULE: ${{ runner.temp }}/nexo-ui/node_modules/playwright
           NEXO_CHROME: /usr/bin/google-chrome
         run: node scripts/mobile_browser.cjs
+      - name: Mobile compatibility runtime and offline reuse
+        env:
+          NEXO_PLAYWRIGHT_MODULE: ${{ runner.temp }}/nexo-ui/node_modules/playwright
+          NEXO_CHROME: /usr/bin/google-chrome
+          NEXO_MOBILE_COMPAT: '1'
+        run: node scripts/mobile_browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

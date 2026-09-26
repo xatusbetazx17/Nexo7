@@ -1,22 +1,23 @@
 # Local trust foundation (Phase 0)
 
-Nexo 0.17 adds local identity, permission checks and an activity viewer. It does
-not install avatars, voice modules, Google OAuth connectors, a chip marketplace,
-mobile sync or arbitrary plugin execution. Existing inference, image generation,
-workspace, music, documents and memory use the same engines and formats.
+Nexo 0.17 introduced local identity, permission checks and an activity viewer.
+Version 0.18 adds optional [Navi modules](NAVI-MODULES.md) on this foundation.
+Existing inference, image generation, workspace, music, documents and memory
+use the same engines and formats. There is no full mobile sync or arbitrary
+executable plugin loading.
 
 ## Where to find it
 
 Open **Settings → Trust and permissions**. Your Navi ID is a SHA-256 fingerprint
 of an Ed25519 public key. No account, registration, cloud upload or extra model is
-needed. The private key is never exposed by the HTTP API or sent to a provider.
+needed. The private key is never returned in plaintext or sent to a provider.
 
 The first run creates `trust.sqlite3` beside `nexo.sqlite3` in your user data
 folder. Windows protects the private key with current-user DPAPI; Linux restricts
 the database to mode 0600 (the key is not encrypted at rest on Linux). Protect
 backups and your OS account. Do not put this file in GitHub. Windows identity
-files cannot simply be moved to a different login; encrypted pairing/export is
-a later phase. Keep a trusted backup while Nexo is closed. A corrupt identity or
+files cannot simply be moved to a different login; use the explicitly approved encrypted profile transfer in the Navi tab
+to move an identity between machines. Keep a trusted backup while Nexo is closed. A corrupt identity or
 invalid signed log stops startup instead of silently creating a different ID.
 
 ## Permissions
@@ -81,5 +82,6 @@ work may already have happened and should not be assumed undone.
 - `GET /api/trust/audit?before=123`: newest receipts before an optional sequence.
 - `GET /api/trust/verify`: signature/chain verification and current head digest.
 
-The private key has no API route. Trust data is independent of the existing memory
+The private key has no plaintext API route; approved encrypted profile exports
+include it inside the encrypted bundle. Trust data is independent of the existing memory
 database, and updating Nexo does not erase saved notes or downloaded models.

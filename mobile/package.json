@@ -1,1 +1,1 @@
-{"name":"nexo-mobile-companion","version":"0.18.0","private":true,"type":"module","scripts":{"build":"node build.mjs"},"dependencies":{"@huggingface/transformers":"3.8.1"},"devDependencies":{"esbuild":"0.25.12"}}
+{"name":"nexo-mobile-companion","version":"0.18.0","private":true,"type":"module","scripts":{"build":"node build.mjs"},"dependencies":{"@wllama/wllama":"3.6.1","@wllama/wllama-compat":"3.6.1"},"devDependencies":{"esbuild":"0.25.12"}}
