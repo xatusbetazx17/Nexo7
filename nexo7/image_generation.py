@@ -92,9 +92,12 @@ class ImageGenerator:
     def snapshot(self):
         with self.lock:
             if self.recommendation is None:
-                try:fast='avx2' in runtime_path().name
-                except (OSError,ValueError,KeyError):fast=False
-                self.recommendation={'size':512 if fast else 256,'steps':4,'cpu_variant':'avx2' if fast else 'baseline'}
+                fast=False;size=256
+                try:
+                    fast='avx2' in runtime_path().name
+                    if fast and detect_hardware(probe_gpu=False).available_bytes>=3_750_000_000:size=512
+                except (OSError,ValueError,KeyError):pass
+                self.recommendation={'size':size,'steps':4,'cpu_variant':'avx2' if fast else 'baseline'}
             installed=self.installed()
             state=dict(self.state)
             if state['phase']=='idle' and installed:state['message']='Image model installed. Describe an image to generate offline.'

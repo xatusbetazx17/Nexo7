@@ -3,7 +3,7 @@
 - Adds a separate CPU image-generation engine: pinned stable-diffusion.cpp, DreamShaper 8 LCM Q4 and TAESD. LFM2-VL and other chat weights remain unchanged.
 - Create → AI images offers explicit model installation, styles, 256/512px output, 2/4/8 steps, cancellation and PNG download. Installed images can also be requested through chat.
 - Unloads the owned chat model before generation and restores it afterward. A separate worker enforces a memory cap of at most 4 GB; admission uses currently available RAM.
-- Automatically selects a faster AVX2 CPU engine where supported; retains a baseline engine for Pentium-class hardware. Defaults to 4 steps with CPU-adaptive size (256px baseline / 512px AVX2). Small 2-step drafts remain optional and can be very blurry.
+- Automatically selects a faster AVX2 CPU engine where supported; retains a baseline engine for Pentium-class hardware. Defaults to 4 steps with CPU/RAM-adaptive size (256px baseline / 512px AVX2 with sufficient free RAM). Small 2-step drafts remain optional and can be very blurry.
 - About 1.64 GB of optional downloads; generation then works offline. CPU jobs can take minutes. Quality, anatomy, lettering and prompt accuracy remain imperfect.
 - Adds real image release checks on Windows/Linux, packaged execution and a simulated 4 GB available-memory budget. Existing chat, simple drawings, music and document features remain.
 

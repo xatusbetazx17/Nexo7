@@ -515,7 +515,7 @@ function diffusionStatus(state){
  $('diffusion-install').disabled=running;$('diffusion-generate').disabled=running||!state.installed;
  $('diffusion-cancel').hidden=!running;
 }
-let watchedDiffusion=null,diffusionDefaultsApplied=false;
+let watchedDiffusion=null,diffusionDefaultsApplied=false,diffusionRevision=0;
 for(const id of ['diffusion-size','diffusion-steps'])$(id).onchange=()=>{diffusionDefaultsApplied=true;};
 function showDiffusionResult(state){
  if(state.phase==='completed'&&state.files?.length&&$('diffusion-output').dataset.job!==state.id){
@@ -523,7 +523,7 @@ function showDiffusionResult(state){
  }
 }
 async function refreshDiffusion(){
- const state=await api('/api/images');diffusionStatus(state);
+ const revision=diffusionRevision,state=await api('/api/images');if(revision!==diffusionRevision)return state;diffusionStatus(state);
  if(!diffusionDefaultsApplied&&state.recommended){$('diffusion-size').value=String(state.recommended.size);$('diffusion-steps').value=String(state.recommended.steps);diffusionDefaultsApplied=true;}
  $('diffusion-use').checked=state.installed&&localStorage.getItem('nexo-diffusion')!=='false';
  showDiffusionResult(state);
@@ -537,8 +537,8 @@ async function waitDiffusion(id){
 }
 $('diffusion-open').onclick=()=>{if(desktopMode){showWorkspace();reveal($('ai-images'));refreshDiffusion().catch(e=>error(e.message));}else error('AI image generation requires the desktop edition.');};
 $('diffusion-use').onchange=()=>localStorage.setItem('nexo-diffusion',String($('diffusion-use').checked));
-$('diffusion-install').onclick=async()=>{try{const job=await api('/api/images/install','POST',{});const state=await waitDiffusion(job.id);if(state.phase==='completed'){localStorage.setItem('nexo-diffusion','true');$('diffusion-use').checked=true;}}catch(e){$('diffusion-status').textContent=e.message;}};
-$('diffusion-generate').onclick=async()=>{try{
+$('diffusion-install').onclick=async()=>{diffusionRevision++;try{const job=await api('/api/images/install','POST',{});const state=await waitDiffusion(job.id);if(state.phase==='completed'){localStorage.setItem('nexo-diffusion','true');$('diffusion-use').checked=true;}}catch(e){$('diffusion-status').textContent=e.message;}};
+$('diffusion-generate').onclick=async()=>{diffusionRevision++;try{
  const job=await api('/api/images/start','POST',{prompt:$('diffusion-prompt').value,size:Number($('diffusion-size').value),steps:Number($('diffusion-steps').value),style:$('diffusion-style').value});
  const state=await waitDiffusion(job.id);showDiffusionResult(state);
 }catch(e){$('diffusion-status').textContent=e.message;}};

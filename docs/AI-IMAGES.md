@@ -17,7 +17,7 @@ The desktop app temporarily unloads its owned native chat model, runs one image 
 
 - 256px draft requires at least 2.75 GB **available** after chat unloads.
 - 512px requires at least 3.75 GB **available** after chat unloads.
-- The default is 4 steps, with 256px for baseline CPUs or 512px for AVX2-capable CPUs. For detailed faces, use 512px and at least 4 steps. Two-step small drafts can be very blurry; they are an optional speed/quality tradeoff. Choose 8 steps for more processing. More steps do not guarantee a better picture.
+- The default is 4 steps, with 512px for AVX2-capable CPUs when at least 3.75 GB is currently available, otherwise 256px. For detailed faces, use 512px and at least 4 steps. Two-step small drafts can be very blurry; they are an optional speed/quality tradeoff. Choose 8 steps for more processing. More steps do not guarantee a better picture.
 - Cancel stops the worker. Jobs stop after 15 minutes. A low-memory failure suggests reducing resolution or closing other apps.
 
 An 8 GB laptop with about 4 GB free may qualify, but its CPU speed still matters. A 4 GB installed machine may not have enough free RAM for diffusion. The Dell Pentium N5030 has not been physically benchmarked. A verified CPU probe selects an AVX2/FMA/F16C engine only when CPU instructions and OS vector state are supported. Other machines use the baseline engine without AVX/AVX2/BMI2. This release does not use GPU acceleration for images. Faster PCs can finish sooner, but this is not a performance guarantee.
