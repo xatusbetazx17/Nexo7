@@ -71,21 +71,21 @@ class Voice:
             if not self.controller.operation.acquire(blocking=False):raise ValueError('Wait for the current model operation before transcribing')
             try:
                 from .hardware import detect_hardware
-                hardware=detect_hardware()
-                if hardware.available_bytes<1_400_000_000:raise ValueError('Close other apps to free 1.4 GB before transcribing')
+                hardware=detect_hardware(probe_gpu=False)
+                if hardware.available_bytes<1_650_000_000:raise ValueError('Close other apps to free 1.65 GB before transcribing')
                 with tempfile.TemporaryDirectory(dir=self.root) as temp:
                     folder=Path(temp);audio=folder/'recording.wav';output=folder/'transcript.json';audio.write_bytes(raw)
                     command=([sys.executable,'--voice-worker'] if getattr(sys,'frozen',False) else [sys.executable,'-m','nexo7.voice'])+[str(model),str(audio),str(output)]
-                    runtime=NativeProcess(command,1_250_000_000,secrets.token_hex(16),capture_output=True);self.active=runtime
+                    runtime=NativeProcess(command,1_500_000_000,secrets.token_hex(16),capture_output=True);self.active=runtime
                     try:
                         deadline=time.monotonic()+60
                         while runtime.process.poll() is None and not output.exists():
                             if time.monotonic()>deadline:raise ValueError('Recognition timed out; try a shorter recording')
                             if not self.trust.allowed('voice.transcribe'):raise ValueError('Voice permission was revoked')
                             time.sleep(.05)
-                        if not output.is_file():raise ValueError('Recognition could not finish within its memory budget')
+                        if not output.is_file():raise ValueError('Recognition worker stopped (exit '+str(runtime.process.poll())+'). Close other apps and retry a shorter recording.')
                         result=json.loads(output.read_text())
-                        if 'error' in result:raise ValueError('Could not recognize this recording')
+                        if 'error' in result:raise ValueError('Could not recognize this recording ('+str(result['error'])[:50]+').')
                         return {'text':str(result.get('text',''))[:4000],'local':True}
                     finally:runtime.close();self.active=None
             finally:self.controller.operation.release()
@@ -121,6 +121,6 @@ def worker_main():
             if recognizer.AcceptWaveform(pcm[offset:offset+8000]):parts.append(json.loads(recognizer.Result()).get('text',''))
         parts.append(json.loads(recognizer.FinalResult()).get('text',''))
         value={'text':' '.join(x for x in parts if x)}
-    except Exception:value={'error':'recognition_failed'}
+    except Exception as exc:value={'error':type(exc).__name__}
     stage=output.with_suffix('.part');stage.write_text(json.dumps(value),encoding='utf-8');stage.replace(output)
 if __name__=='__main__':worker_main()

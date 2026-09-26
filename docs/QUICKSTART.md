@@ -1,4 +1,4 @@
-# Start Nexo 7 — native edition 0.17.0
+# Start Nexo 7 — native edition 0.18.0
 
 1. Extract the archive into a folder you own. Windows: open Nexo7.exe. Linux: run ./Nexo7 (chmod +x Nexo7 if needed).
 2. The local browser interface opens. Python and the PDF reader are included. No Docker or WSL required.
@@ -27,7 +27,7 @@ Approved examples are searchable references, not model training. Incorrect feedb
 
 Nexo normally budgets at most 12 decimal GB for native inference; the configuration ceiling is 16 GB. Linux enforces virtual address space per model process. Windows uses aggregate job committed memory and disables model mmap. These are different memory measures, not a guarantee of whole-PC RAM or disk usage. OS, app/browser, dedicated VRAM and downloaded files are separate. Swap remains an OS setting. RAM/VRAM recommendations are rechecked on setup/launch, not live resized during an answer.
 
-Local data is not encrypted: %LOCALAPPDATA%\Nexo7 on Windows; $XDG_DATA_HOME/Nexo7 or ~/.local/share/Nexo7 on Linux. The native engine is not a security sandbox. No model-generated code runs automatically. Do not expose the local server to a network.
+Desktop notes and history are not encrypted. Optional Google tokens use a passphrase-encrypted vault; transfer bundles are encrypted separately. Data folder: %LOCALAPPDATA%\Nexo7 on Windows; $XDG_DATA_HOME/Nexo7 or ~/.local/share/Nexo7 on Linux. The native engine is not a security sandbox. No model-generated code runs automatically. Do not expose the local server to a network.
 
 This is an independent assistant around Qwen, not official GPT-7. Quality varies, and neither universal task competence nor clinical capability is claimed.
 
@@ -58,3 +58,7 @@ See [COMPANION.md](COMPANION.md) for personality settings, source-linked learnin
 Open My workspace for persistent file tasks. See [TASK-AGENT.md](TASK-AGENT.md) for reviewed changes, rollback, checks and the optional model candidate.
 
 For local image questions and the optional Telegram interface, see [VISION-TELEGRAM.md](VISION-TELEGRAM.md). Select LiquidAI in Setup and click **Switch to selected model**. Use Automatic for the existing general chat profiles.
+
+## Optional Navi modules
+
+Open **Navi** for the desktop avatar, offline voice, reminders, read-only Google connections, signed chips and encrypted transfer. All new optional permissions start off. See [NAVI-MODULES.md](NAVI-MODULES.md) for setup and the separate mobile web app.

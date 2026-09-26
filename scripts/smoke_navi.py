@@ -1,4 +1,5 @@
 """Real offline STT/TTS, import, chip and permission checks against a running app."""
+from urllib.error import HTTPError
 import argparse,base64,io,json,os,subprocess,sys,tempfile,time,urllib.request,wave
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
@@ -16,7 +17,9 @@ def main():
    url=json.loads(access.read_text())['url'];parsed=urlsplit(url);base=url.split('/#')[0];token=parse_qs(parsed.fragment)['token'][0]
    def call(path,body=None):
     request=urllib.request.Request(base+path,data=json.dumps(body).encode() if body is not None else None,headers={'X-Nexo-Key':token,'Content-Type':'application/json'})
-    with urllib.request.urlopen(request,timeout=100) as response:return json.load(response)
+    try:
+     with urllib.request.urlopen(request,timeout=100) as response:return json.load(response)
+    except HTTPError as error:raise AssertionError(path+': '+error.read(1000).decode()) from None
    initial=call('/api/navi');assert not any(initial['settings'][k] for k in ('voice','avatar','scheduler'))
    call('/api/trust/permissions',{'scope':'voice.use','enabled':True});call('/api/navi/settings',{'settings':{'voice':True}})
    call('/api/navi/voice/install',{'language':'en'});deadline=time.monotonic()+180
@@ -41,5 +44,10 @@ def main():
    print(json.dumps({'passed':True,'voice':result,'chips':True,'encrypted_transfer':True,'binary':bool(a.binary)}))
    call('/api/shutdown',{});child.wait(timeout=45)
   finally:
-   if child.poll() is None:child.terminate();child.wait(timeout=15)
+   if child.poll() is None:
+    try:call('/api/shutdown',{});child.wait(timeout=45)
+    except Exception:
+     if os.name=='nt':subprocess.run(['taskkill','/PID',str(child.pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+     else:child.terminate()
+     child.wait(timeout=15)
 if __name__=='__main__':main()

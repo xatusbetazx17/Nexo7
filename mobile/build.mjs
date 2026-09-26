@@ -1,4 +1,5 @@
 import {build} from 'esbuild';
+import {createHash} from 'node:crypto';
 import {mkdir,cp,writeFile,readFile,readdir} from 'node:fs/promises';
 await mkdir('dist',{recursive:true});
 await build({entryPoints:['src/app.js','src/inference.js'],outdir:'dist',bundle:true,format:'esm',platform:'browser',minify:true,define:{'process.env.NODE_ENV':'"production"'},external:[]});
@@ -8,5 +9,6 @@ for(const name of await readdir('node_modules/onnxruntime-web/dist'))if(name.end
 await cp('node_modules/@huggingface/transformers/LICENSE','dist/TRANSFORMERS-LICENSE.txt');
 await cp('src/ONNX-RUNTIME-LICENSE.txt','dist/ONNX-RUNTIME-LICENSE.txt');
 const files=['./','./index.html','./app.js','./inference.js','./style.css','./manifest.webmanifest','./icon.svg',...(await readdir('dist/ort')).map(x=>'./ort/'+x)];
-let sw=await readFile('dist/sw.js','utf8');await writeFile('dist/sw.js',sw.replace('/*PRECACHE*/[]',JSON.stringify(files)));
+const hash=createHash('sha256');for(const file of files.filter(x=>x!=='./'))hash.update(await readFile('dist/'+file.slice(2)));
+let sw=(await readFile('dist/sw.js','utf8')).replace('nexo-mobile-0.18.0','nexo-mobile-'+hash.digest('hex').slice(0,16));await writeFile('dist/sw.js',sw.replace('/*PRECACHE*/[]',JSON.stringify(files)));
 console.log('Standalone mobile companion built in mobile/dist');
