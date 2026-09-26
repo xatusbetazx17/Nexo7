@@ -12,7 +12,7 @@ let browser;
  browser=await chromium.launch({headless:true,executablePath:process.env.NEXO_CHROME||undefined,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
  const page=await browser.newPage({viewport:{width:1366,height:768}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(access.url);await page.locator('#navi-onboarding').waitFor({state:'visible'});
- await page.screenshot({path:path.join(output,'onboarding.png'),fullPage:true});
+ const introButton=await page.locator('#onboarding-form button').first().boundingBox();assert(introButton.y+introButton.height<=768,'First-run action must fit without scrolling');await page.screenshot({path:path.join(output,'onboarding.png'),fullPage:true});
  await page.locator('#onboarding-name').fill('Luna');await page.locator('#onboarding-user').fill('Test user');await page.locator('#onboarding-remember').check();await page.locator('#onboarding-form button').first().click();await page.locator('#navi-onboarding').waitFor({state:'hidden'});assert((await page.locator('#navi-welcome').innerText()).includes('Luna'));
  await page.locator('#try-demo').click();
  await page.locator('#composer').waitFor({state:'visible'});
