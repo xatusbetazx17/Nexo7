@@ -79,7 +79,7 @@ class Navi:
         from .voice import Voice
         self.voice=Voice(self.root,store.trust,controller)
         self.stop=threading.Event();self.lock=threading.RLock();self.busy=0;self.listening_until=0;self.happy_until=0
-        self.overlay=None;self.error='';self.last_activity=time.monotonic()
+        self.overlay=None;self.error='';self.closed=False;self.last_activity=time.monotonic()
         self.thread=threading.Thread(target=self._loop,name='nexo-reminders',daemon=True);self.thread.start()
     def enter(self):
         with self.lock:self.busy+=1;self.last_activity=time.monotonic()
@@ -155,6 +155,9 @@ class Navi:
         return {'settings':self.state.settings(),'presence':self.presence(),'reminders':self.state.reminders(),
                 'notifications':self.state.notifications(),'google':self.google.status(),'voice':self.voice.status(),'chips':self.chips.list()}
     def close(self):
+        with self.lock:
+            if self.closed:return
+            self.closed=True
         self.stop.set();self.google.stop();self.thread.join(timeout=30)
         if self.overlay and self.overlay.poll() is None:
             self.overlay.terminate()

@@ -401,6 +401,9 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
 
     class LocalServer(ThreadingHTTPServer):
         daemon_threads = True
+        def server_close(self):
+            if navi:navi.close()
+            super().server_close()
         def get_request(self):
             sock, address = super().get_request()
             sock.settimeout(15)

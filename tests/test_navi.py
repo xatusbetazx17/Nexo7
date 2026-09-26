@@ -50,6 +50,22 @@ class NaviTests(unittest.TestCase):
    self.assertEqual(len(calls),count)
    self.assertTrue(g.revoke('calendar')['removed_locally']);self.assertIsNone(v.get('google.calendar'))
   finally:g.close()
+ def test_oauth_actual_loopback_callback(self):
+  from urllib.request import urlopen
+  from urllib.error import HTTPError
+  v=Vault(self.root/'vault');v.unlock('several random words for my vault')
+  self.trust.set_scope('google.calendar.read',True)
+  def request(url,**kwargs):return {'access_token':'local-test','refresh_token':'local-test-refresh','expires_in':3600,'scope':GOOGLE['calendar']['scope']}
+  g=GoogleConnections(v,self.trust,request)
+  try:
+   g.configure({'client':{'installed':{'client_id':'1234567890-test.apps.googleusercontent.com','client_secret':'test'}}})
+   q=parse_qs(urlsplit(g.authorize('calendar')['url']).query);callback=q['redirect_uri'][0]+'/'
+   with self.assertRaises(HTTPError) as denied:urlopen(callback+'?state=wrong&code=code',timeout=3)
+   self.assertEqual(denied.exception.code,400)
+   with urlopen(callback+'?state='+q['state'][0]+'&code=code',timeout=3) as response:self.assertEqual(response.status,200)
+   self.assertIsNotNone(v.get('google.calendar'))
+   with self.assertRaises(ValueError):g.complete(q['state'][0],'replay')
+  finally:g.close()
  def test_gmail_revocation_between_messages(self):
   v=Vault(self.root/'vault');v.unlock('several random words for my vault');v.set('google.gmail',{'enabled':True,'access_token':'abc','expires':time.time()+3600})
   self.trust.set_scope('google.gmail.read',True);calls=[]

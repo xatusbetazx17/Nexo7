@@ -109,7 +109,6 @@ def main(argv=None):
             pass
         finally:
             server.telegram_controller.stop()
-            server.navi.close()
             server.server_close()
             try:
                 controller.close()
