@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.15.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.16.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -174,3 +174,7 @@ Version 0.13 adds [Creative Studio](docs/CREATIVE-STUDIO.md): editable simple dr
 ## Everyday chat and what-if questions
 
 [Version 0.14](docs/SCENARIOS-AND-INTERFACE.md) simplifies navigation and separates imagined scenarios from online searches. The offline What-if calculator uses explicit inputs for toy flight paths and paint/labor subtotals. These features improve routing and provide checked formulas; they do not retrain the underlying model or guarantee correct reasoning.
+
+## Optional offline AI images
+
+Version 0.16 adds real diffusion-generated PNGs through **Create → AI images**, using a separate DreamShaper 8 LCM engine. Download approximately 1.63 GB once; generate offline afterward. Chat is unloaded temporarily, and image jobs have an OS memory limit of at most 4 GB. 512px requires 3.75 GB available after chat unloads. CPU generation can take minutes and image accuracy is not guaranteed. See [setup, licenses and limits](docs/AI-IMAGES.md).

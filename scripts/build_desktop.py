@@ -1,6 +1,7 @@
 """Build on the target operating system using PyInstaller, then create a portable archive."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import platform
 import shutil
@@ -24,6 +25,10 @@ def main():
                "--exclude-module", "tkinter", "--exclude-module", "pytest", "desktop_entry.py"]
     if windows:
         command.insert(-1, "--windowed")
+    image_runtime=ROOT/'nexo7/image_runtime'
+    if not (image_runtime/'manifest.json').is_file():
+        raise SystemExit('Build the image engine first: python scripts/build_image_runtime.py')
+    command[-1:-1]=['--add-data',str(image_runtime)+os.pathsep+'nexo7/image_runtime']
     subprocess.run(command, cwd=ROOT, check=True)
     binary = ROOT / "dist" / ("Nexo7.exe" if windows else "Nexo7")
     subprocess.run([sys.executable, "scripts/smoke_desktop.py", str(binary)], cwd=ROOT, check=True)
@@ -64,6 +69,7 @@ def main():
             shutil.copy2(candidate, licenses / "PYTHON-LICENSE.txt")
             break
     shutil.copy2(ROOT / "docs" / "QUICKSTART.md", stage / "START-HERE.md")
+    shutil.copy2(ROOT / "docs" / "AI-IMAGES.md", stage / "AI-IMAGES.md")
     shutil.copy2(ROOT / "docs" / "LEARNING.md", stage / "LEARNING.md")
     shutil.copy2(ROOT / "docs" / "WEB-RESEARCH.md", stage / "WEB-RESEARCH.md")
     if windows:

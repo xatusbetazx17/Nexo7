@@ -1,0 +1,18 @@
+{
+  "engine_commit": "2f886889e6e8b78738d6b87f7191f6018557c551",
+  "model": {
+    "name": "DreamShaper 8 LCM Q4",
+    "filename": "DreamShaper8_LCM_q4_0.gguf",
+    "url": "https://huggingface.co/haven-ai-companion/dreamshaper8-lcm-gguf/resolve/56ac67e016b599c1eaf5be04e68980ff6bbdfa32/DreamShaper8_LCM_q4_0.gguf",
+    "size": 1625373856,
+    "sha256": "a59b01541f145b1f799390922d99eb1182274e05f9e3037b7f627c5577b78866",
+    "license": "CreativeML Open RAIL-M"
+  },
+  "decoder": {
+    "filename": "taesd_decoder.safetensors",
+    "url": "https://huggingface.co/madebyollin/taesd/resolve/9565f9356505d7c3537d0e15c558520ed95142ee/taesd_decoder.safetensors",
+    "size": 4895612,
+    "sha256": "f0fb51dd10d41c26612c070fa0b52ea0215a5ff90792134b4971109dd713c019",
+    "license": "MIT"
+  }
+}

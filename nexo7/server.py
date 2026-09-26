@@ -31,6 +31,9 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     telegram = BridgeController(Path(config.database).resolve().parent / "access.json") if controller else None
     import_slots = threading.BoundedSemaphore(1)
     creative_slots = threading.BoundedSemaphore(1)
+    from .image_generation import ImageGenerator
+    images = ImageGenerator(controller) if controller else None
+    if controller:controller.image_generator=images
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "Nexo7"
@@ -77,7 +80,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.15.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.16.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -87,6 +90,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     "vision": active.provider == "native" and active.model == "lfm2-vl:450m", "desktop": controller is not None})
             if path == "/api/telegram" and telegram:
                 return self._send(200, telegram.snapshot())
+            if path == '/api/images' and images:
+                return self._send(200,images.snapshot())
             if path == "/api/tasks" and agent:
                 return self._send(200, {"tasks":agent.list()})
             if path == "/api/setup" and controller:
@@ -134,6 +139,13 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == '/api/images/install' and images:
+                    return self._send(202,images.begin(body,install=True))
+                if path == '/api/images/start' and images:
+                    return self._send(202,images.begin(body))
+                if path == '/api/images/cancel' and images:
+                    images.cancel.set()
+                    return self._send(200,{'message':'Cancellation requested.'})
                 if path == '/api/telegram/chats' and telegram:
                     return self._send(200, telegram.discover(body))
                 if path == '/api/telegram/start' and telegram:
@@ -255,6 +267,11 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if path == "/api/chat":
                     if type(body.get("private", False)) is not bool:
                         raise ValueError("private must be a boolean")
+                    if images and body.get('image_mode')=='diffusion' and body.get('mode','companion') not in ('web','research','scenario'):
+                        from .creation_requests import intent
+                        prompt=body.get('message')
+                        if isinstance(prompt,str) and intent(prompt)=='drawing':
+                            return self._send(202,{'image_job':images.begin({'prompt':prompt,'size':body.get('image_size',512),'style':body.get('image_style','photo')})})
                     chat_lock = controller.operation if controller else slots
                     if not chat_lock.acquire(blocking=False):
                         return self._send(429, {"error": "The assistant is busy; wait for the current operation"})

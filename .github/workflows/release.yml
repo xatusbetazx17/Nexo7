@@ -55,8 +55,28 @@ jobs:
         run: python scripts/evaluate_learning.py
       - name: Install packaging tools
         run: python -m pip install pyinstaller==6.22.0
+      - uses: actions/cache@v4
+        with:
+          path: nexo7/image_runtime
+          key: diffusion-cpu-noavx-${{ runner.os }}-2f886889-v1
+      - uses: actions/cache@v4
+        with:
+          path: build/image-model-cache
+          key: dreamshaper8-q4-taesd-${{ runner.os }}-a59b0154
+      - name: Build CPU image engine without AVX requirement
+        run: python scripts/build_image_runtime.py
       - name: Build and test native executable
         run: python scripts/build_desktop.py
+      - name: Real diffusion with 4 GB available RAM
+        run: python scripts/smoke_images.py --simulate-4gb-free
+      - name: Real diffusion in packaged application
+        run: python scripts/smoke_images.py --binary dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diffusion-review-${{ matrix.os }}
+          path: reports/diffusion
+          if-no-files-found: warn
       - name: Check LiquidAI creation before other model downloads
         run: python scripts/smoke_vision.py --simulate-4gb --output reports/native-vision-4gb-smoke.json
       - name: Live web lookup and saved-source reuse in packaged app
@@ -92,7 +112,7 @@ jobs:
       - name: Publish preview release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.15.0' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.16.0' }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; native builds remain available as workflow artifacts."

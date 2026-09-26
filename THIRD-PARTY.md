@@ -60,3 +60,7 @@ Telegram script supplied by the user on 2026-09-24: local PNG conversion,
 multimodal content, mention/reply triggers, albums and custom rules. They use
 Nexo's own bounded transport and local endpoint. No aiohttp/python-telegram-bot
 code is bundled, and no Telegram connection is required to use the desktop app.
+
+## Optional diffusion images
+
+stable-diffusion.cpp (MIT), DreamShaper 8 LCM by Lykon / haven-ai-companion Q4 conversion (CreativeML OpenRAIL-M), and TAESD by Ollin Boer Bohan (MIT). See [AI images](docs/AI-IMAGES.md) for source links and component roles. Model revisions, sizes and hashes are pinned in `nexo7/image_catalog.json`. License texts are bundled in `nexo7/licenses`. Model weights are optional downloads and retain their license conditions.

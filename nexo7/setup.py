@@ -88,6 +88,8 @@ class SetupController:
 
     def close(self):
         self.cancel.set()
+        if getattr(self,'image_generator',None):
+            self.image_generator.close()
         if self.thread:
             self.thread.join()
         if self.owns_runtime:

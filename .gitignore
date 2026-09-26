@@ -20,3 +20,5 @@ node_modules/
 research-runs/
 *.safetensors
 *.gguf
+
+nexo7/image_runtime/

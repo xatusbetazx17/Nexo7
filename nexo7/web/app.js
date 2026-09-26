@@ -10,13 +10,16 @@ let conversation = [], busy = false;
 const chatFileUrls=[];
 function clearChatFiles(){for(const url of chatFileUrls)URL.revokeObjectURL(url);chatFileUrls.length=0;}
 window.addEventListener('pagehide',clearChatFiles);
-function showChatFiles(article,files){
+const diffusionUrls=[];
+function clearDiffusionFiles(){for(const url of diffusionUrls)URL.revokeObjectURL(url);diffusionUrls.length=0;}
+window.addEventListener("pagehide",clearDiffusionFiles);
+function showChatFiles(article,files,urls=chatFileUrls){
   const panel=node('div','','chat-files');
   for(const file of files){
     const allowed=['image/png','image/svg+xml','audio/wav','audio/midi','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if(!allowed.includes(file.mime))continue;
     const bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));
-    const url=URL.createObjectURL(new Blob([bytes],{type:file.mime}));chatFileUrls.push(url);
+    const url=URL.createObjectURL(new Blob([bytes],{type:file.mime}));urls.push(url);
     if(file.mime==='image/png'){const img=document.createElement('img');img.src=url;img.alt='Generated illustration';img.className='creative-preview';panel.append(img);}
     if(file.mime==='audio/wav'){const audio=document.createElement('audio');audio.src=url;audio.controls=true;panel.append(audio);}
     const a=node('a','Download '+file.name,'creative-download');a.href=url;a.download=file.name;panel.append(a);
@@ -124,6 +127,7 @@ async function initialize(first=true) {
     clearChatFiles();$("messages").replaceChildren(); conversation=data.messages; for(const m of conversation) message(m.role,m.content);
     await loadDocuments(); await loadLearning(); await loadWebSources();
     desktopMode=Boolean(config.desktop);$("workspace-tab").hidden=!desktopMode; $("setup-tab").hidden=!desktopMode; $("quit").hidden=!desktopMode;
+    if(desktopMode)await refreshDiffusion();
     if(first && desktopMode) {showSetup(); clearTimeout(setupTimer); pollSetup();}
   } catch(exc) { error(exc.message); }
 }
@@ -144,7 +148,12 @@ $("composer").onsubmit=async event=>{
       }
       $('chat-images').value='';return;
     }
-    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked,allow_internet:$("allow-internet").checked});
+    const result=await api("/api/chat","POST",{message:text,session,mode:$("mode").value,private:$("private").checked,language:$("language").value,web_provider:$("web-provider").value,web_language:$("web-language").value,remember_web:$("remember-web").checked,refresh_web:$("refresh-web").checked,synthesize_web:$("synthesize-web").checked,allow_internet:$("allow-internet").checked,image_mode:$("diffusion-use").checked?"diffusion":"illustration",image_size:Number($("diffusion-size").value),image_style:$("diffusion-style").value});
+    if(result.image_job){
+      $('diffusion-chat-cancel').hidden=false;
+      try{const state=await waitDiffusion(result.image_job.id);if(state.phase!=='completed')throw Error(state.message);message('assistant',state.message);showChatFiles($('messages').lastElementChild,state.files);}finally{$('diffusion-chat-cancel').hidden=true;}
+      return;
+    }
     if(attached.length)$("chat-images").value="";
     message("assistant",result.answer,result,text);conversation.push({role:"assistant",content:result.answer,sources:result.sources,stats:result.stats});
   } catch(exc) {error(exc.message);}
@@ -498,3 +507,27 @@ function setTheme(theme){document.documentElement.dataset.theme=theme;$('theme-t
 let savedTheme='light';try{savedTheme=localStorage.getItem('nexo-theme')||'light';}catch{}setTheme(savedTheme==='dark'?'dark':'light');
 $('theme-toggle').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 $('mode').onchange();
+
+// Diffusion jobs keep the UI responsive while the bounded local worker runs.
+function diffusionStatus(state){
+ $('diffusion-status').textContent=state.message+(state.phase==='generating'?' · '+Math.floor(Date.now()/1000-state.started_at)+'s':'');
+ const running=['installing','generating'].includes(state.phase);
+ $('diffusion-install').disabled=running;$('diffusion-generate').disabled=running||!state.installed;
+ $('diffusion-cancel').hidden=!running;
+}
+async function refreshDiffusion(){
+ const state=await api('/api/images');diffusionStatus(state);
+ $('diffusion-use').checked=state.installed&&localStorage.getItem('nexo-diffusion')!=='false';
+ return state;
+}
+async function waitDiffusion(id){
+ for(;;){const state=await api('/api/images');if(state.id!==id)throw Error('This image job has been replaced.');diffusionStatus(state);if(!['installing','generating'].includes(state.phase))return state;await new Promise(resolve=>setTimeout(resolve,2000));}
+}
+$('diffusion-open').onclick=()=>{if(desktopMode){showWorkspace();reveal($('ai-images'));refreshDiffusion().catch(e=>error(e.message));}else error('AI image generation requires the desktop edition.');};
+$('diffusion-use').onchange=()=>localStorage.setItem('nexo-diffusion',String($('diffusion-use').checked));
+$('diffusion-install').onclick=async()=>{try{const job=await api('/api/images/install','POST',{});const state=await waitDiffusion(job.id);if(state.phase==='completed'){localStorage.setItem('nexo-diffusion','true');$('diffusion-use').checked=true;}}catch(e){$('diffusion-status').textContent=e.message;}};
+$('diffusion-generate').onclick=async()=>{try{
+ const job=await api('/api/images/start','POST',{prompt:$('diffusion-prompt').value,size:Number($('diffusion-size').value),steps:Number($('diffusion-steps').value),style:$('diffusion-style').value});
+ const state=await waitDiffusion(job.id);if(state.phase==='completed'){clearDiffusionFiles();$('diffusion-output').replaceChildren();showChatFiles($('diffusion-output'),state.files,diffusionUrls);}
+}catch(e){$('diffusion-status').textContent=e.message;}};
+for(const id of ['diffusion-cancel','diffusion-chat-cancel'])$(id).onclick=()=>api('/api/images/cancel','POST',{}).catch(e=>error(e.message));
