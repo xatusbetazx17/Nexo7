@@ -9,7 +9,7 @@ let browser;
 (async()=>{try{
  const deadline=Date.now()+45000;while(!fs.existsSync(path.join(directory,'access.json'))){if(Date.now()>deadline||child.exitCode!==null)throw Error('Desktop failed to start');await new Promise(r=>setTimeout(r,100));}
  const access=JSON.parse(fs.readFileSync(path.join(directory,'access.json'),'utf8'));
- browser=await chromium.launch({headless:true,executablePath:process.env.NEXO_CHROME||undefined,args:['--no-sandbox']});
+ browser=await chromium.launch({headless:true,executablePath:process.env.NEXO_CHROME||undefined,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
  const page=await browser.newPage({viewport:{width:1366,height:768}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(access.url);await page.locator('#try-demo').click();
  await page.locator('#composer').waitFor({state:'visible'});
@@ -38,6 +38,13 @@ let browser;
  await page.locator('#navi-chips').locator('..').evaluate(e=>e.open=true);
  await page.locator('#navi-chip-run').click();await page.locator('#navi-chip-result').filter({hasText:'2.5'}).waitFor();
  await page.screenshot({path:path.join(output,'navi-desktop.png'),fullPage:true});
+ await page.locator('#navi-voice').check();await page.locator('#chat-tab').click();
+ let recordingChecked=false;
+ await page.route('**/api/navi/voice/transcribe',async route=>{const body=route.request().postDataJSON(),wav=Buffer.from(body.data,'base64');assert.equal(wav.toString('ascii',0,4),'RIFF');assert.equal(wav.readUInt32LE(24),16000);assert.equal(wav.readUInt16LE(22),1);assert(wav.length>44&&wav.length<=1050000);recordingChecked=true;await route.fulfill({json:{text:'Reviewed voice transcript',local:true}});});
+ const beforeVoice=await page.locator('.message').count();
+ await page.locator('#navi-record').click();await page.locator('#navi-record-status').filter({hasText:'Listening'}).waitFor();await page.waitForTimeout(500);await page.locator('#navi-record').click();await page.waitForFunction(()=>document.querySelector('#prompt').value==='Reviewed voice transcript');assert(recordingChecked);assert.equal(await page.locator('.message').count(),beforeVoice,'Recording must not auto-send');
+ await page.unroute('**/api/navi/voice/transcribe');await page.locator('#prompt').fill('');
+
  await page.locator('#setup-tab').click();
  await page.locator('#trust-panel summary').click();
  await page.locator('#navi-id').filter({hasText:'nexo:'}).waitFor();
