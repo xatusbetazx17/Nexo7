@@ -10,8 +10,8 @@ self.onmessage=async({data})=>{
  try{
   if(data.action==='load'){
    env.allowRemoteModels=true;
-   generator=await pipeline('text-generation',MODEL,{revision:REV,dtype:'q8',device:'wasm',progress_callback:x=>self.postMessage({type:'progress',message:x.status+(x.progress?' '+Math.round(x.progress)+'%':'')})});
-   const cached=await modelCache.match('https://huggingface.co/'+MODEL+'/resolve/'+REV+'/onnx/model_quantized.onnx');
+   generator=await pipeline('text-generation',MODEL,{revision:REV,dtype:'q4',device:'wasm',progress_callback:x=>self.postMessage({type:'progress',message:x.status+(x.progress?' '+Math.round(x.progress)+'%':'')})});
+   const cached=await modelCache.match('https://huggingface.co/'+MODEL+'/resolve/'+REV+'/onnx/model_q4.onnx');
    if(!cached)throw Error('The model ran but could not be saved offline. Free browser storage and download it again.');
    await cached.body.cancel();
    self.postMessage({type:'ready'});
@@ -22,7 +22,7 @@ self.onmessage=async({data})=>{
    while(generator.tokenizer.apply_chat_template(messages,{tokenize:true,return_tensor:false,add_generation_prompt:true}).length>512){
     if(messages.length>2)messages.splice(1,1);else{messages[1].content=messages[1].content.slice(0,Math.floor(messages[1].content.length*.8));if(!messages[1].content)throw Error('Message cannot fit the mobile context');}
    }
-   const result=await generator(messages,{max_new_tokens:128,do_sample:false,streamer,repetition_penalty:1.1});
+   const result=await generator(messages,{max_new_tokens:128,do_sample:false,streamer});
    const generated=result[0].generated_text;self.postMessage({type:'answer',text:Array.isArray(generated)?generated.at(-1).content:String(generated)});
   }
  }catch(e){self.postMessage({type:'error',message:String(e.message).slice(0,350)});}finally{busy=false;}
