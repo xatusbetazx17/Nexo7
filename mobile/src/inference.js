@@ -1,5 +1,5 @@
 import {pipeline,env,TextStreamer} from '@huggingface/transformers';
-const MODEL='onnx-community/SmolLM2-135M-Instruct-ONNX',REV='b8a5c0f183b78c55955a5364f610c36668b5e681';
+const MODEL='onnx-community/SmolLM2-360M-Instruct-ONNX',REV='fe7c7db4c8921c9e3fa1c65cfd296fb3b1b1a8f9';
 env.allowLocalModels=false;env.useBrowserCache=true;env.backends.onnx.wasm.numThreads=1;env.backends.onnx.wasm.proxy=false;env.backends.onnx.wasm.wasmPaths=new URL('./ort/',self.location).href;
 let generator=null,busy=false;
 self.onmessage=async({data})=>{
@@ -8,7 +8,7 @@ self.onmessage=async({data})=>{
  try{
   if(data.action==='load'){
    env.allowRemoteModels=true;
-   generator=await pipeline('text-generation',MODEL,{revision:REV,dtype:'q4',device:'wasm',progress_callback:x=>self.postMessage({type:'progress',message:x.status+(x.progress?' '+Math.round(x.progress)+'%':'')})});
+   generator=await pipeline('text-generation',MODEL,{revision:REV,dtype:'q8',device:'wasm',progress_callback:x=>self.postMessage({type:'progress',message:x.status+(x.progress?' '+Math.round(x.progress)+'%':'')})});
    self.postMessage({type:'ready'});
   }else if(data.action==='chat'){
    if(!generator)throw Error('Download or load the local model first');

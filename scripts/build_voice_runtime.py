@@ -7,6 +7,11 @@ REV='4870adfa25b1a32b4361592f1be8a40337c58d6c'
 def run(*args):subprocess.run(list(map(str,args)),check=True)
 def main():
     source=ROOT/'build/espeak-source';build=ROOT/'build/espeak-build';dest=ROOT/'nexo7/voice_runtime'
+    manifest=dest/'manifest.json';executable=dest/('espeak-ng.exe' if os.name=='nt' else 'espeak-ng')
+    if manifest.is_file() and executable.is_file() and (dest/'espeak-ng-data').is_dir() and (dest/'espeak-sources.tar.gz').is_file():
+        saved=json.loads(manifest.read_text())
+        if saved.get('revision')==REV and saved.get('sha256')==hashlib.sha256(executable.read_bytes()).hexdigest():
+            print('Using verified cached speech renderer');return
     if not source.exists():run('git','clone','https://github.com/espeak-ng/espeak-ng.git',source)
     run('git','-C',source,'checkout','--detach',REV)
     cmake=shutil.which('cmake') or str(Path.home()/'.local/bin/cmake')

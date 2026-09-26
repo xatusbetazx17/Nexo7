@@ -70,8 +70,16 @@ jobs:
         with:
           path: nexo7/image_runtime
           key: diffusion-cpu-adaptive-${{ runner.os }}-2f886889-v3
+      - uses: actions/cache@v4
+        with:
+          path: nexo7/voice_runtime
+          key: espeak-ng-1.52-static-${{ runner.os }}-v1
       - name: Build offline speech renderer
         run: python scripts/build_voice_runtime.py
+      - uses: actions/cache/save@v4
+        with:
+          path: nexo7/voice_runtime
+          key: espeak-ng-1.52-static-${{ runner.os }}-v1
       - name: Linux avatar display dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb python3-tk
