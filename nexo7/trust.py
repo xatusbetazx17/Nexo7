@@ -31,6 +31,16 @@ SCOPES = {
     'settings.write': 'Change application settings',
     'chat.use': 'Run chat or vision inference',
 }
+# Optional modules start disabled, including on existing profiles.
+DEFAULT_OFF = {'presence.use','voice.use','scheduler.use','google.calendar.read','google.gmail.read',
+               'chips.install','chips.run','transfer.export','transfer.import'}
+SCOPES.update({
+ 'presence.use':'Show the desktop avatar', 'voice.use':'Local microphone recognition and speech',
+ 'scheduler.use':'Deliver reminders and morning briefings', 'google.calendar.read':'Read Google Calendar events',
+ 'google.gmail.read':'Read Gmail messages (no sending or deletion)', 'chips.install':'Install or remove signed declarative chips',
+ 'chips.run':'Run installed third-party declarative chips', 'transfer.export':'Export encrypted Navi identity and memory',
+ 'transfer.import':'Import a Navi into a separate profile',
+})
 # Extensions must be reviewed and added here. Unknown action names fail closed.
 ACTIONS = {
     'calculate': ('math.use',), 'date_difference': ('math.use',),
@@ -45,6 +55,17 @@ ACTIONS = {
     'telegram.read': ('network.telegram',), 'telegram.send': ('network.telegram',),
     'telegram.download': ('network.telegram',),
 }
+ACTIONS.update({
+ 'presence.show':('presence.use',), 'voice.transcribe':('voice.use',), 'voice.speak':('voice.use',),
+ 'voice.install':('voice.use','models.manage'), 'reminder.deliver':('scheduler.use',),
+ 'briefing.create':('scheduler.use',), 'chips.install':('chips.install',), 'chips.run':('chips.run',),
+ 'chip.math':('math.use',), 'chip.memory':('memory.read','memory.write'), 'chip.security':(),
+ 'transfer.export':('transfer.export','memory.read'), 'transfer.import':('transfer.import',),
+ 'google.revoke':(),
+})
+for service in ('calendar','gmail'):
+    for verb in ('connect','read','refresh','message'):
+        ACTIONS['google.'+verb+'.'+service]=('google.'+service+'.read',)
 # Exact route templates: never log user IDs, filenames, query strings or payloads.
 ROUTES = {}
 def routes(method, paths, scopes=()):
@@ -72,6 +93,17 @@ routes('POST', '/api/artifacts /api/tasks /api/tasks/plan /api/tasks/*/run /api/
 routes('POST', '/api/tasks/*/cancel')
 routes('DELETE', '/api/tasks/* /api/artifacts/*', ('workspace.write',))
 routes('DELETE', '/api/web /api/web/* /api/learning-metrics /api/learning/* /api/documents/* /api/history/*', ('memory.write',))
+
+routes('GET','/api/navi /api/navi/presence')
+routes('POST','/api/navi/settings /api/navi/reminder /api/navi/remove-reminder /api/navi/seen /api/navi/vault/unlock /api/navi/vault/lock /api/navi/google/configure /api/navi/google/toggle',('settings.write',))
+routes('POST','/api/navi/google/authorize /api/navi/google/read /api/navi/google/revoke /api/navi/chips/preview')
+routes('POST','/api/navi/listening /api/navi/voice/transcribe /api/navi/voice/speak',('voice.use',))
+routes('POST','/api/navi/voice/install',('voice.use','models.manage'))
+routes('POST','/api/navi/briefing',('scheduler.use',))
+routes('POST','/api/navi/chips/install /api/navi/chips/remove',('chips.install',))
+routes('POST','/api/navi/chips/run')
+routes('POST','/api/navi/transfer/export',('transfer.export','memory.read'))
+routes('POST','/api/navi/transfer/import /api/navi/transfer/switch',('transfer.import',))
 
 
 def route_action(method, path):
@@ -129,7 +161,7 @@ class PermissionDenied(ValueError):
 
 
 class Trust:
-    def __init__(self, path=':memory:'):
+    def __init__(self, path=':memory:', initial_secret=None):
         self.lock = threading.RLock()
         if str(path) != ':memory:':
             path = Path(path)
@@ -155,9 +187,10 @@ class Trust:
                 if row is None:
                     if self.db.execute('SELECT 1 FROM audit LIMIT 1').fetchone():
                         raise ValueError('Local identity is missing; restore your trust database from backup')
-                    key = Ed25519PrivateKey.generate()
+                    key = Ed25519PrivateKey.from_private_bytes(initial_secret) if initial_secret is not None else Ed25519PrivateKey.generate()
                     self.db.execute('INSERT INTO identity VALUES(1,?)', (protect_key(key.private_bytes_raw()),))
                 else:
+                    if initial_secret is not None:raise ValueError('Identity import requires a new profile')
                     key = Ed25519PrivateKey.from_private_bytes(protect_key(row[0], decrypt=True))
                 self.key = key
                 self.public_key = key.public_key().public_bytes_raw().hex()
@@ -193,7 +226,7 @@ class Trust:
     def allowed(self, action):
         with self.lock:
             grants = dict(self.db.execute('SELECT scope,enabled FROM grants'))
-            return action in ACTIONS and all(grants.get(s, True) for s in ACTIONS[action])
+            return action in ACTIONS and all(grants.get(s, s not in DEFAULT_OFF) for s in ACTIONS[action])
 
     def begin(self, action):
         call = uuid.uuid4().hex
@@ -241,7 +274,7 @@ class Trust:
         with self.lock:
             grants = dict(self.db.execute('SELECT scope,enabled FROM grants'))
             return {'identity': self.identity(), 'permissions': [
-                {'scope': s, 'label': label, 'enabled': bool(grants.get(s, True))}
+                {'scope': s, 'label': label, 'enabled': bool(grants.get(s, s not in DEFAULT_OFF))}
                 for s, label in SCOPES.items()],
                 'actions': [{'name': name, 'scopes': list(scopes)} for name, scopes in sorted(ACTIONS.items())]}
 

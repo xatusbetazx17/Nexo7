@@ -39,6 +39,9 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
         controller.image_generator=images
         controller.trust=trust
 
+    from .navi import Navi
+    navi = Navi(Path(config.database).resolve().parent,store,controller,web_research) if controller else None
+
     class Handler(BaseHTTPRequestHandler):
         server_version = "Nexo7"
 
@@ -99,7 +102,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     # Do not flood the action log with status polling.
                     if method != 'GET' or action not in {
                         'GET /api/status', 'GET /api/setup', 'GET /api/images',
-                        'GET /api/telegram', 'GET /api/preferences'}:
+                        'GET /api/telegram', 'GET /api/preferences', 'GET /api/navi', 'GET /api/navi/presence'}:
                         self._audit_pending = (action, trust.begin(action))
                 return getattr(self, '_handle_' + method)()
             except PermissionDenied as exc:
@@ -123,13 +126,15 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             path = urlsplit(self.path).path
             if not self._allowed(path.startswith("/api/")):
                 return
-            static = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
+            if navi and path == '/api/navi':return self._send(200,navi.snapshot())
+            if navi and path == '/api/navi/presence':return self._send(200,navi.presence())
+            static = {"/navi.js":("navi.js","text/javascript; charset=utf-8"),"/recorder.js":("recorder.js","text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
             if path in static:
                 name, mime = static[path]
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.17.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.18.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -180,7 +185,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 requests.append(now)
             try:
                 size = int(self.headers.get("Content-Length", "-1"))
-                if not 0 <= size <= (10_800_000 if urlsplit(self.path).path in ("/api/vision", "/api/relay") else 6_800_000 if urlsplit(self.path).path == "/api/import" else 500000):
+                if not 0 <= size <= (10_800_000 if urlsplit(self.path).path in ("/api/vision", "/api/relay") else 6_800_000 if urlsplit(self.path).path in ("/api/import","/api/navi/transfer/import") else 1_500_000 if urlsplit(self.path).path == "/api/navi/voice/transcribe" else 500000):
                     return self._send(413, {"error": "Request too large or missing Content-Length"})
                 if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
                     return self._send(415, {"error": "application/json is required"})
@@ -188,6 +193,12 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path.startswith('/api/navi/') and navi:
+                    from .navi_api import post
+                    navi.enter()
+                    try:result=post(navi,path,body,self.server)
+                    finally:navi.leave()
+                    return self._send(200,result)
                 if path == '/api/trust/permissions':
                     trust.set_scope(body.get('scope'), body.get('enabled'))
                     if body.get('enabled') is False:
@@ -197,6 +208,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                             images.cancel.set()
                         if body.get('scope') == 'models.manage' and controller:
                             controller.cancel.set()
+                        if navi and body.get('scope') in {'voice.use','models.manage'}:navi.voice.cancel.set()
+                        if navi and body.get('scope') == 'presence.use':navi.configure({'settings':{'avatar':False}})
                     return self._send(200, trust.snapshot())
                 if path == '/api/images/install' and images:
                     return self._send(202,images.begin(body,install=True))
@@ -261,13 +274,13 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     return self._send(200, export_document(body))
                 if path == "/api/learning/from-source":
                     from .reviewed_sources import admit
-                    return self._send(201, admit(learning, web_research, body))
+                    return self._send(201, navi.chips.run('web-memory',body) if navi else admit(learning, web_research, body))
                 if path == "/api/math":
                     active = controller.config if controller else config
                     if active.max_tool_calls < 1:
                         raise ValueError("Math tools are disabled")
                     from .advanced_math import solve
-                    return self._send(200, solve(body))
+                    return self._send(200, navi.chips.run('math',body) if navi else solve(body))
                 if path == "/api/contributions/prepare":
                     from .contributions import prepare
                     return self._send(200, prepare(web_research, body))
@@ -334,11 +347,13 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     chat_lock = controller.operation if controller else slots
                     if not chat_lock.acquire(blocking=False):
                         return self._send(429, {"error": "The assistant is busy; wait for the current operation"})
+                    if navi:navi.enter()
                     try:
                         active_engine = Engine(controller.config, store, workspace=workspace, web=web_research) if controller else engine
                         result = active_engine.chat(body.get("message"), session=body.get("session"), mode=body.get("mode", "balanced"), private=body.get("private", False), language=body.get("language"), web_provider=body.get("web_provider", "wikipedia"), web_language=body.get("web_language", "en"), remember_web=body.get("remember_web", False), refresh_web=body.get("refresh_web", False), synthesize_web=body.get("synthesize_web", True), allow_internet=body.get("allow_internet", False))
                     finally:
                         chat_lock.release()
+                        if navi:navi.leave()
                     return self._send(200, result)
                 if path == "/api/documents":
                     doc_id = store.add_document(body.get("title"), body.get("content"), body.get("source", "personal"))
@@ -392,6 +407,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             return sock, address
 
     server = LocalServer(("127.0.0.1", port), Handler)
+    server.navi = navi
     server.telegram_controller = telegram
     server.access_token = token
     return server

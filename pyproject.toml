@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexo7-assistant"
-version = "0.17.0"
+version = "0.18.0"
 description = "Independent local assistant with configurable model providers and source-grounded research"
 requires-python = ">=3.11"
-dependencies = ["pypdf==6.10.0", "Pillow==12.3.0", "cryptography==46.0.5"]
+dependencies = ["pypdf==6.10.0", "Pillow==12.3.0", "cryptography==46.0.5", "vosk==0.3.45", "tzdata==2025.2"]
 
 [project.scripts]
 nexo7 = "nexo7.__main__:main"
@@ -17,4 +17,4 @@ nexo7-desktop = "nexo7.desktop:main"
 include = ["nexo7*"]
 
 [tool.setuptools.package-data]
-nexo7 = ["web/*", "knowledge/*", "native_catalog.json", "image_catalog.json", "image_runtime/*", "licenses/*"]
+nexo7 = ["web/*", "chips/*", "voice_catalog.json", "knowledge/*", "native_catalog.json", "image_catalog.json", "image_runtime/*", "licenses/*"]

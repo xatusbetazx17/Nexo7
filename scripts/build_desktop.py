@@ -22,13 +22,16 @@ def main():
         raise SystemExit("This release packages Windows and Linux only")
     command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile",
                "--name", "Nexo7", "--collect-data", "nexo7", "--exclude-module", "torch",
-               "--exclude-module", "tkinter", "--exclude-module", "pytest", "desktop_entry.py"]
+               "--collect-all", "vosk", "--collect-data", "tzdata", "--exclude-module", "pytest", "desktop_entry.py"]
     if windows:
         command.insert(-1, "--windowed")
     image_runtime=ROOT/'nexo7/image_runtime'
     if not (image_runtime/'manifest.json').is_file():
         raise SystemExit('Build the image engine first: python scripts/build_image_runtime.py')
     command[-1:-1]=['--add-data',str(image_runtime)+os.pathsep+'nexo7/image_runtime']
+    voice_runtime=ROOT/'nexo7/voice_runtime'
+    if not (voice_runtime/'manifest.json').is_file():raise SystemExit('Build the voice renderer first: python scripts/build_voice_runtime.py')
+    command[-1:-1]=['--add-data',str(voice_runtime)+os.pathsep+'nexo7/voice_runtime']
     subprocess.run(command, cwd=ROOT, check=True)
     binary = ROOT / "dist" / ("Nexo7.exe" if windows else "Nexo7")
     subprocess.run([sys.executable, "scripts/smoke_desktop.py", str(binary)], cwd=ROOT, check=True)
@@ -51,6 +54,9 @@ def main():
     licenses = stage / "licenses"
     licenses.mkdir(exist_ok=True)
     shutil.copy2(image_runtime/'third-party-sources.tar.gz',licenses/'IMAGE-ENGINE-NOTICES-AND-SOURCES.tar.gz')
+    shutil.copy2(voice_runtime/'espeak-sources.tar.gz',licenses/'ESPEAK-NG-COMPLETE-SOURCES.tar.gz')
+    shutil.copy2(voice_runtime/'COPYING.txt',licenses/'ESPEAK-NG-COPYING.txt')
+    shutil.copy2(ROOT/'docs/NAVI-MODULES.md',stage/'NAVI-MODULES.md')
     for source in (ROOT / "nexo7" / "licenses").glob("*.txt"):
         shutil.copy2(source, licenses / source.name)
     shutil.copy2(ROOT / "docs" / "VISION-TELEGRAM.md", stage / "VISION-TELEGRAM.md")
@@ -66,7 +72,7 @@ def main():
         if "licenses/" in str(entry) and str(entry).endswith(("LICENSE", "LICENSE.txt")):
             shutil.copy2(distribution("Pillow").locate_file(entry), licenses / ("PILLOW-" + Path(str(entry)).name))
     from importlib.metadata import PackageNotFoundError
-    for dependency in ("cryptography", "cffi", "pycparser"):
+    for dependency in ("cryptography", "cffi", "pycparser", "vosk", "tzdata", "requests", "srt", "tqdm", "websockets"):
         try: package = distribution(dependency)
         except PackageNotFoundError: continue
         for entry in package.files or []:

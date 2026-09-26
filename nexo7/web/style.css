@@ -12,3 +12,4 @@
 .audit-entries{padding-left:1.4rem;max-height:24rem;overflow:auto}
 .audit-entries li{padding:.5rem 0;overflow-wrap:anywhere}
 .audit-entries small{display:block}
+#navi-view .panel{margin-bottom:18px}#navi-view details>summary{font-weight:650;cursor:pointer}#navi-view input[type=time],#navi-view input[type=datetime-local]{max-width:320px}#navi-view pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto}#navi-status{min-height:1.5em}#navi-view .navi-row{padding:14px 0;border-bottom:1px solid var(--border,#ddd)}#navi-view .navi-row button{margin:6px 6px 0 0}.voice-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.voice-toolbar[hidden]{display:none}.navi-external{white-space:pre-wrap;overflow-wrap:anywhere;max-height:450px;overflow:auto}

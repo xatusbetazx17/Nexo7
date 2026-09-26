@@ -11,6 +11,12 @@ if __name__ == '__main__':
         if "--native-worker" in sys.argv:
             from nexo7.native_worker import main as worker_main
             worker_main()
+        elif "--avatar-worker" in sys.argv:
+            from nexo7.avatar import main as avatar_main
+            avatar_main()
+        elif "--voice-worker" in sys.argv:
+            from nexo7.voice import worker_main
+            worker_main()
         elif "--telegram" in sys.argv:
             from nexo7.telegram_bridge import main as telegram_main
             telegram_main()

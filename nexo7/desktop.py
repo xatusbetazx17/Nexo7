@@ -60,12 +60,22 @@ def instance_lock(directory):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Nexo 7 desktop assistant")
-    parser.add_argument("--version", action="version", version="Nexo 7 0.17.0")
+    parser.add_argument("--version", action="version", version="Nexo 7 0.18.0")
     parser.add_argument("--no-open", action="store_true", help="Do not open a browser automatically")
     parser.add_argument("--port", type=int, default=0, help="Local port; 0 selects an available port")
     parser.add_argument("--data-dir", type=Path, help="Override the per-user application data directory")
     args = parser.parse_args(argv)
     directory = args.data_dir.resolve() if args.data_dir else data_directory()
+    # Follow only validated child profiles; old data stays in its original directory.
+    for _ in range(10):
+        choice=directory/'profile-choice.json'
+        if not choice.is_file():break
+        import re
+        identifier=json.loads(choice.read_text()).get('profile','')
+        if not re.fullmatch('[a-f0-9]{32}',identifier):raise ValueError('Invalid profile choice')
+        child=directory/'profiles'/identifier
+        if child.is_symlink() or not (child/'nexo.sqlite3').is_file():raise ValueError('Imported profile is missing')
+        directory=child
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     with instance_lock(directory) as acquired:
         access = directory / "access.json"
@@ -90,6 +100,7 @@ def main(argv=None):
             print(url, flush=True)
         if not args.no_open:
             webbrowser.open(url)
+        if server.navi.state.settings()['avatar']:server.navi.start_overlay()
         if controller.preferences["auto_start"] and store.trust.allowed("model_start"):
             controller.start(cpu_only=controller.preferences["cpu_only"], language=controller.preferences["response_language"])
         try:
@@ -98,12 +109,15 @@ def main(argv=None):
             pass
         finally:
             server.telegram_controller.stop()
+            server.navi.close()
             server.server_close()
             try:
                 controller.close()
             finally:
                 store.close()
                 access.unlink(missing_ok=True)
+    if getattr(server,"next_profile",None):
+        return main(["--data-dir",str(server.next_profile)]+(["--no-open"] if args.no_open else []))
 
 
 if __name__ == "__main__":

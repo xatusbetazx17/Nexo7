@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.17.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
+**Early preview · v0.18.0.** Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
 ## Get started — no Docker
 
@@ -182,3 +182,7 @@ Version 0.16 adds real diffusion-generated PNGs through **Create → AI images**
 ## Local identity and permissions
 
 Open **Settings → Trust and permissions** for your Navi ID, built-in capability toggles, and signed local activity receipts. Existing local features remain available. See [Trust foundation](docs/TRUST-FOUNDATION.md) for coverage, privacy and limits.
+
+## Optional Navi modules
+
+Version 0.18 adds an always-on-top avatar, offline voice, local reminders and briefings, encrypted read-only Google connectors, signed declarative chips, and encrypted profile transfer. Open **Navi** in the sidebar. New permissions start off. A separate **Nexo-Mobile** installable web app runs a small model on-device and imports the same encrypted profile. [Setup and limitations](docs/NAVI-MODULES.md).

@@ -1,0 +1,12 @@
+import {build} from 'esbuild';
+import {mkdir,cp,writeFile,readFile,readdir} from 'node:fs/promises';
+await mkdir('dist',{recursive:true});
+await build({entryPoints:['src/app.js','src/inference.js'],outdir:'dist',bundle:true,format:'esm',platform:'browser',minify:true,define:{'process.env.NODE_ENV':'"production"'},external:[]});
+for(const name of ['index.html','style.css','manifest.webmanifest','icon.svg','sw.js'])await cp('src/'+name,'dist/'+name);
+await mkdir('dist/ort',{recursive:true});
+for(const name of await readdir('node_modules/onnxruntime-web/dist'))if(name.endsWith('.wasm')||/^ort-wasm.*\.mjs$/.test(name))await cp('node_modules/onnxruntime-web/dist/'+name,'dist/ort/'+name);
+await cp('node_modules/@huggingface/transformers/LICENSE','dist/TRANSFORMERS-LICENSE.txt');
+await cp('src/ONNX-RUNTIME-LICENSE.txt','dist/ONNX-RUNTIME-LICENSE.txt');
+const files=['./','./index.html','./app.js','./inference.js','./style.css','./manifest.webmanifest','./icon.svg',...(await readdir('dist/ort')).map(x=>'./ort/'+x)];
+let sw=await readFile('dist/sw.js','utf8');await writeFile('dist/sw.js',sw.replace('/*PRECACHE*/[]',JSON.stringify(files)));
+console.log('Standalone mobile companion built in mobile/dist');

@@ -22,3 +22,5 @@ research-runs/
 *.gguf
 
 nexo7/image_runtime/
+nexo7/voice_runtime/
+mobile/dist/

@@ -71,3 +71,12 @@ The `cryptography` package (46.0.5) supplies Ed25519 signing and verification un
 its Apache-2.0/BSD licenses. Binary distributions also contain bundled dependency
 notices. The desktop build copies its installed license directory into the release.
 Windows key storage uses the operating system's DPAPI; no custom cipher is used.
+
+## Optional Navi voice and mobile (0.18)
+
+- eSpeak NG 1.52.0, commit `4870adfa25b1a32b4361592f1be8a40337c58d6c`: GPL-3.0-or-later, separate offline WAV executable. Complete corresponding pinned source and build script accompany desktop archives as `licenses/ESPEAK-NG-COMPLETE-SOURCES.tar.gz`, with COPYING. Built without libsonic, libpcaudio or MBROLA. https://github.com/espeak-ng/espeak-ng
+- Vosk API 0.3.45 and optional small English 0.15 / Spanish 0.42 models: Apache-2.0. Models are downloaded only on request; catalog pins byte sizes and SHA-256. https://alphacephei.com/vosk/ and https://alphacephei.com/vosk/models
+- Tcl/Tk is bundled by PyInstaller where available under its license; Python includes the tkinter binding. tzdata 2025.2 supplies portable IANA time zones (Apache-2.0 package, public-domain database).
+- Mobile uses Transformers.js 3.8.1 (Apache-2.0) and ONNX Runtime Web `1.22.0-dev.20250409-89f8206ba4` (MIT), pinned through npm lockfile. License texts accompany the web bundle. https://github.com/huggingface/transformers.js and https://github.com/microsoft/onnxruntime
+- Mobile optional model: `onnx-community/SmolLM2-135M-Instruct-ONNX`, revision `b8a5c0f183b78c55955a5364f610c36668b5e681`, q4; derived from HuggingFaceTB/SmolLM2-135M-Instruct (Apache-2.0). The model is downloaded from Hugging Face, not included in the app archive. Model card: https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct
+- Navi avatar and mobile icon are original vector shapes from this project. No Mega Man characters or assets are bundled.
