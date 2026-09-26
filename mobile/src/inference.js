@@ -10,8 +10,8 @@ self.onmessage=async({data})=>{
  try{
   if(data.action==='load'){
    env.allowRemoteModels=true;
-   generator=await pipeline('text-generation',MODEL,{revision:REV,dtype:'q4',device:'wasm',progress_callback:x=>self.postMessage({type:'progress',message:x.status+(x.progress?' '+Math.round(x.progress)+'%':'')})});
-   for(const file of ['model_q4.onnx','model_q4.onnx_data']){
+   generator=await pipeline('text-generation',MODEL,{revision:REV,dtype:'q8',device:'wasm',progress_callback:x=>self.postMessage({type:'progress',message:x.status+(x.progress?' '+Math.round(x.progress)+'%':'')})});
+   for(const file of ['model_quantized.onnx','model_quantized.onnx_data']){
    const cached=await modelCache.match('https://huggingface.co/'+MODEL+'/resolve/'+REV+'/onnx/'+file);
    if(!cached)throw Error('The model ran but could not be saved offline. Free browser storage and download it again.');
    await cached.body.cancel();
