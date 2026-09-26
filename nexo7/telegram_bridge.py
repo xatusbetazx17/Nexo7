@@ -113,7 +113,9 @@ class Albums:
 
 
 class Bridge:
-    def __init__(self, settings, stop=None):
+    def __init__(self, settings, stop=None, trust=None):
+        from .trust import Trust
+        self.trust = trust or Trust(settings.access_file.resolve().parent / "trust.sqlite3")
         self.settings = settings
         self.stop = stop or threading.Event()
         self.rules = load_rules(settings.rules_file) if settings.scan_images else []
@@ -121,6 +123,12 @@ class Bridge:
         self.albums = Albums()
 
     def telegram(self, method, payload):
+        if method not in {'getMe', 'getUpdates', 'getFile', 'sendMessage', 'setMessageReaction'}:
+            raise ValueError('Undeclared Telegram method')
+        action = 'telegram.send' if method in {'sendMessage', 'setMessageReaction'} else 'telegram.read'
+        return self.trust.run(action, self._telegram, method, payload)
+
+    def _telegram(self, method, payload):
         if self.stop.is_set(): raise TransportError('Telegram bridge stopped')
         data = fetch_json('https://api.telegram.org/bot' + self.settings.token + '/' + method,
                           payload=payload, timeout=25, max_bytes=2_000_000)
@@ -147,7 +155,7 @@ class Bridge:
         path = file.get('file_path', '')
         if file.get('file_size', 0) > 4_000_000 or not re.fullmatch(r'[A-Za-z0-9_./-]+', path) or '..' in path.split('/'):
             return None
-        raw = fetch('https://api.telegram.org/file/bot' + self.settings.token + '/' + path, max_bytes=4_000_000, timeout=20)
+        raw = self.trust.run('telegram.download', fetch, 'https://api.telegram.org/file/bot' + self.settings.token + '/' + path, max_bytes=4_000_000, timeout=20)
         return base64.b64encode(raw).decode('ascii')
 
     def send(self, trigger, text):
@@ -222,7 +230,9 @@ class Bridge:
 
 class BridgeController:
     """Desktop opt-in lifecycle. Credentials exist only in process memory."""
-    def __init__(self, access_file):
+    def __init__(self, access_file, trust=None):
+        from .trust import Trust
+        self.trust = trust or Trust(Path(access_file).resolve().parent / "trust.sqlite3")
         self.access_file = Path(access_file)
         self.lock = threading.Lock(); self.stop_event = threading.Event(); self.thread = None
         self.phase = 'off'; self.error = None; self.chat_count = 0
@@ -236,7 +246,7 @@ class BridgeController:
         if not isinstance(token, str) or not re.fullmatch(r'\d+:[A-Za-z0-9_-]{20,200}', token): raise ValueError('Enter a valid BotFather token')
         with self.lock:
             if self.thread and self.thread.is_alive(): raise ValueError('Stop the bridge before discovering chat IDs')
-            bridge = Bridge(Settings(token, frozenset(), self.access_file))
+            bridge = Bridge(Settings(token, frozenset(), self.access_file), trust=self.trust)
             updates = bridge.telegram('getUpdates', {'limit': 20, 'timeout': 0, 'allowed_updates': ['message']})
         chats = {}
         for update in updates:
@@ -256,7 +266,7 @@ class BridgeController:
             def work():
                 try:
                     with self.lock: self.phase = 'running'
-                    Bridge(settings, self.stop_event).run()
+                    Bridge(settings, self.stop_event, trust=self.trust).run()
                 except Exception:
                     with self.lock: self.error = 'Telegram could not start or continue. Check the token, connection and Nexo setup.'
                 finally:
@@ -273,8 +283,10 @@ class BridgeController:
 
 
 def main():
-    try: Bridge(Settings.from_env()).run()
+    bridge = Bridge(Settings.from_env())
+    try: bridge.run()
     except KeyboardInterrupt: pass
+    finally: bridge.trust.close()
 
 
 if __name__ == '__main__': main()

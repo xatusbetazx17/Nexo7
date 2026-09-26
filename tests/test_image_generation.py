@@ -1,3 +1,4 @@
+from nexo7.trust import Trust
 from dataclasses import replace
 import hashlib
 import json
@@ -48,7 +49,7 @@ class DiffusionTests(unittest.TestCase):
             controller=SetupController(Path(tmp)/'db',{'cpu_only':True,'performance':'fast','model_choice':'lfm2-vl:450m'})
             original=Config(provider='native',model='lfm2-vl:450m',database=str(Path(tmp)/'db'))
             controller.config=original;controller.owns_runtime=True
-            generator=ImageGenerator(controller);generator.root.mkdir()
+            generator=ImageGenerator(controller,trust=Trust());generator.root.mkdir()
             catalog={'model':{'filename':'model','size':1,'sha256':'ok','name':'test'},'decoder':{'filename':'decoder','size':1,'sha256':'ok'}}
             for name in ('model','decoder'):(generator.root/name).write_bytes(b'x')
             events=[]
@@ -75,7 +76,7 @@ class DiffusionTests(unittest.TestCase):
 
     def test_missing_model_and_busy_do_not_start_workers(self):
         with tempfile.TemporaryDirectory() as tmp:
-            generator=ImageGenerator(SetupController(Path(tmp)/'db'))
+            generator=ImageGenerator(SetupController(Path(tmp)/'db'),trust=Trust())
             with patch('nexo7.image_generation.runtime_path',return_value=Path('/fixture/sd-cli')):
                 with self.assertRaisesRegex(ValueError,'Install AI images'):generator.begin({'prompt':'fox'})
                 generator.controller.operation.acquire()
@@ -85,7 +86,7 @@ class DiffusionTests(unittest.TestCase):
     def test_cancel_and_worker_failure_release_resources(self):
         for cancel in (True,False):
             with self.subTest(cancel=cancel),tempfile.TemporaryDirectory() as tmp:
-                generator=ImageGenerator(SetupController(Path(tmp)/'db'))
+                generator=ImageGenerator(SetupController(Path(tmp)/'db'),trust=Trust())
                 worker=Mock();worker.process.returncode=1
                 worker.process.poll.return_value=None if cancel else 1
                 worker.receipt={'enforced_limit':2_000_000_000}

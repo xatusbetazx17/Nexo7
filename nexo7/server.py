@@ -12,6 +12,8 @@ from .net import TransportError
 
 
 def make_server(config, store, port=8787, token=None, engine=None, controller=None):
+    from .trust import PermissionDenied, route_action
+    trust = store.trust
     token = token or secrets.token_urlsafe(32)
     slots = threading.BoundedSemaphore(1 if config.provider == "ollama" else 2)
     requests = deque()
@@ -28,12 +30,14 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     from .task_agent import TaskAgent
     agent = TaskAgent(store, workspace) if workspace else None
     from .telegram_bridge import BridgeController
-    telegram = BridgeController(Path(config.database).resolve().parent / "access.json") if controller else None
+    telegram = BridgeController(Path(config.database).resolve().parent / "access.json", trust=trust) if controller else None
     import_slots = threading.BoundedSemaphore(1)
     creative_slots = threading.BoundedSemaphore(1)
     from .image_generation import ImageGenerator
-    images = ImageGenerator(controller) if controller else None
-    if controller:controller.image_generator=images
+    images = ImageGenerator(controller, trust=trust) if controller else None
+    if controller:
+        controller.image_generator=images
+        controller.trust=trust
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "Nexo7"
@@ -42,6 +46,11 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             pass  # No prompts, tokens, credentials or query strings in access logs.
 
         def _send(self, code, value, content_type="application/json; charset=utf-8"):
+            pending = getattr(self, '_audit_pending', None)
+            if pending:
+                self._audit_pending = None
+                action, call = pending
+                trust.finish(action, call, 'accepted' if code == 202 else 'completed' if code < 400 else 'failed')
             data = json.dumps(value, ensure_ascii=False).encode() if content_type.startswith("application/json") else value
             self.send_response(code)
             self.send_header("Content-Type", content_type)
@@ -70,7 +79,47 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return False
             return True
 
+        def _dispatch(self, method):
+            self._audit_pending = None
+            path = urlsplit(self.path).path
+            if not self._allowed(path.startswith('/api/')):
+                return
+            try:
+                if path == '/api/trust' and method == 'GET':
+                    return self._send(200, trust.snapshot())
+                if path == '/api/trust/audit' and method == 'GET':
+                    cursor = parse_qs(urlsplit(self.path).query).get('before', [None])[0]
+                    return self._send(200, trust.records(int(cursor) if cursor else None))
+                if path == '/api/trust/verify' and method == 'GET':
+                    return self._send(200, trust.verify())
+                if path.startswith('/api/') and path != '/api/trust/permissions':
+                    action = route_action(method, path)
+                    if action is None:
+                        return self._send(404, {'error': 'Unknown route'})
+                    # Do not flood the action log with status polling.
+                    if method != 'GET' or action not in {
+                        'GET /api/status', 'GET /api/setup', 'GET /api/images',
+                        'GET /api/telegram', 'GET /api/preferences'}:
+                        self._audit_pending = (action, trust.begin(action))
+                return getattr(self, '_handle_' + method)()
+            except PermissionDenied as exc:
+                return self._send(403, {'error': str(exc)})
+            except (ValueError, TypeError) as exc:
+                return self._send(400, {'error': str(exc)[:300]})
+            except Exception:
+                self._audit_pending = None
+                return self._send(503, {'error': 'Local trust storage is unavailable; action was not authorized. Check disk space and restore a trusted backup if needed.'})
+
         def do_GET(self):
+            return self._dispatch('GET')
+
+        def do_POST(self):
+            return self._dispatch('POST')
+
+        def do_DELETE(self):
+            return self._dispatch('DELETE')
+
+        def _handle_GET(self):
             path = urlsplit(self.path).path
             if not self._allowed(path.startswith("/api/")):
                 return
@@ -80,7 +129,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.16.0", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.17.0", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,
@@ -119,7 +168,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return self._send(200, {"messages": store.history(session, 100)})
             self._send(404, {"error": "Unknown route"})
 
-        def do_POST(self):
+        def _handle_POST(self):
             if not self._allowed(True):
                 return
             with request_lock:
@@ -139,6 +188,16 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if not isinstance(body, dict):
                     raise ValueError("A JSON object is required")
                 path = urlsplit(self.path).path
+                if path == '/api/trust/permissions':
+                    trust.set_scope(body.get('scope'), body.get('enabled'))
+                    if body.get('enabled') is False:
+                        if body.get('scope') == 'network.telegram' and telegram:
+                            telegram.stop()
+                        if body.get('scope') in {'images.generate', 'models.manage'} and images:
+                            images.cancel.set()
+                        if body.get('scope') == 'models.manage' and controller:
+                            controller.cancel.set()
+                    return self._send(200, trust.snapshot())
                 if path == '/api/images/install' and images:
                     return self._send(202,images.begin(body,install=True))
                 if path == '/api/images/start' and images:
@@ -271,7 +330,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                         from .creation_requests import intent
                         prompt=body.get('message')
                         if isinstance(prompt,str) and intent(prompt)=='drawing':
-                            return self._send(202,{'image_job':images.begin({'prompt':prompt,'size':body.get('image_size',256),'steps':body.get('image_steps',4),'style':body.get('image_style','photo')})})
+                            return self._send(202,{'image_job':trust.run('image_generate', images.begin,{'prompt':prompt,'size':body.get('image_size',256),'steps':body.get('image_steps',4),'style':body.get('image_style','photo')})})
                     chat_lock = controller.operation if controller else slots
                     if not chat_lock.acquire(blocking=False):
                         return self._send(429, {"error": "The assistant is busy; wait for the current operation"})
@@ -285,6 +344,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     doc_id = store.add_document(body.get("title"), body.get("content"), body.get("source", "personal"))
                     return self._send(201, {"id": doc_id})
                 self._send(404, {"error": "Unknown route"})
+            except PermissionDenied as exc:
+                self._send(403, {"error": str(exc)})
             except (ValueError, TypeError, UnicodeError) as exc:
                 self._send(400, {"error": str(exc)[:300]})
             except TransportError as exc:
@@ -292,7 +353,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
             except Exception:
                 self._send(500, {"error": "Internal error; check the project configuration"})
 
-        def do_DELETE(self):
+        def _handle_DELETE(self):
             if not self._allowed(True):
                 return
             path = urlsplit(self.path).path

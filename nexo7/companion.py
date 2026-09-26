@@ -54,11 +54,11 @@ def run(engine, message, options, allow_internet=False):
             return local_result('File tools are disabled.', 'unavailable')
         name = message.strip()[8:].strip()
         try:
-            item = find_file(engine.workspace, name)
+            item = engine.store.trust.run('read_workspace', find_file, engine.workspace, name)
             if not item['name'].endswith(('.py', '.json')):
                 raise ValueError('Syntax repair supports Python and JSON workspace files')
             try:
-                checked = inspect_file(engine.workspace, name)
+                checked = engine.store.trust.run('inspect_workspace', inspect_file, engine.workspace, name)
             except ValueError as exc:
                 checked = {'error': str(exc)}
             if checked.get('syntax_valid') or checked.get('valid_json'):
@@ -78,7 +78,7 @@ def run(engine, message, options, allow_internet=False):
         if cfg.max_tool_calls < 1:
             return local_result('Device tools are disabled.', 'unavailable')
         result = local_result('')
-        hardware = asdict(detect_hardware())
+        hardware = asdict(engine.store.trust.run('device_check', detect_hardware))
         result.update(answer=('Device check: ' + str(hardware['system']) + '\nAvailable RAM: '
                       + str(round(hardware['available_bytes']/1e9, 2)) + ' GB\nCPU threads: '
                       + str(hardware['cpu_threads']) + '\nThese are observations; no system settings were changed.'),

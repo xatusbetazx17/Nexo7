@@ -1,3 +1,4 @@
+from .trust import guarded
 import ast
 import math
 import operator
@@ -77,6 +78,7 @@ class PubMed:
             fn = fetch_json if json_result else fetch
             return fn(url, timeout=self.timeout, max_bytes=1_000_000)
 
+    @guarded("search_pubmed")
     def search(self, query, limit=4, use_cache=True):
         if not isinstance(query, str) or not 2 <= len(query.strip()) <= 500:
             raise ValueError("PubMed search requires 2 to 500 characters")
@@ -147,6 +149,9 @@ class ToolBox:
         return items
 
     def execute(self, name, args):
+        return self.store.trust.run(name, self._execute, name, args)
+
+    def _execute(self, name, args):
         expected = {s["name"]: s["parameters"]["required"][0] for s in self.schemas()}
         if name not in expected:
             raise ValueError("Tool not authorized")

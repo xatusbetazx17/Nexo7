@@ -60,7 +60,7 @@ def instance_lock(directory):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Nexo 7 desktop assistant")
-    parser.add_argument("--version", action="version", version="Nexo 7 0.16.0")
+    parser.add_argument("--version", action="version", version="Nexo 7 0.17.0")
     parser.add_argument("--no-open", action="store_true", help="Do not open a browser automatically")
     parser.add_argument("--port", type=int, default=0, help="Local port; 0 selects an available port")
     parser.add_argument("--data-dir", type=Path, help="Override the per-user application data directory")
@@ -90,7 +90,7 @@ def main(argv=None):
             print(url, flush=True)
         if not args.no_open:
             webbrowser.open(url)
-        if controller.preferences["auto_start"]:
+        if controller.preferences["auto_start"] and store.trust.allowed("model_start"):
             controller.start(cpu_only=controller.preferences["cpu_only"], language=controller.preferences["response_language"])
         try:
             server.serve_forever()

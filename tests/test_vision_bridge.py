@@ -1,3 +1,4 @@
+from nexo7.trust import Trust
 import base64
 from dataclasses import replace
 import io
@@ -68,7 +69,7 @@ class VisionTests(unittest.TestCase):
 
 class BridgeTests(unittest.TestCase):
     def make(self):
-        bridge = Bridge(Settings('123:' + 'x'*25, frozenset({10}), Path('/unused')))
+        bridge = Bridge(Settings('123:' + 'x'*25, frozenset({10}), Path('/unused')), trust=Trust())
         bridge.bot_id = 99; bridge.username = 'nexo_bot'; bridge.telegram = Mock(); bridge.local = Mock(return_value={'answer': 'hello'})
         return bridge
 
@@ -115,7 +116,7 @@ class BridgeTests(unittest.TestCase):
     def test_local_access_rejects_remote_host(self):
         with tempfile.TemporaryDirectory() as tmp:
             file = Path(tmp)/'access.json'; file.write_text(json.dumps({'url': 'https://evil.example/#token=secret'}))
-            bridge = Bridge(Settings('123:x', frozenset({10}), file))
+            bridge = Bridge(Settings('123:x', frozenset({10}), file), trust=Trust())
             with patch('nexo7.telegram_bridge.fetch_json') as request:
                 with self.assertRaises(ValueError): bridge.local('hello', [])
                 request.assert_not_called()
@@ -131,7 +132,7 @@ if __name__ == '__main__': unittest.main()
 class TelegramLifecycleTests(unittest.TestCase):
     def test_discovery_requires_consent_and_returns_no_message_content(self):
         from nexo7.telegram_bridge import BridgeController
-        controller=BridgeController('/unused/access.json');body={'token':'123:'+'x'*25,'consent':True}
+        controller=BridgeController('/unused/access.json',trust=Trust());body={'token':'123:'+'x'*25,'consent':True}
         with patch('nexo7.telegram_bridge.Bridge.telegram', return_value=[{'message':{'chat':{'id':10,'type':'private'},'text':'private text'}}]) as network:
             with self.assertRaises(ValueError): controller.discover({**body,'consent':False})
             network.assert_not_called()
@@ -139,13 +140,13 @@ class TelegramLifecycleTests(unittest.TestCase):
         self.assertEqual(result['chats'],[{'id':10,'type':'private'}]);self.assertNotIn('private text',str(result))
     def test_stopped_bridge_never_starts_another_send(self):
         from nexo7.net import TransportError
-        stop=threading.Event();bridge=Bridge(Settings('123:x',frozenset({10}),Path('/unused')),stop);stop.set()
+        stop=threading.Event();bridge=Bridge(Settings('123:x',frozenset({10}),Path('/unused')),stop,trust=Trust());stop.set()
         with patch('nexo7.telegram_bridge.fetch_json') as network:
             with self.assertRaises(TransportError):bridge.send({'chat':{'id':10},'message_id':1},'reply')
             network.assert_not_called()
     def test_desktop_lifecycle_keeps_token_out_of_status_and_stops(self):
         from nexo7.telegram_bridge import BridgeController
-        controller=BridgeController('/unused');started=threading.Event()
+        controller=BridgeController('/unused',trust=Trust());started=threading.Event()
         def run(bridge):started.set();bridge.stop.wait(2)
         token='123:'+'x'*25
         with patch.object(Bridge,'run',run):

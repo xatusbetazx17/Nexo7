@@ -123,9 +123,11 @@ async function initialize(first=true) {
     $("resource-note").textContent = config.local_ram_limit_bytes ? `Native memory budget: ${(config.local_ram_limit_bytes/1e9).toFixed(1)} GB · ${config.local_backend}` : "";
     $("privacy-note").textContent = config.provider === "openai" ? "Your queries and relevant excerpts will be sent to OpenAI. Local history is not encrypted." : "Memory and history stay on this computer, without encryption. PubMed needs an Internet connection.";
     if (!config.persist_history) { $("private").checked=true; $("private").disabled=true; }
+    try {
     const data=await api("/api/history?session="+encodeURIComponent(session));
     clearChatFiles();$("messages").replaceChildren(); conversation=data.messages; for(const m of conversation) message(m.role,m.content);
     await loadDocuments(); await loadLearning(); await loadWebSources();
+    } catch(exc) {error(exc.message);}
     desktopMode=Boolean(config.desktop);$("workspace-tab").hidden=!desktopMode; $("setup-tab").hidden=!desktopMode; $("quit").hidden=!desktopMode;
     if(desktopMode)await refreshDiffusion();
     if(first && desktopMode) {showSetup(); clearTimeout(setupTimer); pollSetup();}
@@ -543,3 +545,46 @@ $('diffusion-generate').onclick=async()=>{diffusionRevision++;try{
  const state=await waitDiffusion(job.id);showDiffusionResult(state);
 }catch(e){$('diffusion-status').textContent=e.message;}};
 for(const id of ['diffusion-cancel','diffusion-chat-cancel'])$(id).onclick=()=>api('/api/images/cancel','POST',{}).catch(e=>error(e.message));
+
+// Trust data is loaded only on demand. Render all receipt fields as text.
+let auditCursor = null;
+async function loadTrust(){
+  const data=await api('/api/trust');
+  $('navi-id').textContent='Navi ID: '+data.identity.id;
+  $('trust-permissions').replaceChildren();
+  for(const item of data.permissions){
+    const label=node('label','','trust-permission');
+    const toggle=document.createElement('input');toggle.type='checkbox';toggle.checked=item.enabled;
+    toggle.setAttribute('aria-label',item.label);
+    toggle.onchange=async()=>{
+      toggle.disabled=true;
+      try{await api('/api/trust/permissions','POST',{scope:item.scope,enabled:toggle.checked});
+        $('trust-status').textContent=item.label+': '+(toggle.checked?'enabled':'disabled');await loadAudit();
+      }catch(exc){toggle.checked=!toggle.checked;$('trust-status').textContent=exc.message;}
+      finally{toggle.disabled=false;}
+    };
+    label.append(toggle,node('span',item.label));$('trust-permissions').append(label);
+  }
+}
+async function loadAudit(older=false){
+  const data=await api('/api/trust/audit'+(older&&auditCursor?'?before='+auditCursor:''));
+  if(!older)$('audit-entries').replaceChildren();
+  for(const entry of data.entries){
+    const li=node('li','');li.append(node('strong',entry.action+' · '+entry.outcome),node('small',new Date(entry.time).toLocaleString()));
+    $('audit-entries').append(li);
+  }
+  auditCursor=data.next_before;$('audit-older').hidden=data.entries.length<50;
+  if(!older&&!data.entries.length)$('audit-entries').append(node('li','No actions recorded yet.'));
+}
+$('trust-panel').ontoggle=async()=>{
+  if(!$('trust-panel').open)return;
+  try{await loadTrust();await loadAudit();}catch(exc){$('trust-status').textContent=exc.message;}
+};
+$('audit-refresh').onclick=()=>loadAudit().catch(exc=>{$('trust-status').textContent=exc.message;});
+$('audit-older').onclick=()=>loadAudit(true).catch(exc=>{$('trust-status').textContent=exc.message;});
+$('audit-verify').onclick=async()=>{
+  $('audit-verify').disabled=true;
+  try{const result=await api('/api/trust/verify');$('trust-status').textContent='Verified '+result.records+' signed receipts. This detects changes within the log; it cannot prove an old backup was not restored.';}
+  catch(exc){$('trust-status').textContent=exc.message;}
+  finally{$('audit-verify').disabled=false;}
+};

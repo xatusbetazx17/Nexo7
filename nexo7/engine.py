@@ -1,3 +1,4 @@
+from .trust import guarded
 from dataclasses import asdict
 import json
 import re
@@ -149,6 +150,7 @@ class Engine:
             warnings.append("The answer does not cite saved web excerpt identifiers; review the source list.")
         return text, list(dict.fromkeys(warnings))
 
+    @guarded("chat_inference")
     def chat(self, message, *, session=None, mode="balanced", private=False, optimized=True, language=None, web_provider="wikipedia", web_language="en", remember_web=False, refresh_web=False, synthesize_web=True, allow_internet=False, _defer_save=False):
         start = time.perf_counter()
         if any(type(v) is not bool for v in (remember_web, refresh_web, synthesize_web)):
@@ -190,7 +192,7 @@ class Engine:
             warnings.append('Treated this as an imagined scenario, so no search was sent. Choose an explicit online-search request to research real sources.')
         cacheable = not private and optimized and self.config.cache_seconds > 0 and mode not in {"research", "web"} and not re.search(
             r"\b(hoy|ahora|actual|actuales|precio|precios|today|latest|current|news|noticias)\b", message, re.I)
-        key = self.store.cache_key(["nexo7-v14", message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
+        key = self.store.cache_key(["nexo7-v17", self.store.trust.policy_key(), message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
 
         def finish(answer, status="completed", save_cache=False):
             answer, extra = self._check_citations(answer, sources, mode == "research") if status in {"completed", "incomplete"} else (answer, [])
@@ -219,7 +221,7 @@ class Engine:
                 return finish('File creation tools are disabled.', 'unavailable')
             spec = builtin(message) if creation == 'drawing' else None
             if spec is not None:
-                files = create('drawing', json.dumps(spec))
+                files = self.store.trust.run('create_file', create, 'drawing', json.dumps(spec))
                 answer = 'Here is a simple built-in illustration. Download the PNG or editable SVG below.'
             else:
                 if self.config.provider == 'demo':
@@ -250,7 +252,7 @@ class Engine:
                     return finish('The model did not finish a usable design. Try a simpler request or use Create to edit a design. No file was created.', 'incomplete')
                 draft = completion.text.strip()
                 try:
-                    files = create(creation, draft)
+                    files = self.store.trust.run('create_file', create, creation, draft)
                 except (ValueError, TypeError, KeyError, OverflowError) as exc:
                     failed = finish('The model returned an invalid design. Try a simpler request or use Create to edit a design. No file was created.', 'unavailable')
                     failed['creation_error'] = str(exc)[:300]
@@ -268,7 +270,7 @@ class Engine:
             if self.config.max_tool_calls < 1:
                 return finish('Math tools are disabled.', 'unavailable')
             from .scenarios import calculate as scenario_calculate
-            result = scenario_calculate(json.loads(message[10:]))
+            result = self.store.trust.run('scenario_calculation', scenario_calculate, json.loads(message[10:]))
             stats['tool_calls'] = 1
             trace.append({'tool': 'scenario_calculation', 'status': 'computed'})
             return finish(json.dumps(result, ensure_ascii=False, indent=2))
@@ -277,7 +279,7 @@ class Engine:
             if self.config.max_tool_calls < 1:
                 return finish('Math tools are disabled.', 'unavailable')
             from .advanced_math import solve
-            result = solve(json.loads(message[6:]))
+            result = self.store.trust.run('decimal_math', solve, json.loads(message[6:]))
             stats['tool_calls'] = 1
             trace.append({'tool': 'decimal_math', 'status': 'computed'})
             return finish(json.dumps(result, ensure_ascii=False, indent=2), save_cache=True)
@@ -287,11 +289,11 @@ class Engine:
         if message.startswith('/date '):
             from .local_tools import dates
             stats['tool_calls'] += 1
-            return finish(json.dumps(dates(message[6:]),ensure_ascii=False))
+            return finish(json.dumps(self.store.trust.run('date_difference', dates, message[6:]),ensure_ascii=False))
         if message.startswith('/inspect '):
             from .local_tools import inspect_file
             stats['tool_calls'] += 1
-            return finish(json.dumps(inspect_file(self.workspace,message[9:].strip()),ensure_ascii=False,indent=2))
+            return finish(json.dumps(self.store.trust.run('inspect_workspace', inspect_file, self.workspace,message[9:].strip()),ensure_ascii=False,indent=2))
         if cacheable:
             cached = self.store.get_cache(key)
             if cached:
@@ -318,7 +320,7 @@ class Engine:
         if calc is not None:
             if self.config.max_tool_calls < 1:
                 return finish("The calculator is disabled by the tool limit.", "unavailable")
-            value = calculate(calc)
+            value = self.store.trust.run('calculate', calculate, calc)
             stats["tool_calls"] = 1
             trace.append({"tool": "calculate", "status": "ok"})
             return finish(str(value), save_cache=True)

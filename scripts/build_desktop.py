@@ -65,6 +65,19 @@ def main():
     for entry in distribution("Pillow").files or []:
         if "licenses/" in str(entry) and str(entry).endswith(("LICENSE", "LICENSE.txt")):
             shutil.copy2(distribution("Pillow").locate_file(entry), licenses / ("PILLOW-" + Path(str(entry)).name))
+    from importlib.metadata import PackageNotFoundError
+    for dependency in ("cryptography", "cffi", "pycparser"):
+        try: package = distribution(dependency)
+        except PackageNotFoundError: continue
+        for entry in package.files or []:
+            if "licenses/" in str(entry) or str(entry).endswith(".dist-info/LICENSE"):
+                source = Path(package.locate_file(entry))
+                if source.is_file():
+                    relative = str(entry).split("licenses/", 1)[-1] if "licenses/" in str(entry) else "LICENSE"
+                    target = licenses / dependency / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, target)
+    shutil.copy2(ROOT / "docs" / "TRUST-FOUNDATION.md", stage / "TRUST-FOUNDATION.md")
     for candidate in (Path(sysconfig.get_path("stdlib")) / "LICENSE.txt", Path(sys.base_prefix) / "LICENSE.txt"):
         if candidate.exists():
             shutil.copy2(candidate, licenses / "PYTHON-LICENSE.txt")

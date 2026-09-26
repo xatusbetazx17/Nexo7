@@ -1,3 +1,4 @@
+from .trust import guarded
 import hashlib
 import json
 from pathlib import Path
@@ -13,6 +14,8 @@ class Store:
     def __init__(self, path):
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
+        from .trust import Trust
+        self.trust = Trust(":memory:" if str(path) == ":memory:" else Path(path).resolve().parent / "trust.sqlite3")
         self.lock = threading.RLock()
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
@@ -31,6 +34,7 @@ class Store:
     def close(self):
         with self.lock:
             self.db.close()
+        self.trust.close()
 
     def preferences(self):
         defaults = {"performance": "balanced", "response_language": "auto", "style": "concise",
@@ -63,6 +67,7 @@ class Store:
                 self._changed()
             return values
 
+    @guarded("memory_write")
     def record_feedback(self, question, answer, rating):
         if rating not in {"useful", "incorrect"}:
             raise ValueError("Invalid feedback rating")
@@ -88,6 +93,7 @@ class Store:
         self.db.execute("UPDATE meta SET value=CAST(value AS INTEGER)+1 WHERE key='revision'")
         self.db.execute("DELETE FROM cache")
 
+    @guarded("memory_write")
     def add_document(self, title, content, source="personal"):
         if not isinstance(title, str) or not 1 <= len(title.strip()) <= 160:
             raise ValueError("Title must contain 1 to 160 characters")
@@ -106,6 +112,8 @@ class Store:
         return doc_id
 
     def seed(self, path):
+        if not self.trust.allowed("memory_write"):
+            return
         with self.lock:
             if self.db.execute("SELECT 1 FROM meta WHERE key='seeded'").fetchone():
                 # Upgrade only the exact bundled old guide; never alter user-edited notes.
@@ -122,10 +130,12 @@ class Store:
             with self.db:
                 self.db.execute("INSERT OR REPLACE INTO meta VALUES('seeded','1')")
 
+    @guarded("memory_read")
     def documents(self):
         with self.lock:
             return [dict(r) for r in self.db.execute("SELECT id,title,source,length(content) AS characters FROM documents ORDER BY created DESC")]
 
+    @guarded("memory_write")
     def delete_document(self, doc_id):
         with self.lock, self.db:
             if self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='learning'").fetchone():
@@ -138,6 +148,7 @@ class Store:
                 self._changed()
             return bool(count)
 
+    @guarded("search_memory")
     def search(self, query, limit=4):
         stop = {"que", "qué", "como", "cómo", "para", "con", "una", "las", "los", "del", "por", "the", "and", "what", "about", "quiero", "puedes", "buscar", "explica"}
         terms = [t for t in re.findall(r"\w+", str(query).lower()) if len(t) > 2 and t not in stop][:14]
@@ -154,6 +165,7 @@ class Store:
         return [{"id": f"D{r['rowid']}", "document_id": r["doc_id"], "title": r["title"],
                  "text": r["content"], "source": r["source"]} for r in rows]
 
+    @guarded("memory_read")
     def history(self, session, limit=8):
         if limit <= 0:
             return []
@@ -161,6 +173,7 @@ class Store:
             rows = self.db.execute("SELECT role,content FROM messages WHERE session=? ORDER BY id DESC LIMIT ?", (session, limit)).fetchall()
         return [dict(r) for r in reversed(rows)]
 
+    @guarded("memory_write")
     def save_turn(self, session, user, assistant):
         with self.lock, self.db:
             self.db.executemany("INSERT INTO messages(session,role,content) VALUES(?,?,?)",
@@ -168,6 +181,7 @@ class Store:
             self.db.execute("DELETE FROM messages WHERE session=? AND id NOT IN (SELECT id FROM messages WHERE session=? ORDER BY id DESC LIMIT 100)", (session, session))
             self.db.execute("DELETE FROM messages WHERE id NOT IN (SELECT id FROM messages ORDER BY id DESC LIMIT 10000)")
 
+    @guarded("memory_write")
     def delete_history(self, session):
         with self.lock, self.db:
             self.db.execute("DELETE FROM messages WHERE session=?", (session,))

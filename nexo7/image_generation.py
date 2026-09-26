@@ -77,7 +77,10 @@ def memory_plan(size):
 
 
 class ImageGenerator:
-    def __init__(self, controller):
+    def __init__(self, controller, trust=None):
+        from .trust import Trust
+        self._owns_trust = trust is None
+        self.trust = trust or Trust(Path(controller.config.database).resolve().parent / "trust.sqlite3")
         self.controller=controller
         self.root=Path(controller.config.database).resolve().parent/'image-models'
         self.lock=threading.RLock()
@@ -108,6 +111,17 @@ class ImageGenerator:
         with self.lock:self.state['message']=str(message)[:500]
 
     def begin(self, body, install=False):
+        action = 'image_install' if install else 'image_generate'
+        call = self.trust.begin(action)
+        try:
+            result = self._begin(body, install)
+        except BaseException:
+            self.trust.finish(action, call, 'failed')
+            raise
+        self.trust.finish(action, call, 'accepted')
+        return result
+
+    def _begin(self, body, install=False):
         options=None if install else validate(body)
         executable=runtime_path()
         if not install and not self.installed():
@@ -120,11 +134,15 @@ class ImageGenerator:
         def work():
             was_ready=self.controller.owns_runtime
             original=self.controller.config
-            files=[];notice='';error=None;cancelled=False
+            files=[];notice='';error=None;cancelled=False;unloaded=False
+            action='image_install' if install else 'image_generate'
+            call=None
             try:
+                call=self.trust.begin(action)
                 if not install and was_ready:
                     self.emit('Unloading chat to free memory for the image…')
                     stop_native(original)
+                    unloaded=True
                     with self.controller.lock:
                         self.controller.owns_runtime=False
                         self.controller.config=Config(database=original.database,persist_history=original.persist_history)
@@ -175,7 +193,7 @@ class ImageGenerator:
             except Exception as exc:
                 error=str(exc)[:500];cancelled=self.cancel.is_set()
             finally:
-                if not install and was_ready and not self.controller.cancel.is_set():
+                if unloaded and not self.controller.cancel.is_set():
                     self.emit('Image operation ended. Restoring your chat model…')
                     try:
                         cfg,plan=start_native(original.database,cpu_only=self.controller.preferences.get('cpu_only',False),
@@ -190,6 +208,9 @@ class ImageGenerator:
                         recovery=' Chat could not reload; use Settings to start it again.'
                         if error:error+=recovery
                         else:notice+=recovery
+                if call:
+                    try:self.trust.finish(action,call,'cancelled' if cancelled else 'failed' if error else 'completed')
+                    except Exception:error='Could not record image completion in the local audit log.'
                 with self.lock:
                     self.state.update(phase='cancelled' if cancelled else 'error' if error else 'completed',message=error or notice,files=files,
                                       options=options,elapsed_seconds=round(time.time()-self.state['started_at'],1))
@@ -201,3 +222,6 @@ class ImageGenerator:
     def close(self):
         self.cancel.set()
         if self.thread:self.thread.join()
+        if self._owns_trust:
+            self.trust.close()
+            self._owns_trust=False

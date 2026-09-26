@@ -42,6 +42,12 @@ class SetupController:
         return report
 
     def start(self, *, cpu_only=False, language="auto", switch=False):
+        trust = getattr(self, 'trust', None)
+        if trust:
+            return trust.run('model_start', self._start, cpu_only=cpu_only, language=language, switch=switch)
+        return self._start(cpu_only=cpu_only, language=language, switch=switch)
+
+    def _start(self, *, cpu_only=False, language="auto", switch=False):
         if type(cpu_only) is not bool:
             raise ValueError("cpu_only must be a boolean")
         language = Config(response_language=language).response_language
@@ -55,7 +61,10 @@ class SetupController:
             self.state.update(phase="preparing", logs=[], error=None)
         preferences = dict(self.preferences)
         def work():
+            trust=getattr(self,'trust',None)
+            call=None
             try:
+                if trust:call=trust.begin('model_start')
                 if self.owns_runtime:
                     self.emit("Unloading current model before switching…")
                     stop_native(self.config)
@@ -78,6 +87,10 @@ class SetupController:
                     self.state.update(phase="error", error=str(exc)[:500])
                 self.emit("Setup stopped. Demo mode remains available.")
             finally:
+                if call:
+                    try:trust.finish('model_start',call,'failed' if self.state['phase']=='error' else 'completed')
+                    except Exception:
+                        with self.lock:self.state.update(phase='error',error='Could not record model setup completion in the local audit log.')
                 with self.lock:
                     self.operation.release()
                     if self.state["phase"] == "preparing" and self.owns_runtime:

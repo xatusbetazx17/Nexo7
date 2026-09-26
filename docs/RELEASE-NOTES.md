@@ -1,3 +1,26 @@
+# Nexo 7 v0.17.0 — local trust foundation
+
+- Persistent Ed25519 Navi identity; public-key-derived ID with no account requirement.
+- Windows current-user DPAPI protection; Linux private file permissions.
+- Central permission registry, explicit tool/API scopes and unknown-action denial.
+- Permission enforcement for chat tools, calculations, memory, workspace tasks,
+  optional online research, Telegram and image generation; desktop auto-start honors revocation.
+- Signed, hash-chained append-only activity receipts and an authenticated viewer in
+  Settings → Trust and permissions. Receipts omit content and credentials.
+- Permission toggles, audit pagination and integrity verification.
+- Preserves the existing native models, image engine, documents, music and memory formats.
+
+This is Phase 0, items 1–3. Voice, avatars, Google connectors, chips and mobile
+pairing are not added in this release. This is an application permission boundary,
+not an OS sandbox. Local signatures do not prevent full rollback or compromise
+of the user's OS account. Read TRUST-FOUNDATION.md for details.
+
+Install the new Windows/Linux archive in a new folder after closing Nexo. Models
+and saved data stay in the usual user data folder. No new AI model download is
+required for the trust features.
+
+---
+
 # v0.16.0 — Optional offline diffusion images
 
 - Adds a separate CPU image-generation engine: pinned stable-diffusion.cpp, DreamShaper 8 LCM Q4 and TAESD. LFM2-VL and other chat weights remain unchanged.

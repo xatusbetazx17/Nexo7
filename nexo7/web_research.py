@@ -1,3 +1,4 @@
+from .trust import guarded
 """Opt-in, bounded Internet lookup and expiring local source memory.
 
 Only fixed provider endpoints are contacted. Result URLs are references, never fetched.
@@ -76,6 +77,7 @@ class WebResearch:
             rows=self.store.db.execute('SELECT * FROM web_sources ORDER BY retrieved DESC,id DESC').fetchall()
         return [{**self._source(r),'expired':r['expires']<=self.clock()} for r in rows]
 
+    @guarded("memory_write")
     def delete(self,ident=None):
         if ident is not None and (not isinstance(ident,str) or not re.fullmatch(r'W\d+',ident)):
             raise ValueError('Invalid web source ID')
@@ -93,6 +95,7 @@ class WebResearch:
             s._changed()
         return True
 
+    @guarded("memory_read")
     def recall(self,query,limit=2):
         if current_query(query):return []
         terms=[t for t in re.findall(r'\w+',query.casefold()) if len(t)>2][:12]
@@ -109,6 +112,7 @@ class WebResearch:
         self.store.db.execute('DELETE FROM web_sources WHERE search_key=?',(key,))
         self.store.db.execute('DELETE FROM web_searches WHERE key=?',(key,))
 
+    @guarded("web_lookup")
     def lookup(self,query,*,provider='wikipedia',language='en',remember=False,refresh=False,private=False):
         if not isinstance(query,str) or not 2<=len(query.strip())<=500 or len(query.split())>75:
             raise ValueError('Search requires 2 to 500 characters and at most 75 words; use a short topic')
@@ -117,6 +121,8 @@ class WebResearch:
         if any(type(v) is not bool for v in (remember,refresh,private)):raise ValueError('Search options must be boolean')
         if provider=='brave' and remember and not private and not self.storage_rights:
             raise ValueError('Saving Brave results requires a plan with storage rights; confirm this in search settings or uncheck Remember')
+        if remember and not private:
+            self.store.trust.run('web_save', lambda: None)
         query=query.strip()
         norm=' '.join(unicodedata.normalize('NFKC',query).casefold().split())
         key=self.store.cache_key([provider,language,norm])

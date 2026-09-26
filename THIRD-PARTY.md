@@ -64,3 +64,10 @@ code is bundled, and no Telegram connection is required to use the desktop app.
 ## Optional diffusion images
 
 stable-diffusion.cpp (MIT), DreamShaper 8 LCM by Lykon / haven-ai-companion Q4 conversion (CreativeML OpenRAIL-M), and TAESD by Ollin Boer Bohan (MIT). See [AI images](docs/AI-IMAGES.md) for source links and component roles. Model revisions, sizes and hashes are pinned in `nexo7/image_catalog.json`. License texts are bundled in `nexo7/licenses`. Model weights are optional downloads and retain their license conditions.
+
+## Local identity cryptography
+
+The `cryptography` package (46.0.5) supplies Ed25519 signing and verification under
+its Apache-2.0/BSD licenses. Binary distributions also contain bundled dependency
+notices. The desktop build copies its installed license directory into the release.
+Windows key storage uses the operating system's DPAPI; no custom cipher is used.

@@ -32,6 +32,16 @@ let browser;
  await page.locator('#creative-kind').selectOption('music');await page.locator('#music-tempo').fill('120');await page.locator('#music-tempo').press('Tab');
  await page.locator('#creative-render').click();await page.locator('#creative-output audio').waitFor();
  assert.equal(await page.locator('a[download="music.mid"]').count(),1);
+ await page.locator('#setup-tab').click();
+ await page.locator('#trust-panel summary').click();
+ await page.locator('#navi-id').filter({hasText:'nexo:'}).waitFor();
+ await page.getByRole('checkbox',{name:'Calculations and date tools',exact:true}).uncheck();
+ await page.locator('#trust-status').filter({hasText:'disabled'}).waitFor();
+ await page.getByRole('checkbox',{name:'Calculations and date tools',exact:true}).check();
+ await page.locator('#trust-status').filter({hasText:'enabled'}).waitFor();
+ await page.locator('#audit-verify').click();
+ await page.locator('#trust-status').filter({hasText:'Verified'}).waitFor();
+ await page.screenshot({path:path.join(output,'trust-desktop.png'),fullPage:true});
  for(const width of [1366,390]){
   await page.setViewportSize({width,height:850});
   for(const [id,name] of [['chat-tab','chat'],['workspace-tab','create'],['setup-tab','settings']]){

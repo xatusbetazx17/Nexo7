@@ -47,6 +47,17 @@ def main():
             assert status["desktop"] and status["provider"] == "demo"
             result = json.loads(request("/api/chat", {"message": "/calc 24.5 * 40", "language": "en"}))
             assert result["answer"] == "980.0" and result["stats"]["model_calls"] == 0
+            identity = json.loads(request('/api/trust'))['identity']
+            assert identity['algorithm'] == 'Ed25519' and identity['id'].startswith('nexo:')
+            request('/api/trust/permissions', {'scope':'math.use','enabled':False})
+            try:
+                request('/api/chat', {'message':'/calc 24.5 * 40', 'private':True})
+                raise AssertionError('Revoked calculator still executed')
+            except HTTPError as exc:
+                assert exc.code == 403
+            request('/api/trust/permissions', {'scope':'math.use','enabled':True})
+            assert json.loads(request('/api/trust/verify'))['verified']
+            assert any(r['outcome']=='denied' for r in json.loads(request('/api/trust/audit'))['entries'])
             scenario = json.loads(request('/api/scenario', {'kind':'flight','speed_m_s':10,'angle_degrees':45,'height_m':0}))
             assert abs(scenario['result']['horizontal_distance_m']-10.1937)<0.001
             assert scenario['model_calls']==0 and scenario['network_requests']==0

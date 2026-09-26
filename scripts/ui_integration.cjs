@@ -23,6 +23,16 @@ async function waitFor(predicate,ms=10000){const end=Date.now()+ms;while(!predic
   d.getElementById('check-system').click();
   await waitFor(()=>d.getElementById('setup-requirements').textContent.includes('Insufficient free memory'));
   assert(d.getElementById('start-local').disabled);
+  d.getElementById('trust-panel').open=true;
+  await waitFor(()=>d.getElementById('navi-id').textContent.includes('nexo:'));
+  const mathPermission=d.querySelector('#trust-permissions input[aria-label="Calculations and date tools"]');
+  mathPermission.checked=false;await mathPermission.onchange();
+  assert(d.getElementById('trust-status').textContent.includes('disabled'));
+  mathPermission.checked=true;await mathPermission.onchange();
+  d.getElementById('audit-verify').click();
+  await waitFor(()=>d.getElementById('trust-status').textContent.includes('Verified'));
+  assert(d.getElementById('audit-entries').textContent.includes('permission.math.use'));
+  d.getElementById('trust-panel').open=false;
   d.getElementById('try-demo').click();
   assert(d.getElementById('setup-view').hidden);
   assert.equal(d.getElementById('mode').value,'companion');

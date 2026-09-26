@@ -1,3 +1,4 @@
+from .trust import guarded
 """Persistent bounded file tasks: generate, validate, review, apply, verify and undo.
 
 Original implementation. Does not execute generated code, shells or network tools.
@@ -78,6 +79,7 @@ class TaskAgent:
     def event(self,job,message):
         job['ledger'].append({'time':time.time(),'message':message[:300]});job['ledger']=job['ledger'][-60:]
 
+    @guarded("workspace_write")
     def create(self,body,preview=False):
         goal,steps=body.get('goal'),body.get('steps')
         if not isinstance(goal,str) or not 1<=len(goal.strip())<=800:raise ValueError('Goal must contain 1–800 characters')
@@ -104,6 +106,7 @@ class TaskAgent:
             self.event(job,'Plan saved locally. File changes require review; no code will execute.');self.save(job)
         return job
 
+    @guarded("workspace_write")
     def plan(self,goal,engine):
         if not isinstance(goal,str) or not 1<=len(goal.strip())<=800:raise ValueError('Goal must contain 1–800 characters')
         if engine.config.provider not in ('native','ollama'):raise ValueError('Start a local model to suggest a plan')
@@ -122,6 +125,7 @@ class TaskAgent:
         if len(matches)>1:raise ValueError('Ambiguous workspace filename; remove duplicate files first')
         return self.workspace.read(matches[0]['id']) if matches else None
 
+    @guarded("workspace_write")
     def run(self,identifier,engine):
         with self.lock:
             job=self.get(identifier)
@@ -193,6 +197,7 @@ class TaskAgent:
             with self.lock:self.save(job)
         return job
 
+    @guarded("workspace_write")
     def edit(self, identifier, content, expected_hash):
         with self.lock:
             job = self.get(identifier)
@@ -220,6 +225,7 @@ class TaskAgent:
             self.event(job,'User correction saved. Attempt and token limits retained.');self.save(job)
             return job
 
+    @guarded("workspace_write")
     def apply(self,identifier,proposal_id):
         with self.lock,self.workspace.lock:
             job=self.get(identifier)
@@ -245,6 +251,7 @@ class TaskAgent:
                 job['requires_reconciliation']=True;job['state']='blocked';job['error']='Apply interrupted: '+str(exc)[:200]
             self.save(job);return job
 
+    @guarded("workspace_write")
     def rollback(self,identifier):
         with self.lock,self.workspace.lock:
             job=self.get(identifier)
@@ -263,6 +270,7 @@ class TaskAgent:
             if job['state']=='running':raise ValueError('Wait for the current bounded model request to finish')
             job['state']='cancelled';self.event(job,'Cancelled; already applied files are retained unless rolled back');self.save(job);return job
 
+    @guarded("workspace_write")
     def delete(self,identifier):
         with self.lock:
             job=self.get(identifier)

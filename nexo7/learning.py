@@ -1,3 +1,4 @@
+from .trust import guarded
 """Bounded, reviewable learning data. Never trains weights or executes imported text."""
 import hashlib
 import json
@@ -92,6 +93,7 @@ class Learning:
                 elapsed_ms REAL NOT NULL, tokens INTEGER NOT NULL);
             """)
 
+    @guarded("memory_read")
     def entries(self):
         with self.store.lock:
             rows = self.store.db.execute(
@@ -106,6 +108,7 @@ class Learning:
                 entries.append(item)
             return entries
 
+    @guarded("memory_write")
     def import_pack(self, pack, consent):
         if consent is not True:
             raise ValueError("Review and approve the pack before importing")
@@ -135,6 +138,7 @@ class Learning:
                 s._changed()
         return {"added": len(fresh), "duplicates": len(entries)-len(fresh), "weight_training": False}
 
+    @guarded("memory_read")
     def export(self, ids):
         if not isinstance(ids, list) or not ids or len(ids) > MAX_ENTRIES or any(not isinstance(x, str) for x in ids):
             raise ValueError("Select 1 to 100 examples to export")
@@ -147,6 +151,7 @@ class Learning:
         validate_pack(pack)
         return pack
 
+    @guarded("memory_write")
     def delete(self, ident):
         s = self.store
         with s.lock, s.db:
@@ -160,6 +165,7 @@ class Learning:
             s._changed()
             return True
 
+    @guarded("memory_read")
     def matching(self, question, limit=2):
         # Match Unicode characters, including languages with no space-delimited words.
         # Conservative lexical retrieval, not semantic embeddings or a direct-answer shortcut.
