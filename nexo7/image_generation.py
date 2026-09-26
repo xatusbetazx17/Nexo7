@@ -50,7 +50,7 @@ def validate(body):
     prompt = body.get('prompt')
     if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= 1000 or any(ord(c)<32 and c not in '\n\t' for c in prompt):
         raise ValueError('Describe the image using 1–1000 characters.')
-    size, steps, style = body.get('size',256), body.get('steps',2), body.get('style','photo')
+    size, steps, style = body.get('size',256), body.get('steps',4), body.get('style','photo')
     if type(size) is not int or size not in (256,512):
         raise ValueError('Image size must be 256 or 512 pixels.')
     if type(steps) is not int or steps not in (2,4,8):
@@ -83,6 +83,7 @@ class ImageGenerator:
         self.lock=threading.RLock()
         self.cancel=threading.Event()
         self.thread=None
+        self.recommendation=None
         self.state={'phase':'idle','message':'Install the optional image model to begin.','id':None,'files':[]}
 
     def installed(self):
@@ -90,10 +91,14 @@ class ImageGenerator:
 
     def snapshot(self):
         with self.lock:
+            if self.recommendation is None:
+                try:fast='avx2' in runtime_path().name
+                except (OSError,ValueError,KeyError):fast=False
+                self.recommendation={'size':512 if fast else 256,'steps':4,'cpu_variant':'avx2' if fast else 'baseline'}
             installed=self.installed()
             state=dict(self.state)
             if state['phase']=='idle' and installed:state['message']='Image model installed. Describe an image to generate offline.'
-            return {**state,'installed':installed,'download_bytes':sum(CATALOG[k]['size'] for k in ('model','decoder')),
+            return {**state,'installed':installed,'recommended':self.recommendation,'download_bytes':sum(CATALOG[k]['size'] for k in ('model','decoder')),
                     'model':CATALOG['model']['name'],'engine_available':(Path(__file__).parent/'image_runtime'/'manifest.json').is_file()}
 
     def emit(self, message):

@@ -67,7 +67,7 @@ def main():
                     time.sleep(1)
             prompt='A portrait photograph of an adult woman with curly hair, soft natural light' if args.simulate_4gb_free else 'A photograph of a red fox in a sunlit forest, detailed fur'
             size=256 if args.baseline else 512
-            job=request('/api/chat',{'message':'Draw '+prompt,'mode':'companion','private':True,'image_mode':'diffusion','image_size':size,'image_steps':2 if args.baseline else 4})
+            job=request('/api/chat',{'message':'Draw '+prompt,'mode':'companion','private':True,'image_mode':'diffusion','image_size':size,'image_steps':4})
             assert job.get('image_job'),job
             state=wait();assert state['phase']=='completed',state
             if args.binary:

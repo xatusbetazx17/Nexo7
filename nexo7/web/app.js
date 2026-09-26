@@ -515,7 +515,8 @@ function diffusionStatus(state){
  $('diffusion-install').disabled=running;$('diffusion-generate').disabled=running||!state.installed;
  $('diffusion-cancel').hidden=!running;
 }
-let watchedDiffusion=null;
+let watchedDiffusion=null,diffusionDefaultsApplied=false;
+for(const id of ['diffusion-size','diffusion-steps'])$(id).onchange=()=>{diffusionDefaultsApplied=true;};
 function showDiffusionResult(state){
  if(state.phase==='completed'&&state.files?.length&&$('diffusion-output').dataset.job!==state.id){
   clearDiffusionFiles();$('diffusion-output').replaceChildren();showChatFiles($('diffusion-output'),state.files,diffusionUrls);$('diffusion-output').dataset.job=state.id;
@@ -523,6 +524,7 @@ function showDiffusionResult(state){
 }
 async function refreshDiffusion(){
  const state=await api('/api/images');diffusionStatus(state);
+ if(!diffusionDefaultsApplied&&state.recommended){$('diffusion-size').value=String(state.recommended.size);$('diffusion-steps').value=String(state.recommended.steps);diffusionDefaultsApplied=true;}
  $('diffusion-use').checked=state.installed&&localStorage.getItem('nexo-diffusion')!=='false';
  showDiffusionResult(state);
  if(['installing','generating'].includes(state.phase)&&watchedDiffusion!==state.id){
