@@ -40,7 +40,7 @@ function node(tag, text, className="") { const el=document.createElement(tag); e
 function message(role, text, result, question="") {
   $("welcome").hidden = true;
   const article = node("article", "", "message " + role);
-  article.append(node("div", role === "user" ? "YOU" : "NEXO 7", "message-label"));
+  article.append(node("div", role === "user" ? "YOU" : (document.body.dataset.naviName || "NEXO 7"), "message-label"));
   article.append(node("div", text, "message-text"));
   if (result) {
     if(result.files?.length)showChatFiles(article,result.files);

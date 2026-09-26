@@ -164,11 +164,12 @@ jobs:
         run: |
           mkdir -p release
           cp docs/NAVI-MODULES.md mobile/dist/START-HERE.md
+          cp docs/NAVI-CONTINUITY.md docs/CHIP-CATALOG.md mobile/dist/
           cp LICENSE mobile/dist/LICENSE.txt
           cd mobile/dist
-          zip -qr ../../release/Nexo-Mobile-0.18.0.zip .
+          zip -qr ../../release/Nexo-Mobile-0.19.0.zip .
           cd ../../release
-          sha256sum Nexo-Mobile-0.18.0.zip > Nexo-Mobile-0.18.0.zip.sha256
+          sha256sum Nexo-Mobile-0.19.0.zip > Nexo-Mobile-0.19.0.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-mobile
@@ -189,7 +190,7 @@ jobs:
       - name: Publish preview release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.18.0' }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.19.0' }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; native builds remain available as workflow artifacts."

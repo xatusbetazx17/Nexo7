@@ -75,11 +75,15 @@ class Navi:
         self.root=Path(root);self.store,self.controller=store,controller
         self.state=NaviState(self.root/'navi.sqlite3');self.vault=Vault(self.root/'connector-vault.json')
         self.google=GoogleConnections(self.vault,store.trust)
+        from .mail_drafts import MailDrafts
+        self.mail=MailDrafts(self.google)
         self.chips=Chips(self.root/'chips',store,web)
+        from .chip_catalog import Catalog
+        self.catalog=Catalog(self.chips)
         from .voice import Voice
         self.voice=Voice(self.root,store.trust,controller)
         self.stop=threading.Event();self.lock=threading.RLock();self.busy=0;self.listening_until=0;self.happy_until=0
-        self.overlay=None;self.error='';self.closed=False;self.last_activity=time.monotonic()
+        self.overlay=None;self.error='';self.closed=False;self.last_activity=time.monotonic();self.last_maintenance=0
         self.thread=threading.Thread(target=self._loop,name='nexo-reminders',daemon=True);self.thread.start()
     def enter(self):
         with self.lock:self.busy+=1;self.last_activity=time.monotonic()
@@ -89,7 +93,7 @@ class Navi:
         with self.lock:
             now=time.monotonic()
             phase='thinking' if self.busy or self.controller.operation.locked() else 'listening' if now<self.listening_until else 'happy' if now<self.happy_until else 'sleeping' if now-self.last_activity>180 else 'idle'
-        return {'state':phase,'enabled':self.state.settings()['avatar'] and self.store.trust.allowed('presence.show'),
+        return {'state':phase,'name':self.store.continuity.persona()['name'],'enabled':self.state.settings()['avatar'] and self.store.trust.allowed('presence.show'),
                 'unread':sum(not n['seen'] for n in self.state.notifications()),'error':self.error}
     def start_overlay(self):
         if self.overlay and self.overlay.poll() is None:return
@@ -133,6 +137,12 @@ class Navi:
             self.state.notify('briefing-'+uuid.uuid4().hex,'Your morning briefing',text)
             return {'text':text,'untrusted_external_content':True}
     def tick(self,now=None):
+        maintenance_now=time.time() if now is None else now
+        if maintenance_now-self.last_maintenance>3600 and self.store.trust.allowed("memory_write"):
+            self.store.continuity.maintain(apply=True,now=maintenance_now);self.last_maintenance=maintenance_now
+        with self.state.lock,self.state.db:
+            self.state.db.execute('DELETE FROM notifications WHERE id NOT IN (SELECT id FROM notifications ORDER BY created DESC LIMIT 100)')
+            self.state.db.execute('DELETE FROM daily WHERE day NOT IN (SELECT day FROM daily ORDER BY day DESC LIMIT 366)')
         settings=self.state.settings()
         if not settings['scheduler'] or not self.store.trust.allowed('reminder.deliver'):return
         now=time.time() if now is None else now
@@ -152,7 +162,7 @@ class Navi:
             try:self.tick()
             except Exception:self.error='A scheduled action could not finish. Check its permissions and connector settings.'
     def snapshot(self):
-        return {'settings':self.state.settings(),'presence':self.presence(),'reminders':self.state.reminders(),
+        return {'settings':self.state.settings(),'persona':self.store.continuity.summary(),'presence':self.presence(),'reminders':self.state.reminders(),
                 'notifications':self.state.notifications(),'google':self.google.status(),'voice':self.voice.status(),'chips':self.chips.list()}
     def close(self):
         with self.lock:

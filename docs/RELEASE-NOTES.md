@@ -1,13 +1,12 @@
-Nexo 7 v0.18.0 preview — optional Navi modules
+Nexo 7 v0.19.0 preview — identity, continuity and reviewed actions
 
-- Native, always-on-top 2D avatar with five presence states and reminder badge.
-- Offline voice: English/Spanish Vosk recognition downloads, short guarded worker jobs, and bundled eSpeak NG speech. Review transcripts before sending.
-- Local reminders and morning briefings using saved notes and optional read-only Google data.
-- Google Calendar/Gmail connector framework with external-browser PKCE OAuth, passphrase-encrypted token vault, token refresh, read-only scopes, toggles, revoke and signed audit receipts. Supply your own Google Desktop OAuth client; no pre-verified shared Google app is included.
-- Signed declarative chips. Math and reviewed web-memory saving use built-in chips; security-watch flags suspicious email metadata. No arbitrary executable plugin loading.
-- AES-GCM encrypted profile export/import, preserving identity, personality, notes, reviewed examples and pending reminders. Imports create separate profiles; explicit restart activates them.
-- Nexo-Mobile standalone installable web app with optional local CPU model, encrypted notes/profile storage, import/export, and reminders while open. HTTPS hosting is required; no App Store binary, background push or full sync.
+- First-run introduction with a chosen Navi name, preferred user name and optional remembered activity days. Identity and character mood persist and travel in encrypted profile exports; moods do not represent real feelings.
+- User-reviewed episodic memory: what happened, when, with whom; editing, pinning, expiration, exact-duplicate consolidation and forgetting. Maximum 500 entries; no automatic copying of chat transcripts. Private chats do not add activity or retrieve episodes.
+- Graduated mail controls: off, encrypted local drafts, then a separate Gmail send grant with exact-message confirmation every time. Single-use approvals and no automatic retry after uncertain delivery. Calendar remains read-only.
+- Curated chip discovery, hash/signature-verified optional downloads and export for sharing. Restricted declarative operations remain enforced.
+- Mobile name/persona and experience transfer, encrypted notification inbox, notification click handling, reviewed note sharing, local device voices and offline dictation only where supported by the browser. No cloud speech fallback.
+- New privacy, migration, lifecycle, permission, approval/replay, uncertain-delivery, catalog and browser regression checks, alongside existing Windows/Linux native-model and creation gates.
 
-All new optional permissions start off. Existing chat, memory, workspace, image/music/document creation and no-account default remain. See NAVI-MODULES.md in the downloads for setup and exact limits.
+Extract the Windows or Linux archive fully before opening Nexo7. No Docker or account is required for local use. Open Navi for the new controls. Google requires your Desktop OAuth client and consent. The mobile ZIP is a static installable web app requiring trusted HTTPS hosting, not an App Store binary.
 
-Download the Windows or Linux archive for desktop; Nexo-Mobile is a separate static web-app ZIP. Extract desktop releases fully before starting. Existing user data stays outside the application archive.
+See NAVI-CONTINUITY.md, NAVI-MODULES.md and CHIP-CATALOG.md for setup and exact limits. Real account sending, physical phone voice support and performance on the user's Dell were not live-tested. Small-model answer accuracy is not guaranteed. Full sync, background push, automatic send autonomy and roaming infrastructure remain future work.

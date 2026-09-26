@@ -1,4 +1,4 @@
-"""Read-only Google connectors: external browser, PKCE and an encrypted local vault."""
+"""Separately scoped Google connectors: PKCE and an encrypted local vault."""
 from abc import ABC, abstractmethod
 import base64
 from datetime import datetime, timedelta, timezone
@@ -16,15 +16,18 @@ from .net import NoRedirect
 GOOGLE = {
     'calendar': {'scope':'https://www.googleapis.com/auth/calendar.events.readonly','permission':'google.calendar.read'},
     'gmail': {'scope':'https://www.googleapis.com/auth/gmail.readonly','permission':'google.gmail.read'},
+    'gmail_send': {'scope':'https://www.googleapis.com/auth/gmail.send','permission':'google.gmail.send'},
 }
 
 
-def request(url, *, form=None, token=None):
+def request(url, *, form=None, token=None, json_body=None):
     # The caller selects only fixed Google endpoints, never content-provided URLs.
-    headers={'Accept':'application/json','User-Agent':'Nexo7/0.18'}
+    headers={'Accept':'application/json','User-Agent':'Nexo7/0.19'}
     data=None
     if form is not None:
         data=urlencode(form).encode();headers['Content-Type']='application/x-www-form-urlencoded'
+    if json_body is not None:
+        data=json.dumps(json_body).encode();headers['Content-Type']='application/json'
     if token:headers['Authorization']='Bearer '+token
     req=urllib.request.Request(url,data=data,headers=headers)
     try:
@@ -70,6 +73,7 @@ class Connector(ABC):
 
 class GoogleReadOnly(Connector):
     def read(self):
+        if self.service == 'gmail_send':raise ValueError('Send-only connection cannot read your mailbox')
         with self.trust.action('google.read.'+self.service),self.lock:
             token=self._token()
             if self.service=='calendar':

@@ -1,6 +1,8 @@
-# Nexo Navi modules — 0.18 preview
+# Nexo Navi modules — 0.19 preview
 
 Open **Navi** in the desktop sidebar. All new optional permissions start off, including when upgrading. Existing chat, inference, memory, workspace, image creation and Telegram settings are preserved. No account is needed for local use.
+
+For the 0.19 identity, episodic memory, reviewed email sending, chip catalog and deeper mobile controls, see [NAVI-CONTINUITY.md](NAVI-CONTINUITY.md) and [CHIP-CATALOG.md](CHIP-CATALOG.md).
 
 ## Avatar and voice
 
@@ -24,7 +26,7 @@ External titles and snippets are displayed as plain, untrusted data. They are ne
 4. Click **Connect read only** for each service. Continue in your browser, consent, then return and refresh connections.
 5. Read recent items, disable a connection, or use **Revoke access**. Revoke attempts Google revocation and always removes the local token; if offline, also revoke at https://myaccount.google.com/permissions.
 
-Calendar asks only for `calendar.events.readonly`; Gmail asks only for `gmail.readonly`. The flow uses PKCE S256, random state, a single-use five-minute loopback callback and an external browser. A connector base class declares scopes, refreshes expiring tokens and audits reads. Gmail returns up to ten inbox snippets and attachment filenames; attachment bytes are never downloaded. There is no send/delete API. The security-watch chip flags suspicious wording and risky filename extensions. It is a heuristic, not malware detection or proof of safety.
+Calendar asks only for `calendar.events.readonly`; Gmail asks only for `gmail.readonly`. The flow uses PKCE S256, random state, a single-use five-minute loopback callback and an external browser. A connector base class declares scopes, refreshes expiring tokens and audits reads. Gmail returns up to ten inbox snippets and attachment filenames; attachment bytes are never downloaded. The read connections have no send/delete API. Version 0.19 adds a separate, default-off send-only connection and exact-message review, described in NAVI-CONTINUITY.md. The security-watch chip flags suspicious wording and risky filename extensions. It is a heuristic, not malware detection or proof of safety.
 
 Tokens and OAuth client details are encrypted with AES-256-GCM and a key derived from the vault passphrase (PBKDF2-SHA256, 600,000 iterations). The key stays in process memory only while unlocked. Unlock after each restart. Keep a secure backup and phrase: there is no recovery service. Locking prevents subsequent token access; an already-dispatched request may finish.
 
@@ -42,7 +44,7 @@ Create your own chip with `python -m scripts.make_chip --key PRIVATE_32_BYTE_SEE
 
 ## Encrypted transfer and mobile
 
-Export bundles include the Navi private identity key, selected personality/language preferences, all saved documents (including reviewed examples and provenance), and pending reminders. They exclude OAuth tokens, API keys, chat history, audit history, model weights and executable chips. Use a strong, separate pairing phrase; anyone with the file and phrase can clone the identity. This is an offline transfer, not remote revocation, device attestation or synchronization.
+Export bundles include the Navi private identity key, selected personality/language preferences, persona and experiences, notification records, all saved documents (including reviewed examples and provenance), and pending reminders. They exclude OAuth tokens, API keys, chat history, audit history, model weights and executable chips. Use a strong, separate pairing phrase; anyone with the file and phrase can clone the identity. This is an offline transfer, not remote revocation, device attestation or synchronization.
 
 Imports decrypt and validate before creating a separate profile. **Switch to imported profile and restart** activates it; the previous directory stays intact. Default launches follow `profile-choice.json` to its validated child profile. To restore the old profile, quit Nexo and remove that choice file from the original data directory. The imported profile starts with optional permissions and scheduler off. It downloads its own model unless you arrange a local cache separately.
 

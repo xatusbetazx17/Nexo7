@@ -40,6 +40,10 @@ def main():
    for scope in ('transfer.export','transfer.import'):call('/api/trust/permissions',{'scope':scope,'enabled':True})
    phrase='several test pairing words for transfer';bundle=call('/api/navi/transfer/export',{'consent':True,'phrase':phrase});imported=call('/api/navi/transfer/import',{'consent':True,'phrase':phrase,'bundle':bundle})
    assert imported['identity']['id']==call('/api/trust')['identity']['id']
+   assert any(c['name']=='study-math' for c in call('/api/navi/catalog',{})['chips'])
+   persona=call('/api/navi/persona',{'name':'Luna','onboarded':True});assert persona['name']=='Luna'
+   call('/api/navi/episodes/save',{'what':'Packaged experience','people':'Test user'})
+   assert call('/api/navi/episodes/list',{})['episodes'][0]['what']=='Packaged experience'
    assert call('/api/trust/verify')['verified']
    print(json.dumps({'passed':True,'voice':result,'chips':True,'encrypted_transfer':True,'binary':bool(a.binary)}))
    call('/api/shutdown',{});child.wait(timeout=45)

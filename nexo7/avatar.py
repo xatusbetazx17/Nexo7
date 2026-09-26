@@ -37,7 +37,7 @@ def main():
             else:canvas.create_oval(x-4,69,x+4,86,fill='white',outline='')
         canvas.create_polygon(60,115,120,115,133,143,47,143,fill=color,outline='')
         if state['unread']:canvas.create_oval(132,8,166,42,fill='#ef6a71',outline='');canvas.create_text(149,25,text=str(state['unread']),fill='white')
-        label.configure(text='Nexo · '+phase)
+        label.configure(text=state.get('name','Nexo')[:18]+' · '+phase)
     def fetch():
         try:
             data=request('/api/navi/presence');state.update(data);errors[0]=0

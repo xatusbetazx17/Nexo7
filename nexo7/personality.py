@@ -7,9 +7,15 @@ PERSONALITIES = {
 }
 
 
-def instructions(preferences):
+def instructions(preferences, persona=None):
     tone = PERSONALITIES[preferences['personality']]
     if preferences['adapt_tone']:
         tone += ' Acknowledge explicitly expressed frustration or excitement; do not infer diagnoses or hidden feelings. Remain respectful if insulted.'
+    if persona and persona.get('onboarded'):
+        import json
+        tone += ' Your user-chosen name and presentation mood are ' + json.dumps({k: persona[k] for k in ('name','mood')}) + '.'
+        if persona.get('user_name'): tone += ' Address the user as ' + json.dumps(persona['user_name']) + ' when natural.'
+        if persona.get('active_days'): tone += ' The user has chosen continuity; avoid repetitive introductions and use only supplied experiences for references to the past.'
+        tone += ' Keep this identity consistent. Never invent shared experiences. Use only supplied memories and allow correction. Never use guilt, exclusivity or dependence.'
     return ('\n' + tone + ' Personality changes wording, never facts, uncertainty or permissions. '
             'You simulate a conversational style; do not claim real feelings, consciousness, needs or dependence on the user.')

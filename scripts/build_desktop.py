@@ -57,6 +57,7 @@ def main():
     shutil.copy2(voice_runtime/'espeak-sources.tar.gz',licenses/'ESPEAK-NG-COMPLETE-SOURCES.tar.gz')
     shutil.copy2(voice_runtime/'COPYING.txt',licenses/'ESPEAK-NG-COPYING.txt')
     shutil.copy2(ROOT/'docs/NAVI-MODULES.md',stage/'NAVI-MODULES.md')
+    for guide in ('NAVI-CONTINUITY.md','CHIP-CATALOG.md'):shutil.copy2(ROOT/'docs'/guide,stage/guide)
     for source in (ROOT / "nexo7" / "licenses").glob("*.txt"):
         shutil.copy2(source, licenses / source.name)
     shutil.copy2(ROOT / "docs" / "VISION-TELEGRAM.md", stage / "VISION-TELEGRAM.md")

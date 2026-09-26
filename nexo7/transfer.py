@@ -38,6 +38,18 @@ def validate(payload):
     prefs=payload.get('preferences',{})
     from .personality import PERSONALITIES
     if not isinstance(prefs,dict) or prefs.get('personality','neutral') not in PERSONALITIES:raise ValueError('Invalid personality')
+    from .continuity import persona_valid,episode_valid
+    persona_valid(payload.get('persona',{}))
+    episodes=payload.get('episodes',[])
+    if not isinstance(episodes,list) or len(episodes)>500:raise ValueError('Profile limit: 500 experiences')
+    for episode in episodes:episode_valid(episode)
+    notifications=payload.get('notifications',[])
+    if not isinstance(notifications,list) or len(notifications)>100:raise ValueError('Notification limit: 100')
+    for item in notifications:
+        if not isinstance(item,dict):raise ValueError('Invalid notification')
+        for field,limit in [('id',100),('title',150),('body',4000)]:
+            if not isinstance(item.get(field),str) or len(item[field])>limit:raise ValueError('Invalid notification')
+        if type(item.get('created')) not in (int,float) or not 0<item['created']<32503680000 or item.get('seen') not in (True,False,0,1):raise ValueError('Invalid notification metadata')
     reminders=payload.get('reminders',[])
     if not isinstance(reminders,list) or len(reminders)>100:raise ValueError('Invalid reminders')
     for reminder in reminders:
@@ -65,7 +77,7 @@ def decrypt(envelope,phrase):
     return validate(payload)
 
 
-def export_profile(store,reminders,phrase):
+def export_profile(store,reminders,phrase,notifications=None):
     with store.trust.action('transfer.export'),store.lock:
         documents=[dict(r) for r in store.db.execute('SELECT id,title,content,source FROM documents ORDER BY created LIMIT 201')]
         from .learning import Learning
@@ -78,7 +90,8 @@ def export_profile(store,reminders,phrase):
         # No OAuth tokens, web API keys, audit history or downloaded model weights.
         payload={'format':'nexo-profile-v1','identity':{**store.trust.identity(),'private_key':store.trust.key.private_bytes_raw().hex()},
             'preferences':{k:v for k,v in store.preferences().items() if k in ('personality','adapt_tone','style','response_language')},
-            'documents':documents,'reminders':reminders}
+            'documents':documents,'reminders':reminders,'persona':store.continuity.persona(),
+            'episodes':store.continuity.list(),'notifications':notifications or []}
         return encrypt(payload,phrase)
 
 
@@ -103,12 +116,21 @@ def import_profile(root,envelope,phrase):
                     store.db.execute('INSERT OR IGNORE INTO learning VALUES(?,?,?,?,?,?,?,?)',(example_id,fingerprint(e),e['question'],e['answer'],e['language'],e['kind'],document_id,time.time()))
                     if doc.get('provenance'):store.db.execute('INSERT INTO learning_provenance VALUES(?,?)',(example_id,json.dumps(doc['provenance'])))
         store.set_preferences(payload.get('preferences',{}))
+        from .continuity import persona_valid
+        with store.lock,store.db:
+            persona=persona_valid(payload.get('persona',{}))
+            persona['remember_activity']=False  # New device requires opt-in again.
+            store.continuity._save_persona(persona)
+        for episode in payload.get('episodes',[]):store.continuity.save({k:v for k,v in episode.items() if k!='id'})
         with store.lock,store.db:store.db.execute("INSERT OR REPLACE INTO meta VALUES('seeded','1')")
         # Scheduler remains off on a newly imported device until its user enables it.
         from .navi import NaviState
         state=NaviState(stage/'navi.sqlite3')
         try:
             for r in payload.get('reminders',[]):state.add_reminder(r['text'],r['due'])
+            with state.lock,state.db:
+                for n in payload.get('notifications',[]):
+                    state.db.execute('INSERT OR REPLACE INTO notifications VALUES(?,?,?,?,?)',(n['id'],n['title'],n['body'],n['created'],int(n['seen'])))
         finally:state.close()
         store.close();store=None
         stage.rename(destination)

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "math",
+    "description": "Local decimal mathematics and statistics.",
+    "builtin": true,
+    "permissions": [
+      "math.use"
+    ],
+    "sha256": "6083cfff382f61fc3c54d64b9dce1212258dff27ce4b066a1d313342ce1ad4c0",
+    "fingerprint": "d24acab27e9ee59d0c7b49633c6504bcb0613e59802aae4c91cc104e84230110"
+  },
+  {
+    "name": "web-memory",
+    "description": "Save reviewed search excerpts in your knowledge library.",
+    "builtin": true,
+    "permissions": [
+      "memory.read",
+      "memory.write"
+    ],
+    "sha256": "4f8c829eda00ac42aab9c2a96a28549cb5b19d041050077cae19e00f102a17a4",
+    "fingerprint": "d24acab27e9ee59d0c7b49633c6504bcb0613e59802aae4c91cc104e84230110"
+  },
+  {
+    "name": "security-watch",
+    "description": "Review suspicious email wording and attachment filenames.",
+    "builtin": true,
+    "permissions": [],
+    "sha256": "3f72a4a67fd0b51b7f0575fc2726606427a30506410ce112dfc3cac46e8f545b",
+    "fingerprint": "d24acab27e9ee59d0c7b49633c6504bcb0613e59802aae4c91cc104e84230110"
+  },
+  {
+    "name": "study-math",
+    "description": "A signed, installable catalog example for the existing local math engine. No extra model download.",
+    "builtin": false,
+    "permissions": [
+      "math.use"
+    ],
+    "sha256": "850221c56bce487a541695c47be308d62ae8f56ab82b9d44665d9e06a42f5b7d",
+    "fingerprint": "d18c8d8707db364c275abcdb46849c604d6722ecaca4eea65fb48b3c482175fc",
+    "url": "https://raw.githubusercontent.com/xatusbetazx17/Nexo7/v0.19.0/nexo7/catalog-items/study-math.nexochip"
+  }
+]

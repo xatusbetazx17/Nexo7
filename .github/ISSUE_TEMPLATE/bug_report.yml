@@ -1,0 +1,36 @@
+name: Report a reproducible problem
+description: Help test Nexo on real Windows, Linux and mobile devices.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include passwords, OAuth files/tokens, private chats, patient information, identity keys or unredacted profile bundles. Preview screenshots before uploading.
+  - type: input
+    id: version
+    attributes:
+      label: Nexo version and platform
+      placeholder: 0.19.0 · Windows 11 / Linux distro / mobile browser
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware and available memory
+      placeholder: CPU model, total RAM, free RAM before starting, GPU if used
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you click or type? Use a non-private example.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Exact error or reviewed screenshot
+      description: Remove secrets and personal information. Do not attach your encrypted identity/profile or OAuth JSON.

@@ -141,6 +141,15 @@ def main():
             result['agent_task']={'state':task['state'],'steps':[{'name':s['name'],'attempts':s['attempts'],'validation':s['validation']} for s in task['steps']]}
             request('/api/tasks/'+task['id']+'/rollback',{})
             request('/api/tasks/'+task['id']+'/rollback',{})
+            if args.binary:
+                request('/api/navi/persona',{'name':'Luna','onboarded':True})
+                identity_reply=request('/api/chat',{'message':'What is your chosen name? Reply only with your name.','mode':'chat','private':True})
+                assert identity_reply['status']=='completed' and 'luna' in identity_reply['answer'].lower(),identity_reply
+                request('/api/navi/episodes/save',{'what':'For my violet coding project, I chose a copper owl as its mascot.','people':'Test user','pinned':True})
+                memory_reply=request('/api/chat',{'message':'What mascot did I choose for my violet coding project?','mode':'chat'})
+                assert memory_reply['status']=='completed' and 'owl' in memory_reply['answer'].lower(),memory_reply
+                assert any(s['id'].startswith('E') for s in memory_reply['sources']),memory_reply
+                result['continuity']={'identity':identity_reply['answer'],'memory':memory_reply['answer']}
             result['checks']=['real local multi-step agent generation, scalar function cases, reviewed apply and rollback','real multilingual text generation' ,'real code generation (not executed)','guarded setup','zero-model-call arithmetic','CSV totals','isolated document import','reviewed learning admitted to real model context','live web excerpts used by native model','saved web results reused without network or model calls','clean shutdown']
             request('/api/shutdown',{});process.wait(timeout=30);assert process.returncode==0
             result['passed']=True
