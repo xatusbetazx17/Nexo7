@@ -125,6 +125,19 @@ class TrustTests(unittest.TestCase):
             with self.assertRaises(PermissionDenied):bridge.telegram('sendMessage',{'text':'private'})
             fetch.assert_not_called()
 
+    def test_workspace_agent_requires_read_permission_before_running(self):
+        from nexo7.task_agent import TaskAgent
+        from nexo7.workspace import Workspace
+        store=Store(':memory:');self.addCleanup(store.close)
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace=Workspace(Path(tmp)/'workspace')
+            agent=TaskAgent(store,workspace)
+            job=agent.create({'goal':'Update a note','steps':[{'name':'note.txt','instruction':'Write a note'}]})
+            store.trust.set_scope('workspace.read',False)
+            with patch.object(workspace,'read') as read:
+                with self.assertRaises(PermissionDenied):agent.run(job['id'],Engine(Config(),store))
+                read.assert_not_called()
+
     def test_disabled_memory_does_not_break_startup_seed(self):
         store=Store(':memory:');self.addCleanup(store.close)
         store.trust.set_scope('memory.write',False)

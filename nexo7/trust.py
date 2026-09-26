@@ -39,7 +39,7 @@ ACTIONS = {
     'web_lookup': ('network.search',), 'web_save': ('memory.write',),
     'read_workspace': ('workspace.read',), 'inspect_workspace': ('workspace.read',),
     'create_file': ('creation.use',), 'memory_read': ('memory.read',), 'memory_write': ('memory.write',),
-    'workspace_write': ('workspace.write',), 'device_check': ('device.read',),
+    'workspace_write': ('workspace.write', 'workspace.read'), 'device_check': ('device.read',),
     'chat_inference': ('chat.use',), 'model_start': ('models.manage',),
     'image_generate': ('images.generate',), 'image_install': ('models.manage',),
     'telegram.read': ('network.telegram',), 'telegram.send': ('network.telegram',),
