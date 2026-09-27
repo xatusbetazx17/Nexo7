@@ -93,6 +93,12 @@ def main():
                 assert any(word in response['answer'].lower() for word in expected),response
                 assert response['stats']['network_requests']==0 and response['stats']['tool_calls']==0,response
                 result['answers'].append({'prompt':prompt,'answer':response['answer'],'stats':response['stats']})
+            if args.binary:
+                comparison=request('/api/chat',{'message':'cual es la diferencia entre un pollo una gallina','mode':'companion','language':'es','private':True})
+                text=comparison['answer'].casefold()
+                assert comparison['status']=='completed' and 'hembra' in text and 'adulta' in text and any(w in text for w in ('joven','cria','cría','carne')),comparison
+                assert comparison['stats']['network_requests']==0,comparison
+                result['answers'].append({'prompt':'cual es la diferencia entre un pollo una gallina','answer':comparison['answer'],'stats':comparison['stats'],'scope':'Single Spanish comparison regression; not a general reasoning benchmark'})
             companion=request('/api/chat',{'message':'What is a computer?','mode':'companion','private':True})
             assert companion['status']=='completed' and companion['stats']['network_requests']==0,companion
             assert companion['companion']['steps'],companion

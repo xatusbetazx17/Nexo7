@@ -196,7 +196,7 @@ class Engine:
             warnings.append('Treated this as an imagined scenario, so no search was sent. Choose an explicit online-search request to research real sources.')
         cacheable = not private and optimized and self.config.cache_seconds > 0 and mode not in {"research", "web"} and not re.search(
             r"\b(hoy|ahora|actual|actuales|precio|precios|today|latest|current|news|noticias)\b", message, re.I)
-        key = self.store.cache_key(["nexo7-v17", self.store.trust.policy_key(), message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
+        key = self.store.cache_key(["nexo7-v19.2", self.store.trust.policy_key(), message, mode, language, history, self.store.revision(), self.workspace.revision() if self.workspace else None, asdict(self.config)])
 
         def finish(answer, status="completed", save_cache=False):
             answer, extra = self._check_citations(answer, sources, mode == "research") if status in {"completed", "incomplete"} else (answer, [])
@@ -383,6 +383,9 @@ class Engine:
 
         box = ToolBox(self.store, self.pubmed, mode == "research" and self.config.research_network, private, self.workspace)
         instructions = self._instructions(mode, language)
+        if mode not in ("research", "web", "scenario"):
+            from .answer_guidance import guidance
+            instructions += guidance(message, language)
         if not private and mode not in ("research", "web"):
             sources += self.store.continuity.matching(message)
         # Web lookup has already provided evidence. One synthesis call without tool

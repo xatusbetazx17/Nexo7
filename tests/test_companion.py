@@ -67,3 +67,28 @@ class CompanionTests(unittest.TestCase):
         audit=evidence_review([{'id':'W1','url':'https://a.example/x'},{'id':'W2','url':'https://b.example/y'}])
         self.assertTrue(audit['multiple_domains']);self.assertFalse(audit['independence_verified'])
         self.assertFalse(audit['truth_verified'])
+
+
+class KnowledgeReviewTests(unittest.TestCase):
+    def test_factual_correction_is_reference_not_automatic_truth(self):
+        with closing(Store(':memory:')) as store:
+            provider=Mock();provider.complete.return_value=Completion('A hen is an adult female chicken.')
+            engine=Engine(Config(provider='openai',model='fixture'),store,provider=provider)
+            question='What is a hen?'
+            engine.learning.import_pack({'format':'nexo-learning-v1','entries':[{'question':question,'answer':'A hen is a fish.','language':'en','kind':'correction'}]},True)
+            result=engine.chat(question,mode='companion',language='en',private=True)
+            provider.complete.assert_called_once()
+            self.assertEqual(result['answer'],'A hen is an adult female chicken.')
+            self.assertTrue(result['sources'])
+            self.assertEqual(result['stats']['network_requests'],0)
+
+    def test_comparison_guidance_does_not_contain_canned_answers(self):
+        from nexo7.answer_guidance import guidance,knowledge_question
+        for question in ['cual es la diferencia entre un pollo una gallina','¿Cuál es la diferencia entre memoria RAM y almacenamiento?']:
+            self.assertTrue(knowledge_question(question))
+            self.assertIn('diferencia esencial',guidance(question))
+        self.assertEqual(guidance('/calc 2+2'),'')
+        self.assertEqual(guidance('Hola, ¿cómo estás?'),'')
+        self.assertFalse(knowledge_question('My project code?'))
+        self.assertNotIn('pollo',guidance('pollo vs gallina','es'))
+        self.assertIn('essential distinction',guidance('Compare RAM and storage','en'))
