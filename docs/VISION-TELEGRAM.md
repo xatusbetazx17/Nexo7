@@ -76,7 +76,7 @@ It is not an offline/private transport. Nexo never starts it automatically.
 3. Open **Setup → Optional Telegram access**, enter the token and review the
    Telegram-access checkbox. The token is held in memory, not saved in preferences.
 4. Send a message to your new bot in Telegram. Click **Read recent chat IDs from
-   Telegram** in Nexo, then copy only your intended numeric ID into Allowed chats.
+   Telegram** in Nexo, then click **Allow** beside your intended private/group conversation. Its numeric ID is added to Allowed chats.
    This reads recent bot updates and returns chat IDs/types; it saves no messages
    and sends no reply. It does not automatically select every discovered chat.
 5. Click **Start Telegram bridge**. The token field clears after successful start.
@@ -165,3 +165,21 @@ participants aware that the bot receives images. Enable that only if intended.
   are adapted to Python in `task_contracts.py`, retaining its MIT notice. Nexo
   retains its own task engine and interface, without adding Electron or Node
   as desktop runtime requirements.
+
+
+## Telegram diagnostics in 0.19.1
+
+The bot ID (digits before the colon in a token) is not your private conversation
+ID and is now rejected before starting. Discovery offers explicit Allow buttons;
+no discovered conversation is automatically authorized. Start clears the token
+field but preserves the consent selection. Re-enter the token after stopping.
+
+The separate connection status does not overwrite discovery results. Starting
+means authentication is pending; running means initial authentication/polling
+succeeded. Reconnecting includes a bounded, credential-free explanation. HTTP
+409 indicates another polling client or a webhook; close other bot instances
+and review your own webhook configuration. The app does not delete webhooks.
+Session counters show received allowed messages, completed answers and messages
+blocked by the allowlist. Generating indicates the local model is working.
+Counters and status contain no chat content and are not saved. A reply failure
+asks you to check local chat/model readiness; no silent cloud fallback is used.

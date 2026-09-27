@@ -15,6 +15,18 @@ from urllib.parse import urlsplit, parse_qs
 from .net import fetch, fetch_json, TransportError
 
 
+def connection_hint(exc):
+    # Never expose remote bodies, URLs or credentials in status or Telegram.
+    code = re.search(r'HTTP (\d{3})', str(exc))
+    code = int(code.group(1)) if code else None
+    return {
+        401: 'Telegram rejected the token. Enter the current token from BotFather.',
+        403: 'Telegram denied access. Check whether the bot is blocked or lacks chat permissions.',
+        409: 'Telegram polling conflict. Stop other copies of this bot; a configured webhook also prevents polling.',
+        429: 'Telegram rate limit reached. Wait before reconnecting.',
+    }.get(code, 'Telegram connection failed. Check the PC internet connection and try again.')
+
+
 @dataclass(frozen=True)
 class Settings:
     token: str
@@ -113,9 +125,10 @@ class Albums:
 
 
 class Bridge:
-    def __init__(self, settings, stop=None, trust=None):
+    def __init__(self, settings, stop=None, trust=None, report=None):
         from .trust import Trust
         self.trust = trust or Trust(settings.access_file.resolve().parent / "trust.sqlite3")
+        self.report = report or (lambda **state: None)
         self.settings = settings
         self.stop = stop or threading.Event()
         self.rules = load_rules(settings.rules_file) if settings.scan_images else []
@@ -179,14 +192,18 @@ class Bridge:
             encoded = self.image(source)
             if encoded: images.append(encoded)
         if requested:
+            self.report(phase='generating', error=None)
             text = next((m.get('text') or m.get('caption') for m in requested if m.get('text') or m.get('caption')), '')
             prompt = re.sub(r'@' + re.escape(self.username) + r'\b', '', text, flags=re.I).strip()
             if len(prompt.encode('utf-8')) > 1800:
-                self.send(trigger, 'Please shorten your question to 1800 UTF-8 bytes.'); return
+                self.send(trigger, 'Please shorten your question to 1800 UTF-8 bytes.')
+                self.report(phase='running', error=None)
+                return
             for index, batch in enumerate([[image] for image in images] or [[]]):
                 result = self.local(prompt or ('Describe the image briefly.' if images else 'Hello'), batch)
                 label = 'Image ' + str(index + 1) + ' (analyzed separately):\n' if len(images) > 1 else ''
                 self.send(trigger, label + result['answer'])
+                self.report(phase='running', error=None, replied=True)
         if images and self.rules:
             prompt = 'Classify these images. Reply only with matching names separated by commas, or NONE.\n' + '\n'.join(r['name'] + ': ' + r['description'] for r in self.rules)
             try:
@@ -203,18 +220,31 @@ class Bridge:
 
     def run(self):
         me = self.telegram('getMe', {}); self.username = me['username']; self.bot_id = me['id']
+        if self.bot_id in self.settings.chats:
+            raise ValueError('The allowed ID is the bot ID. Stop and use Read recent chat IDs to select your private conversation.')
         # Skip pre-start backlog; an old message must not trigger an unexpected reply.
         latest = self.telegram('getUpdates', {'offset': -1, 'timeout': 0, 'limit': 1, 'allowed_updates': ['message']})
         offset = latest[-1]['update_id'] + 1 if latest else 0
+        self.report(phase='running', error=None)
+        reconnecting = False
         while not self.stop.is_set():
             try:
                 updates = self.telegram('getUpdates', {'offset': offset, 'timeout': 1 if self.albums.groups else 15, 'limit': 20, 'allowed_updates': ['message']})
-            except TransportError:
+            except TransportError as exc:
+                reconnecting = True
+                self.report(phase='reconnecting', error=connection_hint(exc))
                 self.stop.wait(3); continue
+            if reconnecting:
+                self.report(phase='running', error=None)
+                reconnecting = False
             for update in updates:
                 offset = max(offset, update['update_id'] + 1)
                 message = update.get('message', {})
-                if message.get('chat', {}).get('id') not in self.settings.chats or message.get('from', {}).get('is_bot'): continue
+                if message.get('from', {}).get('is_bot'): continue
+                if message.get('chat', {}).get('id') not in self.settings.chats:
+                    self.report(ignored=True)
+                    continue
+                self.report(received=True)
                 if message.get('media_group_id'): self.albums.add(message, time.monotonic())
                 else: self.process_safely([message])
             for group in self.albums.due(time.monotonic()): self.process_safely(group)
@@ -222,10 +252,12 @@ class Bridge:
     def process_safely(self, group):
         try: self.process(group)
         except (TransportError, ValueError, OSError, KeyError):
+            self.report(phase='running', error='Reply failed. Check local chat, model readiness and whether another model task is busy.')
             # No raw exception, URLs or tokens sent to Telegram or persisted.
             if group and addressed(group[0], self.username, self.bot_id):
                 try: self.send(group[0], 'Local request failed. Check that Nexo is running and the selected model supports your input.')
-                except TransportError: pass
+                except TransportError as exc:
+                    self.report(phase='running', error=connection_hint(exc))
 
 
 class BridgeController:
@@ -236,9 +268,20 @@ class BridgeController:
         self.access_file = Path(access_file)
         self.lock = threading.Lock(); self.stop_event = threading.Event(); self.thread = None
         self.phase = 'off'; self.error = None; self.chat_count = 0
+        self.received = 0; self.ignored = 0; self.replied = 0
 
     def snapshot(self):
-        with self.lock: return {'phase': self.phase, 'error': self.error, 'chat_count': self.chat_count}
+        with self.lock:
+            return {'phase': self.phase, 'error': self.error, 'chat_count': self.chat_count,
+                    'received': self.received, 'ignored': self.ignored, 'replied': self.replied}
+
+    def report(self, **state):
+        with self.lock:
+            if self.stop_event.is_set(): return
+            if 'phase' in state: self.phase = state['phase']
+            if 'error' in state: self.error = state['error']
+            for counter in ('received', 'ignored', 'replied'):
+                if state.get(counter): setattr(self, counter, getattr(self, counter) + 1)
 
     def discover(self, body):
         if body.get('consent') is not True: raise ValueError('Consent is required to read recent chat IDs from Telegram')
@@ -259,14 +302,18 @@ class BridgeController:
         token, chats = body.get('token'), body.get('chat_ids')
         if not isinstance(token, str) or not re.fullmatch(r'\d+:[A-Za-z0-9_-]{20,200}', token): raise ValueError('Enter a valid BotFather token')
         if not isinstance(chats, list) or not 1 <= len(chats) <= 20 or any(type(x) is not int or not x or abs(x) > 2**52 for x in chats): raise ValueError('Enter 1–20 numeric Telegram chat IDs')
+        if int(token.split(':', 1)[0]) in chats:
+            raise ValueError('That is the bot ID, not a conversation ID. Use Read recent chat IDs and select your private chat.')
         with self.lock:
             if self.thread and self.thread.is_alive(): raise ValueError('Stop the active Telegram bridge first')
             self.stop_event = threading.Event(); self.phase = 'starting'; self.error = None; self.chat_count = len(set(chats))
+            self.received = self.ignored = self.replied = 0
             settings = Settings(token, frozenset(chats), self.access_file)
             def work():
                 try:
-                    with self.lock: self.phase = 'running'
-                    Bridge(settings, self.stop_event, trust=self.trust).run()
+                    Bridge(settings, self.stop_event, trust=self.trust, report=self.report).run()
+                except TransportError as exc:
+                    with self.lock: self.error = connection_hint(exc)
                 except Exception:
                     with self.lock: self.error = 'Telegram could not start or continue. Check the token, connection and Nexo setup.'
                 finally:

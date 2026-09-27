@@ -206,7 +206,7 @@ function displayReport(report) {
 }
 async function pollSetup() {
   try {
-    const tg=await api("/api/telegram");$("telegram-status").textContent=tg.phase+(tg.error?": "+tg.error:"");
+    const tg=await api("/api/telegram");$('telegram-health').textContent=tg.phase+(tg.error?': '+tg.error:'')+' · Received: '+(tg.received||0)+' · Replied: '+(tg.replied||0)+' · Blocked by allowed IDs: '+(tg.ignored||0);
     const state=await api("/api/setup"); setupBusy=state.phase==="preparing";
     $("setup-phase").textContent=state.phase==="ready"?"Ready to chat":state.phase==="preparing"?"Preparing your model…":state.phase==="error"?"Setup needs attention":"Waiting";
     if(state.error)$("setup-details").open=true;
@@ -424,11 +424,29 @@ $('task-template').onchange=()=>{
 $('telegram-form').onsubmit=async event=>{event.preventDefault();try{
  const parts=$('telegram-chats').value.split(',').map(x=>x.trim());if(parts.some(x=>!/^[-]?\d+$/.test(x)))throw Error('Enter numeric chat IDs.');
  const state=await api('/api/telegram/start','POST',{token:$('telegram-token').value,chat_ids:parts.map(Number),consent:$('telegram-consent').checked});
- $('telegram-token').value='';$('telegram-consent').checked=false;$('telegram-status').textContent=state.phase;
+ $('telegram-token').value='';$('telegram-status').textContent=state.phase+' — The token field was cleared; the bridge keeps it in memory until stopped.';
 }catch(exc){$('telegram-status').textContent=exc.message;}};
 $('telegram-stop').onclick=async()=>{try{const s=await api('/api/telegram/stop','POST',{});$('telegram-status').textContent=s.phase;}catch(exc){$('telegram-status').textContent=exc.message;}};
 
-$('telegram-discover').onclick=async()=>{try{const r=await api('/api/telegram/chats','POST',{token:$('telegram-token').value,consent:$('telegram-consent').checked});$('telegram-status').textContent=r.chats.map(c=>c.id+' ('+c.type+')').join(', ')+' — '+r.notice;}catch(exc){$('telegram-status').textContent=exc.message;}};
+$('telegram-discover').onclick=async()=>{
+ $('telegram-chat-choices').replaceChildren();
+ try{
+  const r=await api('/api/telegram/chats','POST',{token:$('telegram-token').value,consent:$('telegram-consent').checked});
+  $('telegram-status').textContent=r.notice;
+  for(const chat of r.chats){
+   const button=document.createElement('button');button.type='button';button.className='quiet';
+   button.textContent='Allow '+chat.id+' ('+chat.type+')';
+   button.onclick=()=>{
+    const botId=$('telegram-token').value.split(':')[0];
+    const ids=$('telegram-chats').value.split(',').map(x=>x.trim()).filter(x=>/^-?\d+$/.test(x)&&x!==botId);
+    if(!ids.includes(String(chat.id)))ids.push(String(chat.id));
+    $('telegram-chats').value=ids.join(', ');
+    $('telegram-status').textContent='Chat selected. Click Start Telegram bridge, then send a new message in Telegram.';
+   };
+   $('telegram-chat-choices').append(button);
+  }
+ }catch(exc){$('telegram-status').textContent=exc.message;}
+};
 
 // Creative files remain in browser memory until the user downloads them.
 const creativeExamples={

@@ -169,3 +169,80 @@ class SetupReadinessTests(unittest.TestCase):
             finally:finish.set();controller.thread.join(3)
         self.assertTrue(controller.snapshot()['ready'])
         self.assertTrue(controller.operation.acquire(blocking=False));controller.operation.release()
+
+
+class TelegramDiagnosticsTests(unittest.TestCase):
+    def test_bot_id_is_rejected_before_start(self):
+        from nexo7.telegram_bridge import BridgeController
+        controller = BridgeController('/unused', trust=Trust())
+        with patch.object(Bridge, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'bot ID'):
+                controller.start({'token': '123:' + 'x'*25, 'consent': True, 'chat_ids': [123]})
+            run.assert_not_called()
+        self.assertEqual(controller.snapshot()['phase'], 'off')
+
+    def test_polling_routes_private_reply_and_counts_disallowed_chat(self):
+        from nexo7.telegram_bridge import BridgeController
+        controller = BridgeController('/unused', trust=Trust())
+        controller.stop_event.clear()
+        bridge = Bridge(Settings('123:'+'x'*25, frozenset({10}), Path('/unused')), trust=controller.trust, report=controller.report)
+        bridge.local = Mock(return_value={'answer': 'hello'})
+        polls = 0
+        sends = []
+        def network(method, payload):
+            nonlocal polls
+            if method == 'getMe': return {'id': 123, 'username': 'nexo_bot'}
+            if method == 'sendMessage': sends.append(payload); return {'message_id': 5}
+            if method == 'getUpdates':
+                polls += 1
+                if polls == 1: return []
+                if polls == 2:
+                    return [{'update_id': i, 'message': {'message_id': i, 'chat': {'id': chat, 'type': 'private'}, 'text': 'hello'}} for i, chat in [(1, 99), (2, 10)]]
+                bridge.stop.set(); return []
+            self.fail(method)
+        bridge.telegram = network
+        bridge.run()
+        self.assertEqual(len(sends), 1)
+        self.assertEqual(sends[0]['chat_id'], 10)
+        self.assertEqual(sends[0]['reply_parameters'], {'message_id': 2})
+        self.assertEqual(bridge.local.call_count, 1)
+        state = controller.snapshot()
+        self.assertEqual((state['received'], state['ignored'], state['replied']), (1, 1, 1))
+        self.assertNotIn('hello', str(state))
+
+    def test_poll_errors_report_conflict_and_recover_without_leaking(self):
+        from nexo7.net import TransportError
+        reports = []
+        bridge = Bridge(Settings('123:'+'x'*25, frozenset({10}), Path('/unused')), trust=Trust(), report=lambda **s: reports.append(s))
+        polls = 0
+        def network(method, payload):
+            nonlocal polls
+            if method == 'getMe': return {'id': 123, 'username': 'nexo_bot'}
+            polls += 1
+            if polls == 2: raise TransportError('HTTP 409 secret-token-content')
+            if polls == 3: bridge.stop.set()
+            return []
+        bridge.telegram = network
+        with patch.object(bridge.stop, 'wait', return_value=False): bridge.run()
+        self.assertTrue(any(r.get('phase') == 'reconnecting' and 'conflict' in r.get('error', '') for r in reports))
+        self.assertEqual(reports[-1], {'phase': 'running', 'error': None})
+        self.assertNotIn('secret-token-content', str(reports))
+
+    def test_start_does_not_claim_running_before_authentication(self):
+        from nexo7.telegram_bridge import BridgeController
+        from nexo7.net import TransportError
+        entered, release = threading.Event(), threading.Event()
+        controller = BridgeController('/unused', trust=Trust())
+        def network(*args):
+            entered.set(); release.wait(2)
+            raise TransportError('HTTP 401 secret')
+        with patch.object(Bridge, 'telegram', network):
+            try:
+                controller.start({'token': '123:'+'x'*25, 'consent': True, 'chat_ids': [10]})
+                self.assertTrue(entered.wait(2))
+                self.assertEqual(controller.snapshot()['phase'], 'starting')
+            finally:
+                release.set(); controller.thread.join(2)
+        self.assertEqual(controller.snapshot()['phase'], 'off')
+        self.assertIn('rejected the token', controller.snapshot()['error'])
+        self.assertNotIn('secret', str(controller.snapshot()))

@@ -55,6 +55,19 @@ let browser;
  await page.unroute('**/api/navi/voice/transcribe');await page.locator('#prompt').fill('');
 
  await page.locator('#setup-tab').click();
+ // Telegram discovery survives background status refresh; owner selects the chat.
+ await page.route('**/api/telegram',route=>route.fulfill({json:{phase:'off',received:0,ignored:0,replied:0}}));
+ await page.route('**/api/telegram/chats',route=>route.fulfill({json:{chats:[{id:24680,type:'private'}],notice:'Choose your conversation.'}}));
+ let telegramStarted=false;
+ await page.route('**/api/telegram/start',route=>{const b=route.request().postDataJSON();assert.deepEqual(b.chat_ids,[24680]);assert.equal(b.consent,true);telegramStarted=true;return route.fulfill({json:{phase:'starting'}});});
+ await page.getByText('Optional Telegram access',{exact:true}).click();
+ await page.locator('#telegram-token').fill('123:'+'x'.repeat(25));await page.locator('#telegram-consent').check();await page.locator('#telegram-discover').click();
+ await page.getByRole('button',{name:'Allow 24680 (private)',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#telegram-health').textContent.includes('Received:'));
+ assert((await page.locator('#telegram-status').innerText()).includes('Chat selected'));
+ await page.locator('#telegram-form button[type=submit]').click();assert(telegramStarted);
+ assert.equal(await page.locator('#telegram-token').inputValue(),'');assert(await page.locator('#telegram-consent').isChecked());
+ await page.getByText('Optional Telegram access',{exact:true}).click();
  await page.locator('#trust-panel summary').click();
  await page.locator('#navi-id').filter({hasText:'nexo:'}).waitFor();
  await page.getByRole('checkbox',{name:'Calculations and date tools',exact:true}).uncheck();
