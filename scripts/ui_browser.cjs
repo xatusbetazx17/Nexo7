@@ -65,7 +65,7 @@ let browser;
  await page.getByRole('button',{name:'Allow 24680 (private)',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('#telegram-health').textContent.includes('Received:'));
  assert((await page.locator('#telegram-status').innerText()).includes('Chat selected'));
- await page.locator('#telegram-form button[type=submit]').click();assert(telegramStarted);
+ await page.locator('#telegram-form button[type=submit]').click();await page.locator('#telegram-status').filter({hasText:'The token field was cleared'}).waitFor();assert(telegramStarted);
  assert.equal(await page.locator('#telegram-token').inputValue(),'');assert(await page.locator('#telegram-consent').isChecked());
  await page.getByText('Optional Telegram access',{exact:true}).click();
  await page.locator('#trust-panel summary').click();
