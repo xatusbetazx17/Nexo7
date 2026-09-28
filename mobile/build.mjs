@@ -3,7 +3,12 @@ import {createHash} from 'node:crypto';
 import {mkdir,cp,writeFile,readFile,rm} from 'node:fs/promises';
 await rm('dist',{recursive:true,force:true});
 await mkdir('dist',{recursive:true});
-await build({entryPoints:['src/app.js','src/inference.js'],outdir:'dist',bundle:true,format:'esm',platform:'browser',minify:true,define:{'process.env.NODE_ENV':'"production"'},external:[]});
+// Wllama 3.6.1's abort handler assumes a string; WebKit can return an Error.
+// Preserve the actual error instead of masking it with `replace is not a function`.
+const normalizeAbort={name:'wllama-abort-message',setup(builder){builder.onLoad({filter:/@wllama[\\/]wllama[\\/]esm[\\/]index\.js$/},async({path})=>{const source=await readFile(path,'utf8'),needle='let newMsg = message.replace(';
+  if(source.split(needle).length!==2)throw Error('Recheck Wllama abort-message patch after dependency changes');
+  return {contents:source.replace(needle,'let newMsg = String(message?.message || message).replace(').replace('rawStack.replace(/\\|/g,', 'String(rawStack || \'\').replace(/\\|/g,').replace('yield Debug.decodeStackTrace(stack, isCompatBuild);', 'yield Debug.decodeStackTrace(stack || \'\', isCompatBuild).catch(() => String(stack || \'\'));'),loader:'js'};});}};
+await build({entryPoints:['src/app.js','src/inference.js'],outdir:'dist',bundle:true,format:'esm',platform:'browser',minify:true,define:{'process.env.NODE_ENV':'"production"'},external:[],plugins:[normalizeAbort]});
 for(const name of ['index.html','style.css','manifest.webmanifest','icon.svg','sw.js','LFM-LICENSE.txt','LLAMA-CPP-LICENSE.txt'])await cp('src/'+name,'dist/'+name);
 await cp('node_modules/@wllama/wllama/esm/wasm/wllama.wasm','dist/wllama.wasm');
 await mkdir('dist/compat',{recursive:true});
