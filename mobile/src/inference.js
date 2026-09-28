@@ -1,4 +1,4 @@
-import {Wllama,CacheManager} from '@wllama/wllama';
+import {Wllama,CacheManager} from '@wllama/wllama/esm/index.js';
 import {checkDownloadSpace} from './device.js';
 import {modelCache,indexedModelBackend} from './model-cache.js';
 const URL_MODEL='https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/657e078c94084481950a2d555a941481f715536b/LFM2.5-350M-Q4_K_M.gguf';
