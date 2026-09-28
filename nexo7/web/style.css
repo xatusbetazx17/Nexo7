@@ -21,3 +21,9 @@ dialog{border:1px solid var(--border,#dbe1e8);border-radius:22px;padding:28px;wi
 button{color:var(--accent-ink,var(--panel))}button.quiet,.quiet{color:var(--text)}
 #avatar-preview{display:grid;place-items:center;width:96px;height:96px;border-radius:28px;font-size:48px;background:var(--soft);border:3px solid var(--accent);margin:12px 0}
 input[type=color]{width:76px!important;height:46px;padding:4px;cursor:pointer}
+
+/* Shared offline creative studio, desktop and mobile. */
+.media-studio canvas{display:block;width:100%;max-width:640px;height:auto;border-radius:16px;margin:18px 0;background:#edf2f4;border:1px solid #8796a455}
+.media-studio label{display:block;margin:14px 0 6px}.media-studio input:not([type=checkbox]):not([type=color]),.media-studio select{width:100%;max-width:640px}.media-studio input[type=checkbox]{width:24px;height:24px}
+.media-actions{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.media-actions button{min-height:44px}
+#media-output img,#media-output video{display:block;width:100%;max-width:640px;height:auto;border-radius:14px;margin:14px 0}#media-output audio{display:block;width:100%;max-width:640px;margin:14px 0}#media-output a{display:inline-block;padding:12px;margin:6px;border:1px solid currentColor;border-radius:10px}#media-status{min-height:1.5em;overflow-wrap:anywhere}

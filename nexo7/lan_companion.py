@@ -70,7 +70,7 @@ class Companion:
                     self.send_response(status)
                     for key, val in {'Content-Type':mime,'Content-Length':str(len(data)), 'Cache-Control':'no-store',
                                      'Referrer-Policy':'no-referrer', 'X-Content-Type-Options':'nosniff',
-                                     'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'"}.items():
+                                     'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'"}.items():
                         self.send_header(key, val)
                     self.end_headers()
                     self.wfile.write(data)
@@ -85,7 +85,7 @@ class Companion:
                     return True
                 def do_GET(self):
                     if not self.valid(): return
-                    paths={'/':('companion.html','text/html; charset=utf-8'),'/companion.js':('companion.js','text/javascript'),'/companion.css':('companion.css','text/css')}
+                    paths={'/media-studio.js':('media-studio.js','text/javascript'),'/':('companion.html','text/html; charset=utf-8'),'/companion.js':('companion.js','text/javascript'),'/companion.css':('companion.css','text/css')}
                     item=paths.get(urlsplit(self.path).path)
                     if not item:return self.send(404,{'error':'Not found'})
                     return self.send(200,(Path(__file__).parent/'web'/item[0]).read_bytes(),item[1])

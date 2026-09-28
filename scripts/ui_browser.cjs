@@ -29,7 +29,7 @@ let browser;
  await page.screenshot({path:path.join(output,'chat-drawing.png'),fullPage:true});
  await page.locator('#open-scenario').click();await page.locator('#scenario-form button').click();await page.getByText('Horizontal distance (m): 10.1937',{exact:true}).waitFor();
  await page.screenshot({path:path.join(output,'scenario-calculator.png'),fullPage:true});
- await page.locator('#workspace-tab').click();assert.equal(await page.locator('#creative-spec').isVisible(),false);
+ await page.locator('#workspace-tab').click();await require('./media_browser_checks.cjs')(page);assert.equal(await page.locator('#creative-spec').isVisible(),false);
  await page.locator('#creative-render').click();await page.locator('#creative-output img').waitFor();
  await page.screenshot({path:path.join(output,'create-desktop.png'),fullPage:true});
  await page.locator('#creative-kind').selectOption('music');await page.locator('#music-tempo').fill('120');await page.locator('#music-tempo').press('Tab');

@@ -2,7 +2,7 @@ name: Local browser app
 on:
   push:
     branches: [main, browser-local-preview]
-    paths: ['mobile/**', 'scripts/mobile_browser.cjs', '.github/workflows/browser-local.yml', 'docs/LOCAL-BROWSER.md']
+    paths: ['mobile/**', 'nexo7/web/media-studio.js', 'scripts/mobile_browser.cjs', 'scripts/media_browser_checks.cjs', '.github/workflows/browser-local.yml', 'docs/LOCAL-BROWSER.md']
   workflow_dispatch:
 permissions:
   contents: read

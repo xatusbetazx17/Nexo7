@@ -1,17 +1,13 @@
-Nexo 7 v0.19.2 preview — Telegram, browser companion and appearance
+Nexo 7 v0.19.3 preview — local creative studio across devices
 
-**Known unresolved limitation:** the real Spanish comparison diagnostic fails. This release does not fix general model accuracy. Accuracy results are uploaded as model-answer-review artifacts and the failed diagnostic remains visible in CI; required application, privacy and memory tests still block publication. See docs/ANSWER-QUALITY-STATUS.md.
+- Shared Create tools in the standalone browser app, desktop Windows/Linux interface, and LAN companion.
+- Local template illustrations (landscape, space, chicken, abstract), captions, colors, freehand drawing and optional imported pictures. Export PNG.
+- Procedural instrumental music: mood, tempo, length, variation and instrument controls. Play and export WAV/MIDI, with no model download.
+- Short animated clips (4, 8 or 12 seconds), with optional synthesized soundtrack. Exports MP4 or WebM depending on browser encoder support. Imported pictures produce captioned still-image clips.
+- One recording at a time, cancellation, hidden-tab cancellation, 16 MB output cap and bounded 640×360 rendering. Browser profile lock clears the creative session.
+- No network requests from the studio. Existing desktop neural image generation and chat/document tools remain available.
 
-- Web lookup retains retrieved excerpts when AI synthesis fails or reaches its output limit; the response explicitly identifies the missing summary. No hidden retry or extra search.
-- Telegram adds model-independent `/ping` and `/start`, authenticated bot username, last successful polling time and actionable blocked-chat diagnostics. The bridge can be started for diagnostics before a model is loaded. No live bot was connected during development.
-- Optional private-Wi-Fi browser companion for Mac/iPhone/iPad, independent revocable key, no app installation on the client, no admin/file/email access. HTTP only: trusted network and non-sensitive use.
-- Five accent palettes/custom color plus robot/cat/orb avatar appearance. See BROWSER-COMPANION.md.
-- Exact English/Spanish greetings now use a bounded local social reply in desktop and Telegram text relay. No model or web request; mixed greeting-plus-task prompts still reach the model. This is routing, not learned reasoning.
-- Comparisons receive compact guidance to define both terms, lead with the essential distinction and avoid fabricated differences. Spanish comparisons receive Spanish guidance, including common missing accents. Applies to desktop chat and text-only Telegram relay.
-- General-knowledge questions no longer automatically echo an exact saved correction. Relevant saved corrections are still retrieved as untrusted references for the model. Personal exact-match shortcuts remain available.
-- Learning UI explains that saving an example neither verifies its facts nor retrains the model. Existing notes are not rewritten or deleted.
-- New answer-cache namespace avoids reusing replies generated under the previous prompt policy.
-- Adds a real packaged-model regression for the user's Spanish chicken/hen comparison, alongside mocked routing/privacy tests and the existing Windows/Linux release checks.
-- Preserves 0.19.1 Telegram chat selection and diagnostics and previous local features.
+Limits: this is not arbitrary prompt-to-image or generative video; the browser studio uses template/procedural graphics and instrument synthesis. No vocals. Safari/iOS and other browsers must expose canvas recording and a supported encoder to export clips; unsupported browsers display an explanation and retain image/music export. Physical Apple-device testing is still needed. Telegram remains a chat/image-analysis bridge, not a media-generation command interface.
 
-This is application-level prompting and routing, not new trained weights or an automatic fact checker. A small model can still make factual and reasoning mistakes; a single passed example does not establish general accuracy. Remove or correct erroneous saved learning examples yourself. Telegram account behavior still needs a live user check.
+Browser use: https://xatusbetazx17.github.io/Nexo7/ — Create tab. Existing visitors: close all Nexo tabs and reopen to activate an updated offline cache.
+Desktop use: run the new Windows/Linux package, choose Create, then Create on this device. No additional model is needed for these lightweight tools. Optional DreamShaper neural image generation remains a separate desktop download with its own RAM requirements.

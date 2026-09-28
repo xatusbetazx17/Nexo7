@@ -130,13 +130,13 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 return
             if navi and path == '/api/navi':return self._send(200,navi.snapshot())
             if navi and path == '/api/navi/presence':return self._send(200,navi.presence())
-            static = {"/journey.js":("journey.js","text/javascript; charset=utf-8"),"/navi.js":("navi.js","text/javascript; charset=utf-8"),"/recorder.js":("recorder.js","text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
+            static = {"/media-studio.js":("media-studio.js","text/javascript; charset=utf-8"),"/journey.js":("journey.js","text/javascript; charset=utf-8"),"/navi.js":("navi.js","text/javascript; charset=utf-8"),"/recorder.js":("recorder.js","text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
             if path in static:
                 name, mime = static[path]
                 return self._send(200, (web / name).read_bytes(), mime)
             if path == "/api/status":
                 active = controller.config if controller else config
-                return self._send(200, {"name": "Nexo 7", "version": "0.19.2", "provider": active.provider,
+                return self._send(200, {"name": "Nexo 7", "version": "0.19.3", "provider": active.provider,
                     "model": active.model or "No model connected", "fast_model": active.fast_model,
                     "deep_model": active.deep_model, "persist_history": active.persist_history,
                     "max_model_calls": active.max_model_calls, "max_output_tokens": active.max_output_tokens,

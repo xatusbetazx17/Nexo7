@@ -37,3 +37,9 @@ For GitHub Pages, select **Settings → Pages → Source → GitHub Actions** on
 Alternatively, build with `npm ci --prefix mobile --ignore-scripts` and `npm run build --prefix mobile`, and publish `mobile/dist` on a trusted HTTPS static host with `.wasm` served as `application/wasm`. Use the same origin/path to retain existing encrypted profiles and cached models. Do not import sensitive data into an untrusted host: the host can change JavaScript.
 
 Small-model factual accuracy is still limited. Browser execution and offline tests do not establish ChatGPT-level reasoning or the image quality shown in the video.
+
+## Creative studio (v0.19.3)
+
+Open **Create** to make template illustrations or freehand drawings (PNG), procedural instrumental tunes (WAV/MIDI), and 4–12 second animated clips (MP4/WebM when the browser supports recording). All rendering happens in the tab without a model or uploads. Optional pictures are resized and kept in memory. Keep the tab visible for recording; locking the profile clears the studio. These are bounded graphics/music tools, not neural image/video generation or vocals. The desktop and LAN companion include the same tools. The desktop's optional DreamShaper AI-image engine remains separate.
+
+After updates, close all Nexo tabs and reopen so the waiting offline cache can activate.
