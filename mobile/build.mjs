@@ -8,8 +8,12 @@ await mkdir('dist',{recursive:true});
 let abortPatched=false;
 const normalizeAbort={name:'wllama-abort-message',setup(builder){builder.onLoad({filter:/@wllama[\\/]wllama[\\/]esm[\\/]index\.js$/},async({path})=>{const source=await readFile(path,'utf8'),needle='let newMsg = message.replace(';
   if(source.split(needle).length!==2)throw Error('Recheck Wllama abort-message patch after dependency changes');
+  const memoryStart=source.indexOf('var isSupportMem64 = () => {'),memoryEnd=source.indexOf('var checkEnvironmentCompatible',memoryStart);
+  if(memoryStart<0||memoryEnd<memoryStart)throw Error('Recheck Wllama Memory64 feature probe');
+  // Some WebKit builds accept the Memory constructor but cannot compile i64 memory.
+  const compatibleSource=source.slice(0,memoryStart)+'var isSupportMem64 = () => WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,5,3,1,4,1]));\n'+source.slice(memoryEnd);
   abortPatched=true;
-  return {contents:source.replace(needle,'let newMsg = String(message?.message || message).replace(').replace('rawStack.replace(/\\|/g,', 'String(rawStack || \'\').replace(/\\|/g,').replace('yield Debug.decodeStackTrace(stack, isCompatBuild);', 'yield Debug.decodeStackTrace(stack || \'\', isCompatBuild).catch(() => String(stack || \'\'));'),loader:'js'};});}};
+  return {contents:compatibleSource.replace(needle,'let newMsg = String(message?.message || message).replace(').replace('rawStack.replace(/\\|/g,', 'String(rawStack || \'\').replace(/\\|/g,').replace('yield Debug.decodeStackTrace(stack, isCompatBuild);', 'yield Debug.decodeStackTrace(stack || \'\', isCompatBuild).catch(() => String(stack || \'\'));'),loader:'js'};});}};
 await build({entryPoints:['src/app.js','src/inference.js'],outdir:'dist',bundle:true,format:'esm',platform:'browser',minify:true,define:{'process.env.NODE_ENV':'"production"'},external:[],plugins:[normalizeAbort]});
 if(!abortPatched)throw Error('Wllama abort-message adapter was not included in the browser bundle');
 for(const name of ['index.html','style.css','manifest.webmanifest','icon.svg','sw.js','LFM-LICENSE.txt','LLAMA-CPP-LICENSE.txt'])await cp('src/'+name,'dist/'+name);
