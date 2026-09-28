@@ -5,7 +5,7 @@ Nexo's optional browser companion uses the model running on your Windows/Linux P
 1. Start Nexo and its local model on the PC.
 2. Connect both devices to the same trusted home Wi-Fi.
 3. In Settings, open **Open on Mac, iPhone or iPad**. Read the HTTP connection notice, check the consent box, and select **Enable browser companion**.
-4. Open the displayed private link in Safari on the other device. Keep the entire link, including its `#key=...` fragment. Treat the link as a password.
+4. Use **Copy private link**, then open that link in Safari on the other device. Keep the entire link, including its `#key=...` fragment. Treat the link as a password.
 5. Ask a question. An image requires the vision model selected on the PC. Questions are independent, not a shared desktop conversation.
 6. Select **Stop and revoke link** when finished. Restarting creates a different key. The feature does not start automatically.
 
@@ -22,4 +22,4 @@ The PC must stay awake with Nexo open. On Windows, if a firewall prompt appears,
 
 ## Appearance
 
-Desktop Settings offers five accent palettes and a custom color, separately from light/dark appearance. My Navi offers robot, cat or orb and an avatar color. Avatar changes are saved in the local Navi profile. The browser companion has its own lightweight color/avatar selectors; it never changes the PC's settings.
+Desktop Settings offers five accent palettes and a custom color, separately from light/dark appearance. These settings persist in the local profile across desktop restarts. My Navi offers robot, cat or orb and an avatar color. Avatar changes are saved in the local Navi profile. The browser companion has its own lightweight color/avatar selectors; it never changes the PC's settings.

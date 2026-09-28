@@ -122,7 +122,11 @@ def main():
             assert any('violet triangle' in s['text'] for s in learned['sources']),learned
             result['answers'].append({'prompt':'What is the fictional Zorilo marker?','answer':learned['answer'],'stats':learned['stats'],'source_admitted':True})
             instant=request('/api/chat',{'message':'What is the fictional Zorilo marker?','mode':'companion','language':'en','private':True})
-            assert instant['status']=='completed' and instant['stats']['model_calls']==0 and 'violet triangle' in instant['answer'],instant
+            assert instant['status']=='completed' and instant['stats']['model_calls']==1 and 'violet triangle' in instant['answer'],instant
+            assert instant['sources'] and instant['stats']['network_requests']==0,instant
+            request('/api/learning/import',{'pack':{'format':'nexo-learning-v1','entries':[{'question':'My project marker?', 'answer':'Blue fox', 'language':'en','kind':'correction'}]},'consent':True})
+            personal=request('/api/chat',{'message':'My project marker?','mode':'companion','language':'en','private':True})
+            assert personal['status']=='completed' and personal['stats']['model_calls']==0 and personal['answer']=='Blue fox',personal
             web_reply=request('/api/chat',{'message':'Computer network','mode':'web','remember_web':True,'language':'en'})
             if web_reply['status']=='unavailable':
                 # One bounded retry for the live third-party dependency; a second failure still fails CI.

@@ -34,6 +34,7 @@ class Companion:
     def __init__(self, controller, trust):
         self.controller, self.trust = controller, trust
         self.lock = threading.RLock()
+        self.readers = threading.BoundedSemaphore(2)
         self.server = None
         self.key = ''
         self.urls = []
@@ -89,6 +90,10 @@ class Companion:
                     if not item:return self.send(404,{'error':'Not found'})
                     return self.send(200,(Path(__file__).parent/'web'/item[0]).read_bytes(),item[1])
                 def do_POST(self):
+                    if not owner.readers.acquire(blocking=False):return self.send(429,{'error':'Too many requests. Try again shortly.'})
+                    try:self.chat_request()
+                    finally:owner.readers.release()
+                def chat_request(self):
                     if not self.valid(True):return
                     if urlsplit(self.path).path!='/chat':return self.send(404,{'error':'Not found'})
                     try:

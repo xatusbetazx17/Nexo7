@@ -219,6 +219,16 @@ class Engine:
             self.learning.record_metrics(stats, status, private)
             return result
 
+        def source_fallback(reason):
+            # Preserve evidence when bounded synthesis fails; never relabel it as an AI answer.
+            label = ('Fragmentos recuperados: el resumen de IA no se completó.' if language.startswith('es')
+                     else 'Retrieved source excerpts: the AI summary did not complete.')
+            warnings.append('AI synthesis '+reason+'; showing source excerpts instead. These are not a verified answer.')
+            answer = label + '\n\n' + '\n\n'.join(f"[{s['id']}] {s['title']}\n{s['text'][:700]}" for s in sources)
+            fallback = finish(answer)
+            fallback['synthesis_status'] = reason
+            return fallback
+
         from .smalltalk import reply as social_reply
         greeting = social_reply(message, language) if mode not in ('research', 'web', 'scenario') else None
         if greeting is not None:
@@ -417,12 +427,15 @@ class Engine:
             except (TransportError, ValueError) as exc:
                 stats["usage_complete"] = False
                 warnings.append("Usage for the failed attempt is unknown; metrics may be incomplete.")
+                if mode == "web" and sources:return source_fallback("failed")
                 return finish("Could not complete the query: " + str(exc), "upstream_error")
             for k in ("input_tokens", "output_tokens", "cached_input_tokens"):
                 v = result.usage.get(k, 0)
                 if type(v) is int and v >= 0:
                     stats[k] += v
             remaining -= max(result.usage.get("output_tokens", 0), 0)
+            if result.incomplete and mode == "web" and sources:
+                return source_fallback("incomplete")
             if result.incomplete:
                 warnings.append("The provider reported an incomplete response; a larger budget may be needed.")
             if not result.calls:

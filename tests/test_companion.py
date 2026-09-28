@@ -92,3 +92,23 @@ class KnowledgeReviewTests(unittest.TestCase):
         self.assertFalse(knowledge_question('My project code?'))
         self.assertNotIn('pollo',guidance('pollo vs gallina','es'))
         self.assertIn('essential distinction',guidance('Compare RAM and storage','en'))
+
+class WebFailureRecoveryTests(unittest.TestCase):
+    def test_web_failure_preserves_sources_and_does_not_claim_a_summary(self):
+        from nexo7.net import TransportError
+        for failure in (Completion('Invented looping partial answer',incomplete=True,usage={'output_tokens':64}), TransportError('timeout')):
+            with closing(Store(':memory:')) as store:
+                provider=Mock()
+                if isinstance(failure,Exception):provider.complete.side_effect=failure
+                else:provider.complete.return_value=failure
+                web=Mock(storage_rights=True)
+                web.lookup.return_value={'sources':[{'id':'W1','title':'Source title','text':'Source evidence.','url':'https://example.org','source':'excerpt'}],
+                    'network_requests':1,'reused':False,'saved':False}
+                engine=Engine(Config(provider='openai',model='fixture'),store,provider=provider,web=web)
+                result=engine.chat('a topic',mode='web',private=True)
+                self.assertEqual(result['status'],'completed')
+                self.assertIn(result['synthesis_status'],('failed','incomplete'))
+                self.assertIn('AI summary did not complete',result['answer'])
+                self.assertIn('[W1]',result['answer']);self.assertIn('Source evidence.',result['answer'])
+                self.assertNotIn('Invented looping',result['answer'])
+                self.assertEqual(result['stats']['model_calls'],1);self.assertEqual(result['stats']['network_requests'],1)

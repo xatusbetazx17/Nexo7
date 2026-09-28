@@ -186,7 +186,7 @@ asks you to check local chat/model readiness; no silent cloud fallback is used.
 
 ## Bridge connects but does not reply (0.19.2 development)
 
-After starting, open the exact bot shown as `@username` in the health line and send a **new** `/ping` message. `/ping` and `/start` answer without calling the model, but only in your explicitly allowed chats. In groups use `/ping@your_bot_username`. The bridge deliberately skips pre-start messages.
+You can start the bridge and test `/ping` before loading the AI model. Ordinary questions still require a running native model. After starting, open the exact bot shown as `@username` in the health line and send a **new** `/ping` message. `/ping` and `/start` answer without calling the model, but only in your explicitly allowed chats. In groups use `/ping@your_bot_username`. The bridge deliberately skips pre-start messages.
 
 - No recent **Last contact**: connection/startup problem. Check the displayed token, conflict, rate-limit or Internet error.
 - **Blocked by allowed IDs** increases: the incoming conversation is not selected. Stop, send another message in Telegram, read recent chat IDs, allow that conversation and restart. The numeric prefix of the BotFather token is the bot's ID, not your conversation ID.

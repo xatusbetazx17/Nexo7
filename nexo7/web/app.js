@@ -117,6 +117,7 @@ async function initialize(first=true) {
     const config=await api("/api/status"); $("login").hidden=true;
     $("provider").textContent = config.provider === "demo" ? "Demo · no AI model" : `${["native","ollama"].includes(config.provider)?"Local":"Online"} · ${config.model}`;
     const preferences=await api("/api/preferences");
+    setTheme(preferences.ui_theme||"light");if(preferences.ui_accent)setAccent(preferences.ui_accent);
     $("model-choice").value=preferences.model_choice;$("personality").value=preferences.personality;$("adapt-tone").checked=preferences.adapt_tone;$("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
     const language = preferences.response_language || config.response_language || "auto";
     $("language").value=language;
@@ -525,7 +526,7 @@ $('scenario-form').onsubmit=async event=>{
 };
 function setTheme(theme){document.documentElement.dataset.theme=theme;$('theme-toggle').textContent=theme==='dark'?'Light appearance':'Dark appearance';try{localStorage.setItem('nexo-theme',theme);}catch{}}
 let savedTheme='light';try{savedTheme=localStorage.getItem('nexo-theme')||'light';}catch{}setTheme(savedTheme==='dark'?'dark':'light');
-$('theme-toggle').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+$('theme-toggle').onclick=()=>{const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';setTheme(theme);api('/api/preferences','POST',{ui_theme:theme}).catch(e=>error(e.message));};
 $('mode').onchange();
 
 // Diffusion jobs keep the UI responsive while the bounded local worker runs.
@@ -607,7 +608,7 @@ $('audit-verify').onclick=async()=>{
   finally{$('audit-verify').disabled=false;}
 };
 
-function setAccent(color){
+function setAccent(color,persist=false){
  if(!/^#[0-9a-f]{6}$/i.test(color))return;
  const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
  const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
@@ -615,13 +616,13 @@ function setAccent(color){
  document.documentElement.style.setProperty('--accent-ink',luminance>.179?'#111111':'#ffffff');
  $('accent-custom').value=color;
  try{localStorage.setItem('nexo-accent',color);}catch{}
- $('appearance-status').textContent='Colors saved on this browser.';
+ $('appearance-status').textContent='Color applied.';if(persist)api('/api/preferences','POST',{ui_accent:color}).then(()=>{$('appearance-status').textContent='Color saved in your Nexo profile.';}).catch(e=>{$('appearance-status').textContent=e.message;});
 }
-$('accent-preset').onchange=e=>setAccent(e.target.value);
-$('accent-custom').oninput=e=>setAccent(e.target.value);
-$('appearance-reset').onclick=()=>{document.documentElement.style.removeProperty('--accent');document.documentElement.style.removeProperty('--accent-ink');try{localStorage.removeItem('nexo-accent');}catch{}$('appearance-status').textContent='Default colors restored.';};
+$('accent-preset').onchange=e=>setAccent(e.target.value,true);
+$('accent-custom').oninput=e=>setAccent(e.target.value);$('accent-custom').onchange=e=>setAccent(e.target.value,true);
+$('appearance-reset').onclick=()=>{document.documentElement.style.removeProperty('--accent');document.documentElement.style.removeProperty('--accent-ink');try{localStorage.removeItem('nexo-accent');}catch{}api('/api/preferences','POST',{ui_accent:''}).then(()=>{$('appearance-status').textContent='Default colors restored.';}).catch(e=>{$('appearance-status').textContent=e.message;});};
 try{const accent=localStorage.getItem('nexo-accent');if(accent)setAccent(accent);}catch{}
 
-function companionStatus(state){$('companion-status').textContent=state.running?'Browser companion is on. Open a private link below on the other device.':'Browser companion is off.';$('companion-links').replaceChildren();for(const url of state.urls||[]){const link=node('a',url);link.href=url;link.target='_blank';link.rel='noreferrer';link.style.overflowWrap='anywhere';const row=node('p','');row.append(link);$('companion-links').append(row);}if(state.running&&!state.urls?.length)$('companion-status').textContent='No private network address found. Connect the PC to your home Wi-Fi and restart the companion.';}
+function companionStatus(state){$('companion-status').textContent=state.running?'Browser companion is on. Open a private link below on the other device.':'Browser companion is off.';$('companion-links').replaceChildren();for(const url of state.urls||[]){const link=node('a','Open companion · '+new URL(url).host);link.href=url;link.target='_blank';link.rel='noreferrer';link.style.overflowWrap='anywhere';const row=node('p','');row.append(link);const copy=node('button','Copy private link','quiet');copy.type='button';copy.onclick=async()=>{try{await navigator.clipboard.writeText(url);$('companion-status').textContent='Private link copied. Share it only with your own device.';}catch{$('companion-status').textContent='Use the link menu to copy its address, including the private key.';}};row.append(document.createTextNode(' '),copy);$('companion-links').append(row);}if(state.running&&!state.urls?.length)$('companion-status').textContent='No private network address found. Connect the PC to your home Wi-Fi and restart the companion.';}
 $('companion-start').onclick=async()=>{try{if(!$('companion-consent').checked)throw Error('Confirm trusted private Wi-Fi use first.');await api('/api/trust/permissions','POST',{scope:'network.companion',enabled:true});companionStatus(await api('/api/companion/start','POST',{consent:true}));}catch(e){$('companion-status').textContent=e.message;}};
 $('companion-stop').onclick=async()=>{try{companionStatus(await api('/api/companion/stop','POST',{}));}catch(e){$('companion-status').textContent=e.message;}};

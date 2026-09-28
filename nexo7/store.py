@@ -41,7 +41,7 @@ class Store:
 
     def preferences(self):
         defaults = {"performance": "balanced", "response_language": "auto", "style": "concise",
-                    "model_choice": "automatic", "personality": "neutral", "adapt_tone": False, "cpu_only": False, "auto_start": False, "local_metrics": False, "use_learning": True}
+                    "ui_theme":"light", "ui_accent":"", "model_choice": "automatic", "personality": "neutral", "adapt_tone": False, "cpu_only": False, "auto_start": False, "local_metrics": False, "use_learning": True}
         with self.lock:
             row = self.db.execute("SELECT value FROM meta WHERE key='preferences'").fetchone()
         if row:
@@ -58,6 +58,8 @@ class Store:
                 raise ValueError("Invalid preference value")
             if values["model_choice"] not in ("automatic","qwen2.5:1.5b","lfm2-vl:450m"):
                 raise ValueError("Unknown model choice")
+            if values["ui_theme"] not in ("light","dark"):raise ValueError("Choose light or dark appearance")
+            if not isinstance(values["ui_accent"],str) or values["ui_accent"] and not re.fullmatch(r"#[0-9a-fA-F]{6}",values["ui_accent"]):raise ValueError("Choose a valid accent color")
             from .personality import PERSONALITIES
             if values["personality"] not in PERSONALITIES:
                 raise ValueError("Unknown personality")

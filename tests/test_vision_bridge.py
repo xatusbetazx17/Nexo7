@@ -261,3 +261,25 @@ class TelegramPingTests(unittest.TestCase):
             bridge.process([{'message_id':2,'chat':{'id':99,'type':'private'},'text':'/ping'}])
             self.assertEqual(bridge.send.call_count,3)
             self.assertTrue(addressed({'chat':{'type':'group'},'text':'/ping@nexo_bot'},'nexo_bot',123))
+
+class TelegramBeforeModelTests(unittest.TestCase):
+    def test_desktop_can_start_transport_diagnostics_before_loading_model(self):
+        from contextlib import closing
+        from urllib.request import Request,urlopen
+        from nexo7.server import make_server
+        from nexo7.store import Store
+        with tempfile.TemporaryDirectory() as tmp, closing(Store(str(Path(tmp)/'nexo.sqlite'))) as store:
+            controller=SetupController(str(Path(tmp)/'nexo.sqlite'))
+            server=make_server(controller.config,store,port=0,controller=controller)
+            thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+            entered=threading.Event()
+            def run(bridge):entered.set();bridge.stop.wait(3)
+            try:
+                with patch.object(Bridge,'run',run):
+                    payload=json.dumps({'token':'123:'+'x'*25,'chat_ids':[10],'consent':True}).encode()
+                    with urlopen(Request(f'http://127.0.0.1:{server.server_port}/api/telegram/start',data=payload,
+                        headers={'Content-Type':'application/json','X-Nexo-Key':server.access_token}),timeout=3) as response:
+                        self.assertEqual(response.status,202)
+                    self.assertTrue(entered.wait(2));self.assertEqual(controller.config.provider,'demo')
+                    server.telegram_controller.stop();server.telegram_controller.thread.join(3)
+            finally:server.shutdown();server.server_close();thread.join(3);controller.close()

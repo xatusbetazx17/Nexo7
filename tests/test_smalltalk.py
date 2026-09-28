@@ -40,3 +40,16 @@ class SocialReplyTests(unittest.TestCase):
             self.assertEqual(result['stats']['model_calls'],0)
             self.assertIn('listo para ayudarte',result['answer'])
             provider.assert_not_called()
+
+class AppearancePersistenceTests(unittest.TestCase):
+    def test_appearance_survives_reopening_and_rejects_arbitrary_style(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            path=str(Path(tmp)/'profile.sqlite')
+            with closing(Store(path)) as store:
+                store.set_preferences({'ui_theme':'dark','ui_accent':'#7251b5'})
+                with self.assertRaises(ValueError):store.set_preferences({'ui_accent':'url(https://example.org)'})
+            with closing(Store(path)) as store:
+                self.assertEqual(store.preferences()['ui_theme'],'dark')
+                self.assertEqual(store.preferences()['ui_accent'],'#7251b5')

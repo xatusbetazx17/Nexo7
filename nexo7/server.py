@@ -231,7 +231,6 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if path == '/api/telegram/chats' and telegram:
                     return self._send(200, telegram.discover(body))
                 if path == '/api/telegram/start' and telegram:
-                    if controller.config.provider != 'native':raise ValueError('Start a local model first')
                     return self._send(202, telegram.start(body))
                 if path == '/api/telegram/stop' and telegram:
                     return self._send(202, telegram.stop())

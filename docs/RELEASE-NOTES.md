@@ -2,7 +2,8 @@ Nexo 7 v0.19.2 preview — Telegram, browser companion and appearance
 
 **Known unresolved limitation:** the real Spanish comparison diagnostic fails. This release does not fix general model accuracy. Accuracy results are uploaded as model-answer-review artifacts and the failed diagnostic remains visible in CI; required application, privacy and memory tests still block publication. See docs/ANSWER-QUALITY-STATUS.md.
 
-- Telegram adds model-independent `/ping` and `/start`, authenticated bot username, last successful polling time and actionable blocked-chat diagnostics. No live bot was connected during development.
+- Web lookup retains retrieved excerpts when AI synthesis fails or reaches its output limit; the response explicitly identifies the missing summary. No hidden retry or extra search.
+- Telegram adds model-independent `/ping` and `/start`, authenticated bot username, last successful polling time and actionable blocked-chat diagnostics. The bridge can be started for diagnostics before a model is loaded. No live bot was connected during development.
 - Optional private-Wi-Fi browser companion for Mac/iPhone/iPad, independent revocable key, no app installation on the client, no admin/file/email access. HTTP only: trusted network and non-sensitive use.
 - Five accent palettes/custom color plus robot/cat/orb avatar appearance. See BROWSER-COMPANION.md.
 - Exact English/Spanish greetings now use a bounded local social reply in desktop and Telegram text relay. No model or web request; mixed greeting-plus-task prompts still reach the model. This is routing, not learned reasoning.
