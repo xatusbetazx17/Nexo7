@@ -30,7 +30,7 @@ module.exports=async function checkMedia(page){
    await page.locator('#media-output a[download="Nexo-animation.gif"]').waitFor({timeout:25000});assert((await page.locator('#media-status').innerText()).includes('Animated GIF ready'));
  }
  await page.locator('#media-gif').click();await page.locator('#media-output a[download="Nexo-animation.gif"]').waitFor({timeout:25000});
- const gifBytes=await page.locator('#media-output a').evaluate(async a=>Array.from(new Uint8Array(await (await fetch(a.href)).arrayBuffer())));
+ const downloaded=page.waitForEvent('download');await page.locator('#media-output a[download="Nexo-animation.gif"]').click();const gif=await downloaded;const gifBytes=require('fs').readFileSync(await gif.path());
  const result=require('child_process').spawnSync(process.env.NEXO_PYTHON||'python',['-c',"import sys,io;from PIL import Image;im=Image.open(io.BytesIO(sys.stdin.buffer.read()));assert im.size==(320,180);assert im.n_frames==32;im.seek(31);im.load()"],{input:Buffer.from(gifBytes)});assert.equal(result.status,0,result.stderr?.toString());
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  return {videoEncoded:supported};
