@@ -10,6 +10,8 @@ An independent local assistant with an English setup interface, multilingual cha
 
 Download the Windows or Linux x86-64 archive from [Releases](https://github.com/xatusbetazx17/Nexo7/releases), extract it and open **Nexo7.exe** or **Nexo7**. Python and the document reader are bundled. The setup screen downloads a pinned native llama.cpp engine and Qwen3.5 GGUF model, checks SHA-256 hashes, applies an OS memory limit and starts local chat. Neither Docker nor WSL is required by the desktop application.
 
+For **local execution on each Mac, iPhone, iPad or other supported device without installing an app**, use the [standalone browser version](docs/LOCAL-BROWSER.md). Its small model runs on that device after an explicit download. It is separate from the PC-powered LAN companion; the browser feature set and model are smaller than the native desktop application.
+
 Select **Fast** for the 0.8B model (~580 MB). Balanced/Larger-model preferences choose among supported profiles according to free resources. Initial engine/model downloads require Internet; subsequent chat, document lookup, file inspection and calculations can run offline. PubMed and the explicitly configured optional cloud provider still require Internet.
 
 Windows can attempt NVIDIA/Vulkan acceleration when VRAM is measurable, with CPU fallback. **This Linux native release uses CPU** because GPU drivers may reserve more virtual address space than its strict address-space budget allows. AMD/Intel GPU acceleration and general native Linux GPU support are not promised in this release. See [START HERE](docs/QUICKSTART.md).

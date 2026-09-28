@@ -1,0 +1,77 @@
+name: Local browser app
+on:
+  push:
+    branches: [main, browser-local-preview]
+    paths: ['mobile/**', 'scripts/mobile_browser.cjs', '.github/workflows/browser-local.yml', 'docs/LOCAL-BROWSER.md']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: browser-local-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, compat, webkit]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: python -m pip install -r requirements-runtime.txt
+      - run: npm ci --prefix mobile --ignore-scripts
+      - run: npm run build --prefix mobile
+      - run: npm install --prefix "$RUNNER_TEMP/nexo-ui" --no-save playwright@1.62.1
+      - if: matrix.browser == 'webkit'
+        run: "$RUNNER_TEMP/nexo-ui/node_modules/.bin/playwright install --with-deps webkit"
+      - name: Actual on-device model, image editing and offline reload
+        env:
+          NEXO_PLAYWRIGHT_MODULE: ${{ runner.temp }}/nexo-ui/node_modules/playwright
+          NEXO_CHROME: /usr/bin/google-chrome
+          NEXO_BROWSER: ${{ matrix.browser }}
+          NEXO_MOBILE_COMPAT: ${{ matrix.browser == 'compat' && '1' || '' }}
+        run: node scripts/mobile_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-browser-review-${{ matrix.browser }}
+          path: reports/mobile
+  build:
+    needs: validate
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: npm ci --prefix mobile --ignore-scripts
+      - run: npm run build --prefix mobile
+      - run: cp docs/LOCAL-BROWSER.md mobile/dist/START-HERE.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nexo-Local-Browser
+          path: mobile/dist
+      - uses: actions/upload-pages-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: mobile/dist
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the verified static app
+        id: deployment
+        uses: actions/deploy-pages@v4

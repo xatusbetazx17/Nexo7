@@ -1,4 +1,5 @@
 import {Wllama} from '@wllama/wllama';
+import {checkDownloadSpace} from './device.js';
 import {modelCache} from './model-cache.js';
 const URL_MODEL='https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/657e078c94084481950a2d555a941481f715536b/LFM2.5-350M-Q4_K_M.gguf';
 const SIZE=229312224,SHA='7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4';
@@ -12,10 +13,12 @@ self.onmessage=async({data})=>{
    progress('Checking downloaded model…');
    let cached=await modelCache.match(URL_MODEL);
    if(!cached){
+    await checkDownloadSpace(SIZE);
     progress('Downloading local model · 230 MB…');
     const response=await fetch(URL_MODEL);
     if(!response.ok)throw Error('The model download failed. Check the connection and try again.');
-    await modelCache.put(URL_MODEL,response);
+    let lastPercent=-1;
+    await modelCache.put(URL_MODEL,response,(loaded)=>{const percent=Math.min(100,Math.floor(loaded/SIZE*100));if(percent!==lastPercent){lastPercent=percent;progress('Downloading local model · '+percent+'% of 230 MB…');}});
     cached=await modelCache.match(URL_MODEL);
    }
    if(!cached)throw Error('Could not save the model offline. Free browser storage and try again.');
