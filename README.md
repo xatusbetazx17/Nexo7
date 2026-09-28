@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.19.2.** This application update improves Telegram diagnostics, browser access and appearance. Small-model factual accuracy is still limited: the Spanish chicken/hen comparison diagnostic currently fails. This is reported separately from required functionality, memory-limit and security checks. [Known limitation and test evidence](docs/ANSWER-QUALITY-STATUS.md).
+**Early preview · v0.19.3.** This update adds shared local illustration, instrumental music and animated-clip tools across browser and desktop versions. Small-model factual accuracy is still limited: the Spanish chicken/hen comparison diagnostic currently fails. This is reported separately from required functionality, memory-limit and security checks. [Known limitation and test evidence](docs/ANSWER-QUALITY-STATUS.md).
 
  Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 
@@ -10,7 +10,7 @@ An independent local assistant with an English setup interface, multilingual cha
 
 Download the Windows or Linux x86-64 archive from [Releases](https://github.com/xatusbetazx17/Nexo7/releases), extract it and open **Nexo7.exe** or **Nexo7**. Python and the document reader are bundled. The setup screen downloads a pinned native llama.cpp engine and Qwen3.5 GGUF model, checks SHA-256 hashes, applies an OS memory limit and starts local chat. Neither Docker nor WSL is required by the desktop application.
 
-For **local execution on each Mac, iPhone, iPad or other supported device without installing an app**, use the [standalone browser version](docs/LOCAL-BROWSER.md). Its small model runs on that device after an explicit download. It is separate from the PC-powered LAN companion; the browser feature set and model are smaller than the native desktop application.
+For **local execution on each Mac, iPhone, iPad or other supported device without installing an app**, open the [standalone browser app](https://xatusbetazx17.github.io/Nexo7/) ([guide](docs/LOCAL-BROWSER.md)). Its small model runs on that device after an explicit download. It is separate from the PC-powered LAN companion; the browser feature set and model are smaller than the native desktop application.
 
 Select **Fast** for the 0.8B model (~580 MB). Balanced/Larger-model preferences choose among supported profiles according to free resources. Initial engine/model downloads require Internet; subsequent chat, document lookup, file inspection and calculations can run offline. PubMed and the explicitly configured optional cloud provider still require Internet.
 
@@ -170,6 +170,16 @@ Task templates, editable proposals and declared HTML checks extend the reviewed
 workspace workflow. See [images, Telegram, measured limits and licenses](docs/VISION-TELEGRAM.md)
 and [task editing](docs/TASK-AGENT.md). These features do not establish superior
 reasoning or factual accuracy; the new checkpoint officially supports English.
+
+## Pictures, music and short clips on every supported device
+
+Open **Create** in the [browser app](https://xatusbetazx17.github.io/Nexo7/) or the desktop edition. Choose **Picture**, **Music**, or **Video clip**. The same studio is available in the LAN companion.
+
+- Pictures: customizable templates, captions and freehand drawing, or import your own picture. Download PNG.
+- Music: procedurally compose instrumental melodies with bass, choose mood/tempo/instrument, and download playable WAV or editable MIDI.
+- Clips: animate the selected scene for 4–12 seconds with an optional instrumental soundtrack. Download MP4 or WebM, depending on browser encoder support. Imported pictures make still-image clips.
+
+No model download or network requests are needed for these tools. They do not provide arbitrary prompt-to-image, vocals or neural text-to-video. Unsupported browsers retain picture/music tools and explain why video export is unavailable. Keep the tab visible during recording. The desktop's separate AI image generator remains available below.
 
 ## Offline drawing and music
 

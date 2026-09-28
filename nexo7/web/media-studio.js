@@ -73,6 +73,7 @@ export function setupMediaStudio(root) {
   const intro=node('p','Create illustrations, instrumental tunes and short animated clips on this device. The lightweight tools use templates, drawing and procedural composition—not a text-to-image, singing or AI video model. No uploads or downloads of models.');root.append(node('h2','Create on this device'),intro);
   const field=(label,id,element)=>{element.id=id;const l=node('label',label);l.htmlFor=id;root.append(l,element);return element;};
   const select=(items)=>{const e=node('select');for(const [value,text]of items){const o=node('option',text);o.value=value;e.append(o);}return e;};
+  const mode=field('What would you like to create?','media-mode',select([['image','Picture'],['music','Music'],['video','Video clip']]));
   const title=field('Caption / title','media-title',node('input'));title.maxLength=80;title.placeholder='My little world';
   const scene=field('Illustration template','media-scene',select([['landscape','Landscape'],['space','Space'],['chicken','Chicken'],['abstract','Abstract shapes']]));
   const palette=field('Illustration colors','media-palette',select(Object.keys(palettes).map(x=>[x,x[0].toUpperCase()+x.slice(1)])));
@@ -98,7 +99,7 @@ export function setupMediaStudio(root) {
   const clearOutput=()=>{for(const media of output.querySelectorAll('audio,video')){media.pause();media.removeAttribute('src');media.load();}for(const url of urls)URL.revokeObjectURL(url);urls=[];output.replaceChildren();};
   const publish=(blob,name,kind)=>{const url=URL.createObjectURL(blob);urls.push(url);if(kind){const media=node(kind);media.src=url;if(kind==='img')media.alt='Locally composed illustration';else{media.controls=true;media.preload='metadata';if(kind==='video')media.playsInline=true;}output.append(media);}const a=node('a','Download '+name);a.href=url;a.download=name;output.append(a);};
   const button=(text,id,fn)=>{const b=node('button',text);b.type='button';b.id=id;b.onclick=async()=>{try{await fn();}catch(e){status.textContent=e.message;}};actions.append(b);return b;};
-  const controls=[title,scene,palette,draw,color,pen,photoInput,mood,sound,tempo,bars,seconds,soundtrack];
+  const controls=[mode,title,scene,palette,draw,color,pen,photoInput,mood,sound,tempo,bars,seconds,soundtrack];
   const busy=value=>{for(const e of [...controls,...actions.querySelectorAll('button')])e.disabled=value;stop.disabled=!value;};
   const score=()=>compose({seed:title.value+variant,mood:mood.value,bpm:Number(tempo.value),bars:Number(bars.value)});
   button('New variation','media-variation',()=>{variant++;render();status.textContent='New procedural variation. Choose a template or draw your own picture.';});
@@ -128,6 +129,17 @@ export function setupMediaStudio(root) {
       if(!state.cancelled&&revision===disposed){const blob=new Blob(chunks,{type:recorder.mimeType});if(blob.size<100)throw Error('The encoder returned an empty clip');publish(blob,type.startsWith('video/mp4')?'Nexo-clip.mp4':'Nexo-clip.webm','video');status.textContent='Animated clip ready. This animates a template (or shows your picture) with optional synthesized music; it is not AI text-to-video.';}
     } finally {cleanup(state);if(job===state){job=null;busy(false);render();}}
   });
+  function chooseMode(){
+    const isMusic=mode.value==='music',isVideo=mode.value==='video';
+    for(const e of [scene,palette,draw,color,pen,photoInput]){e.hidden=isMusic;root.querySelector('label[for="'+e.id+'"]').hidden=isMusic;}
+    for(const e of [mood,sound,tempo,bars]){e.hidden=!isMusic&&!isVideo;root.querySelector('label[for="'+e.id+'"]').hidden=e.hidden;}
+    for(const e of [seconds,soundtrack]){e.hidden=!isVideo;root.querySelector('label[for="'+e.id+'"]').hidden=e.hidden;}
+    canvas.hidden=isMusic;
+    for(const id of ['media-clear-ink','media-clear-photo'])root.querySelector('#'+id).hidden=isMusic;
+    root.querySelector('#media-image').hidden=mode.value!=='image';root.querySelector('#media-music').hidden=!isMusic;
+    root.querySelector('#media-video').hidden=!isVideo;stop.hidden=!isVideo;
+  }
+  mode.onchange=chooseMode;chooseMode();
   function cleanup(s){clearInterval(s.timer);clearTimeout(s.deadline);try{s.source?.stop();}catch{}s.stream?.getTracks().forEach(t=>t.stop());s.destination?.stream.getTracks().forEach(t=>t.stop());s.context?.close().catch(()=>{});}
   function cancel(message){if(job){job.cancelled=true;if(job.recorder?.state==='recording')job.recorder.stop();cleanup(job);}status.textContent=message;}
   const visibility=()=>{if(document.hidden&&job)cancel('Clip cancelled because the tab was hidden. Keep it visible while recording.');};document.addEventListener('visibilitychange',visibility);
