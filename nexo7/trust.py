@@ -32,9 +32,10 @@ SCOPES = {
     'chat.use': 'Run chat or vision inference',
 }
 # Optional modules start disabled, including on existing profiles.
-DEFAULT_OFF = {'presence.use','voice.use','scheduler.use','google.calendar.read','google.gmail.read',
+DEFAULT_OFF = {'network.companion','presence.use','voice.use','scheduler.use','google.calendar.read','google.gmail.read',
                'chips.install','chips.run','transfer.export','transfer.import','google.gmail.send','network.chips'}
 SCOPES.update({
+ 'network.companion':'Share stateless chat on your trusted private Wi-Fi',
  'presence.use':'Show the desktop avatar', 'voice.use':'Local microphone recognition and speech',
  'scheduler.use':'Deliver reminders and morning briefings', 'google.calendar.read':'Read Google Calendar events',
  'google.gmail.read':'Read Gmail messages (no sending or deletion)', 'chips.install':'Install or remove signed declarative chips',
@@ -119,6 +120,12 @@ routes('POST','/api/navi/mail/list',('memory.read',))
 routes('POST','/api/navi/mail/preview /api/navi/mail/send',('google.gmail.send','memory.read'))
 routes('POST','/api/navi/catalog /api/navi/chips/export')
 routes('POST','/api/navi/catalog/download',('network.chips',))
+
+
+ACTIONS['companion.reply'] = ('network.companion',)
+routes('GET', '/api/companion')
+routes('POST', '/api/companion/start', ('network.companion',))
+routes('POST', '/api/companion/stop')
 
 
 def route_action(method, path):

@@ -183,3 +183,14 @@ Session counters show received allowed messages, completed answers and messages
 blocked by the allowlist. Generating indicates the local model is working.
 Counters and status contain no chat content and are not saved. A reply failure
 asks you to check local chat/model readiness; no silent cloud fallback is used.
+
+## Bridge connects but does not reply (0.19.2 development)
+
+After starting, open the exact bot shown as `@username` in the health line and send a **new** `/ping` message. `/ping` and `/start` answer without calling the model, but only in your explicitly allowed chats. In groups use `/ping@your_bot_username`. The bridge deliberately skips pre-start messages.
+
+- No recent **Last contact**: connection/startup problem. Check the displayed token, conflict, rate-limit or Internet error.
+- **Blocked by allowed IDs** increases: the incoming conversation is not selected. Stop, send another message in Telegram, read recent chat IDs, allow that conversation and restart. The numeric prefix of the BotFather token is the bot's ID, not your conversation ID.
+- `/ping` replies but questions do not: the transport works. Test a question in Nexo's own Chat and inspect the model/busy error. Keep the PC awake.
+- HTTP 409: another instance or webhook is receiving this bot's updates. Stop the other instance or manage that webhook before retrying; Nexo does not delete webhooks automatically.
+
+The token field clears after start because the running bridge holds it only in memory. This does not disconnect it. Never send anyone your token. These changes have automated transport tests; a live Telegram account was not used during development.

@@ -45,7 +45,12 @@ def run(engine, message, options, allow_internet=False):
     exact = next((e for e in engine.learning.entries() if ' '.join(e['question'].casefold().split()) == ' '.join(message.casefold().split())
                   and options['language'] in ('auto', e['language'])), None) if engine.store.preferences()['use_learning'] else None
     from .answer_guidance import knowledge_question
-    if exact and not knowledge_question(message) and not imagined and not exact.get('provenance') and not current and not message.startswith('/'):
+    from .smalltalk import reply as social_reply
+    greeting = social_reply(message, options['language'])
+    if greeting is not None:
+        result = local_result(greeting)
+        steps.append({'action': 'Local greeting', 'result': 'Built-in social reply; no model call'})
+    elif exact and not knowledge_question(message) and not imagined and not exact.get('provenance') and not current and not message.startswith('/'):
         result = local_result(exact['answer'])
         result['warnings'].append('Reused your reviewed example; not independently fact-checked.')
         steps.append({'action': 'Reuse reviewed answer', 'result': 'Exact question and compatible language; no model call'})

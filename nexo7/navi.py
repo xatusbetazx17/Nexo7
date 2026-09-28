@@ -15,7 +15,7 @@ from .vault import Vault
 from .connectors import GoogleConnections
 from .chips import Chips
 
-DEFAULTS={'avatar':False,'voice':False,'voice_language':'en','scheduler':False,
+DEFAULTS={'avatar':False,'avatar_style':'robot','avatar_color':'#65a8ff','voice':False,'voice_language':'en','scheduler':False,
           'briefing':False,'briefing_time':'08:00','timezone':'America/New_York',
           'briefing_calendar':False,'briefing_gmail':False,'briefing_note':''}
 
@@ -41,6 +41,8 @@ class NaviState:
         values={**self.settings(),**updates}
         for k in ('avatar','voice','scheduler','briefing','briefing_calendar','briefing_gmail'):
             if type(values[k]) is not bool:raise ValueError('Navi switches must be boolean')
+        if values['avatar_style'] not in ('robot','cat','orb'):raise ValueError('Choose robot, cat or orb')
+        if not isinstance(values['avatar_color'],str) or not re.fullmatch(r'#[0-9a-fA-F]{6}',values['avatar_color']):raise ValueError('Choose a valid avatar color')
         if values['voice_language'] not in ('en','es'):raise ValueError('Choose English or Spanish for recognition')
         if not isinstance(values['briefing_time'],str) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d',values['briefing_time']):raise ValueError('Choose a valid morning time')
         if not isinstance(values['timezone'],str) or len(values['timezone'])>80:raise ValueError('Invalid time zone')
@@ -94,6 +96,7 @@ class Navi:
             now=time.monotonic()
             phase='thinking' if self.busy or self.controller.operation.locked() else 'listening' if now<self.listening_until else 'happy' if now<self.happy_until else 'sleeping' if now-self.last_activity>180 else 'idle'
         return {'state':phase,'name':self.store.continuity.persona()['name'],'enabled':self.state.settings()['avatar'] and self.store.trust.allowed('presence.show'),
+                'avatar_style':self.state.settings()['avatar_style'],'avatar_color':self.state.settings()['avatar_color'],
                 'unread':sum(not n['seen'] for n in self.state.notifications()),'error':self.error}
     def start_overlay(self):
         if self.overlay and self.overlay.poll() is None:return

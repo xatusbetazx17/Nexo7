@@ -1,4 +1,6 @@
-# Start Nexo 7 — native edition 0.19.2
+# Start Nexo 7 — native edition
+
+Version 0.19.2 is an unreleased development candidate. Use the published v0.19.1 installer until the real-model answer-quality release gate passes. See [investigation status](ANSWER-QUALITY-STATUS.md).
 
 1. Extract the archive into a folder you own. Windows: open Nexo7.exe. Linux: run ./Nexo7 (chmod +x Nexo7 if needed).
 2. The local browser interface opens. Python and the PDF reader are included. No Docker or WSL required.

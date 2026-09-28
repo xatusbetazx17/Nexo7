@@ -31,6 +31,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     agent = TaskAgent(store, workspace) if workspace else None
     from .telegram_bridge import BridgeController
     telegram = BridgeController(Path(config.database).resolve().parent / "access.json", trust=trust) if controller else None
+    from .lan_companion import Companion
+    companion = Companion(controller, trust) if controller else None
     import_slots = threading.BoundedSemaphore(1)
     creative_slots = threading.BoundedSemaphore(1)
     from .image_generation import ImageGenerator
@@ -142,6 +144,8 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                     "local_ram_limit_bytes": active.local_ram_limit_bytes if active.provider in {"native", "ollama"} else None,
                     "local_backend": active.local_backend if active.provider in {"native", "ollama"} else None,
                     "vision": active.provider == "native" and active.model == "lfm2-vl:450m", "desktop": controller is not None})
+            if path == "/api/companion" and companion:
+                return self._send(200, companion.snapshot())
             if path == "/api/telegram" and telegram:
                 return self._send(200, telegram.snapshot())
             if path == '/api/images' and images:
@@ -202,6 +206,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if path == '/api/trust/permissions':
                     trust.set_scope(body.get('scope'), body.get('enabled'))
                     if body.get('enabled') is False:
+                        if body.get('scope') == 'network.companion' and companion:companion.stop()
                         if body.get('scope') == 'network.telegram' and telegram:
                             telegram.stop()
                         if body.get('scope') in {'images.generate', 'models.manage'} and images:
@@ -219,6 +224,10 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
                 if path == '/api/images/cancel' and images:
                     images.cancel.set()
                     return self._send(200,{'message':'Cancellation requested.'})
+                if path == '/api/companion/start' and companion:
+                    return self._send(200, companion.start(body))
+                if path == '/api/companion/stop' and companion:
+                    return self._send(200, companion.stop())
                 if path == '/api/telegram/chats' and telegram:
                     return self._send(200, telegram.discover(body))
                 if path == '/api/telegram/start' and telegram:
@@ -405,6 +414,7 @@ def make_server(config, store, port=8787, token=None, engine=None, controller=No
     class LocalServer(ThreadingHTTPServer):
         daemon_threads = True
         def server_close(self):
+            if companion:companion.stop()
             if navi:navi.close()
             super().server_close()
         def get_request(self):

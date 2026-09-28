@@ -1,5 +1,11 @@
-Nexo 7 v0.19.2 preview — comparison answers and reviewed-memory handling
+Nexo 7 v0.19.2 development candidate — NOT RELEASED
 
+Publication is blocked: the real Spanish comparison regression fails. v0.19.1 remains the downloadable release. See docs/ANSWER-QUALITY-STATUS.md.
+
+- Telegram adds model-independent `/ping` and `/start`, authenticated bot username, last successful polling time and actionable blocked-chat diagnostics. No live bot was connected during development.
+- Optional private-Wi-Fi browser companion for Mac/iPhone/iPad, independent revocable key, no app installation on the client, no admin/file/email access. HTTP only: trusted network and non-sensitive use.
+- Five accent palettes/custom color plus robot/cat/orb avatar appearance. See BROWSER-COMPANION.md.
+- Exact English/Spanish greetings now use a bounded local social reply in desktop and Telegram text relay. No model or web request; mixed greeting-plus-task prompts still reach the model. This is routing, not learned reasoning.
 - Comparisons receive compact guidance to define both terms, lead with the essential distinction and avoid fabricated differences. Spanish comparisons receive Spanish guidance, including common missing accents. Applies to desktop chat and text-only Telegram relay.
 - General-knowledge questions no longer automatically echo an exact saved correction. Relevant saved corrections are still retrieved as untrusted references for the model. Personal exact-match shortcuts remain available.
 - Learning UI explains that saving an example neither verifies its facts nor retrains the model. Existing notes are not rewritten or deleted.

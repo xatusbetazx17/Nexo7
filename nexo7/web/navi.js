@@ -16,6 +16,7 @@ function notices(items){
 }
 async function refresh(){
  snapshot=await api('/api/navi');const s=snapshot.settings;
+ $('avatar-style').value=s.avatar_style||'robot';$('avatar-color').value=s.avatar_color||'#65a8ff';previewAvatar();
  for(const key of ['avatar','voice','scheduler','briefing'])$('navi-'+key).checked=s[key];
  $('navi-voice-toolbar').hidden=!s.voice;
  for(const key of ['voice_language','briefing_time','timezone','briefing_note'])$('navi-'+key.replaceAll('_','-')).value=s[key];
@@ -59,4 +60,8 @@ async function stopRecord(transcribe=true){const r=recording;if(!r)return;record
 $('navi-record').onclick=attempt(async()=>{if(recording)return stopRecord();if(!navigator.mediaDevices?.getUserMedia)throw Error('Microphone access requires a supported browser on localhost');const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true},video:false});let context;try{context=new AudioContext();await context.audioWorklet.addModule('/recorder.js');const worklet=new AudioWorkletNode(context,'nexo-recorder');recording={stream,context,worklet,chunks:[],rate:context.sampleRate};worklet.port.onmessage=e=>{if(recording)recording.chunks.push(e.data);};context.createMediaStreamSource(stream).connect(worklet);worklet.connect(context.destination);await context.resume();await post('listening',{active:true});recording.timer=setTimeout(()=>stopRecord().catch(e=>{$('navi-record-status').textContent=e.message;}),30000);$('navi-record').textContent='Stop recording';$('navi-record-status').textContent='Listening on this device · up to 30 seconds';}catch(e){stream.getTracks().forEach(t=>t.stop());if(context)await context.close();recording=null;throw e;}});
 window.addEventListener('pagehide',()=>{if(recording){recording.stream.getTracks().forEach(t=>t.stop());recording.context.close();}if(audioURL)URL.revokeObjectURL(audioURL);});
 api('/api/status').then(async s=>{if(!s.desktop)return;$('navi-tab').hidden=false;await refresh();setInterval(async()=>{if(polling||document.hidden)return;polling=true;try{const p=await api('/api/navi');snapshot=p;$('navi-voice-toolbar').hidden=!p.settings.voice;$('navi-presence').textContent='Currently '+p.presence.state;notices(p.notifications);if(p.voice.busy||p.voice.progress||p.voice.error)$('navi-voice-status').textContent=p.voice.error||p.voice.progress;}catch{}finally{polling=false;}},15000);}).catch(()=>{});
+function previewAvatar(){const preview=$('avatar-preview');preview.textContent={robot:'🤖',cat:'🐱',orb:'◉'}[$('avatar-style').value];preview.style.background=$('avatar-color').value;}
+$('avatar-style').onchange=previewAvatar;$('avatar-color').oninput=previewAvatar;
+$('avatar-save').onclick=attempt(async()=>{await settings({avatar_style:$('avatar-style').value,avatar_color:$('avatar-color').value});status('Avatar appearance saved.');});
+
 })();

@@ -93,6 +93,11 @@ def main():
                 assert any(word in response['answer'].lower() for word in expected),response
                 assert response['stats']['network_requests']==0 and response['stats']['tool_calls']==0,response
                 result['answers'].append({'prompt':prompt,'answer':response['answer'],'stats':response['stats']})
+            for social in ('¿Cómo estás?', 'Hola, como estas?', 'Hello, how are you?'):
+                greeting=request('/api/chat',{'message':social,'mode':'companion','private':True})
+                assert greeting['status']=='completed' and greeting['stats']['model_calls']==0,greeting
+                assert greeting['stats']['network_requests']==0,greeting
+                result['answers'].append({'prompt':social,'answer':greeting['answer'],'stats':greeting['stats'],'scope':'Built-in greeting, not a model reasoning result'})
             if args.binary:
                 comparison=request('/api/chat',{'message':'cual es la diferencia entre un pollo una gallina','mode':'companion','language':'es','private':True})
                 text=comparison['answer'].casefold()

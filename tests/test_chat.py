@@ -30,7 +30,7 @@ class ChatTests(unittest.TestCase):
         with closing(Store(":memory:")) as store:
             provider = Mock()
             provider.complete.side_effect = TransportError("timeout")
-            result = Engine(Config(provider="openai", model="fixture"), store, provider=provider).chat("hello", mode="chat", session="failure")
+            result = Engine(Config(provider="openai", model="fixture"), store, provider=provider).chat("Explain gravity", mode="chat", session="failure")
             self.assertEqual(result["status"], "upstream_error")
             self.assertEqual(store.history("failure", 10), [])
 

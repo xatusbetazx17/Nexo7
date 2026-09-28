@@ -84,6 +84,8 @@ def matched_rules(text, rules):
 
 def addressed(message, username, bot_id):
     if message.get('chat', {}).get('type') == 'private': return True
+    command = (message.get('text') or '').split()[0] if message.get('text') else ''
+    if command.casefold() in {'/start@'+username.casefold(), '/ping@'+username.casefold()}: return True
     if message.get('reply_to_message', {}).get('from', {}).get('id') == bot_id: return True
     text = message.get('text') or message.get('caption') or ''
     encoded = text.encode('utf-16-le')
@@ -183,6 +185,11 @@ class Bridge:
         requested = [m for m in messages if addressed(m, self.username, self.bot_id)]
         if not requested and not self.rules: return
         trigger = requested[0] if requested else messages[0]
+        command = (trigger.get('text') or '').strip().casefold()
+        if command in ('/start', '/ping', '/start@'+self.username.casefold(), '/ping@'+self.username.casefold()):
+            self.send(trigger, 'Nexo bridge connected / Puente conectado. Your chat is allowed. Send a new question here. / Envía tu pregunta aquí. The PC must stay awake with Nexo open.')
+            self.report(phase='running', error=None, replied=True)
+            return
         sources = list(messages)
         referenced = trigger.get('reply_to_message')
         if referenced: sources.append(referenced)
@@ -225,7 +232,7 @@ class Bridge:
         # Skip pre-start backlog; an old message must not trigger an unexpected reply.
         latest = self.telegram('getUpdates', {'offset': -1, 'timeout': 0, 'limit': 1, 'allowed_updates': ['message']})
         offset = latest[-1]['update_id'] + 1 if latest else 0
-        self.report(phase='running', error=None)
+        self.report(phase='running', error=None, username=self.username, polled=True)
         reconnecting = False
         while not self.stop.is_set():
             try:
@@ -234,6 +241,7 @@ class Bridge:
                 reconnecting = True
                 self.report(phase='reconnecting', error=connection_hint(exc))
                 self.stop.wait(3); continue
+            self.report(polled=True)
             if reconnecting:
                 self.report(phase='running', error=None)
                 reconnecting = False
@@ -242,7 +250,7 @@ class Bridge:
                 message = update.get('message', {})
                 if message.get('from', {}).get('is_bot'): continue
                 if message.get('chat', {}).get('id') not in self.settings.chats:
-                    self.report(ignored=True)
+                    self.report(ignored=True, error='A message arrived from a chat outside your allowed IDs. Stop the bridge and use Read recent chat IDs to select that conversation.')
                     continue
                 self.report(received=True)
                 if message.get('media_group_id'): self.albums.add(message, time.monotonic())
@@ -269,15 +277,19 @@ class BridgeController:
         self.lock = threading.Lock(); self.stop_event = threading.Event(); self.thread = None
         self.phase = 'off'; self.error = None; self.chat_count = 0
         self.received = 0; self.ignored = 0; self.replied = 0
+        self.last_poll = None; self.username = ''
 
     def snapshot(self):
         with self.lock:
             return {'phase': self.phase, 'error': self.error, 'chat_count': self.chat_count,
-                    'received': self.received, 'ignored': self.ignored, 'replied': self.replied}
+                    'received': self.received, 'ignored': self.ignored, 'replied': self.replied,
+                    'username': self.username, 'last_poll': self.last_poll}
 
     def report(self, **state):
         with self.lock:
             if self.stop_event.is_set(): return
+            if state.get('polled'): self.last_poll = time.time()
+            if 'username' in state: self.username = str(state['username'])[:64]
             if 'phase' in state: self.phase = state['phase']
             if 'error' in state: self.error = state['error']
             for counter in ('received', 'ignored', 'replied'):
@@ -308,6 +320,7 @@ class BridgeController:
             if self.thread and self.thread.is_alive(): raise ValueError('Stop the active Telegram bridge first')
             self.stop_event = threading.Event(); self.phase = 'starting'; self.error = None; self.chat_count = len(set(chats))
             self.received = self.ignored = self.replied = 0
+            self.last_poll = None; self.username = ''
             settings = Settings(token, frozenset(chats), self.access_file)
             def work():
                 try:

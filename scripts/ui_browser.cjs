@@ -85,6 +85,14 @@ let browser;
    if(width===390)await page.screenshot({path:path.join(output,name+'-mobile.png'),fullPage:true});
   }
  }
+ await page.setViewportSize({width:1366,height:850});await page.locator('#setup-tab').click();
+ await page.locator('#accent-preset').selectOption('#7251b5');assert.equal(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--accent')),'#7251b5');
+ await page.screenshot({path:path.join(output,'personal-colors.png'),fullPage:true});
+ await page.locator('#companion-consent').check();await page.locator('#companion-start').click();await page.locator('#companion-status').filter({hasText:'Browser companion is on'}).waitFor();
+ const companionLink=await page.locator('#companion-links a').first().getAttribute('href');const companionPage=await browser.newPage({viewport:{width:390,height:844}});companionPage.on('pageerror',e=>errors.push(e.message));await companionPage.goto(companionLink);
+ await companionPage.locator('#color').selectOption('rose');await companionPage.locator('#face').selectOption('🐱');assert.equal(await companionPage.locator('#avatar').innerText(),'🐱');
+ assert(await companionPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));await companionPage.screenshot({path:path.join(output,'companion-phone.png'),fullPage:true});await companionPage.close();
+ await page.locator('#companion-stop').click();await page.locator('#companion-status').filter({hasText:'off'}).waitFor();
  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks:['named onboarding and persistent persona','reviewed episodic memory','offline chip discovery','encrypted local draft without sending','desktop and mobile layout without horizontal overflow','collapsed options','theme switch','keyboard send','what-if calculation','PNG preview','WAV/MIDI controls','real microphone capture produces a reviewed 16 kHz WAV without auto-send','Navi reminders and signed math chip','no browser JavaScript errors']},null,2));
  console.log('Chromium UI checks passed');
 }finally{if(browser)await browser.close();child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));fs.rmSync(directory,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -28,8 +28,13 @@ def main():
     root.protocol('WM_DELETE_WINDOW',close)
     tk.Button(root,text='Open Nexo',command=lambda:__import__('webbrowser').open(access['url'])).pack()
     def draw():
-        canvas.delete('all');phase=state['state'];color={'thinking':'#f1bf5a','listening':'#64dbcb','happy':'#bfa0ff','sleeping':'#77849b'}.get(phase,'#65a8ff')
-        canvas.create_oval(35,12,145,122,fill=color,outline='')
+        canvas.delete('all');phase=state['state'];color={'thinking':'#f1bf5a','listening':'#64dbcb','happy':'#bfa0ff','sleeping':'#77849b'}.get(phase,state.get('avatar_color','#65a8ff'))
+        style=state.get('avatar_style','robot')
+        if style=='cat':
+            canvas.create_polygon(35,55,35,8,74,30,fill=color,outline='')
+            canvas.create_polygon(106,30,145,8,145,55,fill=color,outline='')
+        if style=='robot':canvas.create_rectangle(35,20,145,122,fill=color,outline='')
+        else:canvas.create_oval(35,12,145,122,fill=color,outline='')
         canvas.create_rectangle(46,58,134,98,fill='#14213d',outline='')
         for x in (68,112):
             if phase=='sleeping':canvas.create_line(x-8,79,x+8,79,fill='white',width=3)

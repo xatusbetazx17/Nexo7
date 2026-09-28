@@ -219,6 +219,12 @@ class Engine:
             self.learning.record_metrics(stats, status, private)
             return result
 
+        from .smalltalk import reply as social_reply
+        greeting = social_reply(message, language) if mode not in ('research', 'web', 'scenario') else None
+        if greeting is not None:
+            trace.append({'tool': 'local_greeting', 'status': 'built_in'})
+            return finish(greeting)
+
         if creation:
             from .creation_requests import builtin, create, instructions, schema
             if self.config.max_tool_calls < 1:

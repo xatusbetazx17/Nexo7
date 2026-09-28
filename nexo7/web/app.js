@@ -206,7 +206,7 @@ function displayReport(report) {
 }
 async function pollSetup() {
   try {
-    const tg=await api("/api/telegram");$('telegram-health').textContent=tg.phase+(tg.error?': '+tg.error:'')+' · Received: '+(tg.received||0)+' · Replied: '+(tg.replied||0)+' · Blocked by allowed IDs: '+(tg.ignored||0);
+    const tg=await api("/api/telegram");$('telegram-health').textContent=(tg.username?'@'+tg.username+' · ':'')+tg.phase+(tg.error?': '+tg.error:'')+' · Received: '+(tg.received||0)+' · Replied: '+(tg.replied||0)+' · Blocked by allowed IDs: '+(tg.ignored||0)+(tg.last_poll?' · Last contact: '+new Date(tg.last_poll*1000).toLocaleTimeString():' · Waiting for Telegram connection');
     const state=await api("/api/setup"); setupBusy=state.phase==="preparing";
     $("setup-phase").textContent=state.phase==="ready"?"Ready to chat":state.phase==="preparing"?"Preparing your model…":state.phase==="error"?"Setup needs attention":"Waiting";
     if(state.error)$("setup-details").open=true;
@@ -606,3 +606,22 @@ $('audit-verify').onclick=async()=>{
   catch(exc){$('trust-status').textContent=exc.message;}
   finally{$('audit-verify').disabled=false;}
 };
+
+function setAccent(color){
+ if(!/^#[0-9a-f]{6}$/i.test(color))return;
+ const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
+ const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+ document.documentElement.style.setProperty('--accent',color);
+ document.documentElement.style.setProperty('--accent-ink',luminance>.179?'#111111':'#ffffff');
+ $('accent-custom').value=color;
+ try{localStorage.setItem('nexo-accent',color);}catch{}
+ $('appearance-status').textContent='Colors saved on this browser.';
+}
+$('accent-preset').onchange=e=>setAccent(e.target.value);
+$('accent-custom').oninput=e=>setAccent(e.target.value);
+$('appearance-reset').onclick=()=>{document.documentElement.style.removeProperty('--accent');document.documentElement.style.removeProperty('--accent-ink');try{localStorage.removeItem('nexo-accent');}catch{}$('appearance-status').textContent='Default colors restored.';};
+try{const accent=localStorage.getItem('nexo-accent');if(accent)setAccent(accent);}catch{}
+
+function companionStatus(state){$('companion-status').textContent=state.running?'Browser companion is on. Open a private link below on the other device.':'Browser companion is off.';$('companion-links').replaceChildren();for(const url of state.urls||[]){const link=node('a',url);link.href=url;link.target='_blank';link.rel='noreferrer';link.style.overflowWrap='anywhere';const row=node('p','');row.append(link);$('companion-links').append(row);}if(state.running&&!state.urls?.length)$('companion-status').textContent='No private network address found. Connect the PC to your home Wi-Fi and restart the companion.';}
+$('companion-start').onclick=async()=>{try{if(!$('companion-consent').checked)throw Error('Confirm trusted private Wi-Fi use first.');await api('/api/trust/permissions','POST',{scope:'network.companion',enabled:true});companionStatus(await api('/api/companion/start','POST',{consent:true}));}catch(e){$('companion-status').textContent=e.message;}};
+$('companion-stop').onclick=async()=>{try{companionStatus(await api('/api/companion/stop','POST',{}));}catch(e){$('companion-status').textContent=e.message;}};

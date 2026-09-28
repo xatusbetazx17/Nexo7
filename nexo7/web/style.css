@@ -17,3 +17,7 @@
 dialog{border:1px solid var(--border,#dbe1e8);border-radius:22px;padding:28px;width:min(92vw,560px);max-height:90vh;overflow:auto;background:var(--panel,#fff);color:var(--text,#17243b);box-shadow:0 24px 90px #0005}dialog::backdrop{background:#10192f88;backdrop-filter:blur(4px)}dialog form{display:grid;gap:10px}dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:45vh;overflow:auto}.persona-greeting{padding:18px 22px;border-radius:16px;background:#e8f0e7;color:#203e2d}.navi-row pre{white-space:pre-wrap;overflow-wrap:anywhere}#episode-list:empty,#catalog-list:empty,#mail-list:empty{display:none}
 
 #navi-onboarding{padding:22px;width:min(92vw,520px)}#navi-onboarding form{gap:8px}#navi-onboarding h2{margin:0 0 4px}#navi-onboarding p{margin:4px 0}#navi-onboarding label{margin:2px 0 0}#navi-onboarding input,#navi-onboarding select{margin:0;padding:8px 10px}#onboarding-status:empty{display:none}.onboarding-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.onboarding-actions button{flex:1;white-space:nowrap}
+
+button{color:var(--accent-ink,var(--panel))}button.quiet,.quiet{color:var(--text)}
+#avatar-preview{display:grid;place-items:center;width:96px;height:96px;border-radius:28px;font-size:48px;background:var(--soft);border:3px solid var(--accent);margin:12px 0}
+input[type=color]{width:76px!important;height:46px;padding:4px;cursor:pointer}

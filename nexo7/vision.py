@@ -88,6 +88,14 @@ def reply(config, body, *, require_images=True):
     started = time.monotonic()
     prepared = prepare(images) if images else []
     prompt = prompt.strip() or ('Describe the image briefly.' if images else 'Hello')
+    from .smalltalk import reply as social_reply
+    greeting = social_reply(prompt, language) if not images else None
+    if greeting is not None:
+        return {'answer': greeting, 'status': 'completed', 'private': True, 'sources': [],
+                'mode': 'relay', 'warnings': [], 'images': [],
+                'stats': {'provider': 'native', 'model': config.model, 'model_calls': 0,
+                          'input_tokens': 0, 'output_tokens': 0, 'elapsed_ms': 0,
+                          'cache_hit': False, 'network_requests': 0}}
     content = [{'type': 'text', 'text': prompt}]
     content.extend({'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,' + i['data']}} for i in prepared)
     instructions = ('You are a helpful assistant. Answer the question accurately and briefly. '

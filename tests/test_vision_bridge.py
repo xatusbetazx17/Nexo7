@@ -246,3 +246,18 @@ class TelegramDiagnosticsTests(unittest.TestCase):
         self.assertEqual(controller.snapshot()['phase'], 'off')
         self.assertIn('rejected the token', controller.snapshot()['error'])
         self.assertNotIn('secret', str(controller.snapshot()))
+
+class TelegramPingTests(unittest.TestCase):
+    def test_ping_and_start_do_not_depend_on_model(self):
+        from contextlib import closing
+        with closing(Trust()) as trust:
+            bridge=Bridge(Settings('123:'+'x'*25,frozenset({10}),Path('/unused')),trust=trust)
+            bridge.username='nexo_bot';bridge.bot_id=123
+            bridge.local=Mock(side_effect=ValueError('Model unavailable'))
+            bridge.send=Mock()
+            for command in ('/ping','/start','/ping@nexo_bot'):
+                bridge.process([{'message_id':1,'chat':{'id':10,'type':'private'},'text':command}])
+            self.assertEqual(bridge.send.call_count,3);bridge.local.assert_not_called()
+            bridge.process([{'message_id':2,'chat':{'id':99,'type':'private'},'text':'/ping'}])
+            self.assertEqual(bridge.send.call_count,3)
+            self.assertTrue(addressed({'chat':{'type':'group'},'text':'/ping@nexo_bot'},'nexo_bot',123))
