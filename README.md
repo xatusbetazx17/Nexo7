@@ -204,3 +204,5 @@ Version 0.18 adds an always-on-top avatar, offline voice, local reminders and br
 ### Navi continuity in 0.19
 
 Name your Navi during the first-run introduction. Review dated experiences, set their retention, pin important ones or forget them. Optional activity counters support continuity without copying transcripts or granting permissions. New controls add encrypted local email drafts and separately authorized, explicitly confirmed Gmail sending, a curated signed-chip catalog, and deeper mobile identity/notification/offline-voice integration. Read the [0.19 setup and limits](docs/NAVI-CONTINUITY.md) and [chip distribution guide](docs/CHIP-CATALOG.md). Small-model accuracy remains limited; real feelings, autonomous sending and cross-service roaming are not claimed.
+
+Video compatibility: browsers without canvas recording or a supported encoder fall back to a **silent animated GIF** (320×180, 8 frames/second). All versions also offer an explicit GIF button. GIF has no audio; export WAV separately. WebKit on Linux was verified for this fallback, not MP4/WebM recording or physical iPhone hardware.

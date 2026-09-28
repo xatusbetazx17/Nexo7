@@ -43,3 +43,5 @@ Small-model factual accuracy is still limited. Browser execution and offline tes
 Open **Create** to make template illustrations or freehand drawings (PNG), procedural instrumental tunes (WAV/MIDI), and 4–12 second animated clips (MP4/WebM when the browser supports recording). All rendering happens in the tab without a model or uploads. Optional pictures are resized and kept in memory. Keep the tab visible for recording; locking the profile clears the studio. These are bounded graphics/music tools, not neural image/video generation or vocals. The desktop and LAN companion include the same tools. The desktop's optional DreamShaper AI-image engine remains separate.
 
 After updates, close all Nexo tabs and reopen so the waiting offline cache can activate.
+
+Video compatibility: browsers without canvas recording or a supported encoder fall back to a **silent animated GIF** (320×180, 8 frames/second). All versions also offer an explicit GIF button. GIF has no audio; export WAV separately. WebKit on Linux was verified for this fallback, not MP4/WebM recording or physical iPhone hardware.

@@ -11,3 +11,5 @@ Limits: this is not arbitrary prompt-to-image or generative video; the browser s
 
 Browser use: https://xatusbetazx17.github.io/Nexo7/ — Create tab. Existing visitors: close all Nexo tabs and reopen to activate an updated offline cache.
 Desktop use: run the new Windows/Linux package, choose Create, then Create on this device. No additional model is needed for these lightweight tools. Optional DreamShaper neural image generation remains a separate desktop download with its own RAM requirements.
+
+Video compatibility: browsers without canvas recording or a supported encoder fall back to a **silent animated GIF** (320×180, 8 frames/second). All versions also offer an explicit GIF button. GIF has no audio; export WAV separately. WebKit on Linux was verified for this fallback, not MP4/WebM recording or physical iPhone hardware.

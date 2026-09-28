@@ -66,6 +66,20 @@ export function paint(canvas,{scene='landscape',palette='sunrise',title='',seed=
   if(title){c.fillStyle='#10182dbb';c.fillRect(20,HEIGHT-63,WIDTH-40,43);c.fillStyle='#ffffff';c.font='22px system-ui';c.textAlign='center';c.fillText(title,WIDTH/2,HEIGHT-34,WIDTH-64);}
   if(ink)c.drawImage(ink,0,0,WIDTH,HEIGHT);c.restore();
 }
+// GIF89a with a bounded 3/3/2-bit palette. Frequent clear codes keep LZW at 9 bits.
+export function gifHeader(width,height) {
+  const a=[71,73,70,56,57,97,width&255,width>>8,height&255,height>>8,247,0,0];
+  for(let i=0;i<256;i++)a.push(Math.round((i>>5)*255/7),Math.round(((i>>2)&7)*255/7),(i&3)*85);
+  a.push(33,255,11,...Array.from('NETSCAPE2.0',c=>c.charCodeAt(0)),3,1,0,0,0);return new Uint8Array(a);
+}
+export function gifFrame(rgba,width,height,delay=12) {
+  const codes=[];let bits=0,count=0;
+  const code=n=>{bits|=n<<count;count+=9;while(count>=8){codes.push(bits&255);bits>>>=8;count-=8;}};
+  for(let p=0;p<width*height;p++){if(p%200===0)code(256);const i=p*4;code((rgba[i]>>5)<<5|(rgba[i+1]>>5)<<2|(rgba[i+2]>>6));}
+  code(257);if(count)codes.push(bits&255);
+  const out=[33,249,4,4,delay&255,delay>>8,0,0,44,0,0,0,0,width&255,width>>8,height&255,height>>8,0,8];
+  for(let i=0;i<codes.length;i+=255){const chunk=codes.slice(i,i+255);out.push(chunk.length,...chunk);}out.push(0);return new Uint8Array(out);
+}
 const node=(tag,text='')=>{const e=document.createElement(tag);e.textContent=text;return e;};
 export function setupMediaStudio(root) {
   if(!root)return {reset(){}};
@@ -109,9 +123,9 @@ export function setupMediaStudio(root) {
   button('Compose music','media-music',async()=>{busy(true);status.textContent='Composing instruments locally…';try{const s=score(),samples=synthesize(s,sound.value);clearOutput();publish(wav(samples),'Nexo-music.wav','audio');publish(midi(s),'Nexo-music.mid');status.textContent=`Instrumental music ready · ${s.seconds.toFixed(1)} seconds. Press play to listen. No vocals.`;}finally{busy(false);}});
   const stop=button('Cancel clip','media-stop',()=>cancel('Clip cancelled.'));stop.disabled=true;
   button('Create video clip','media-video',async()=>{
-    if(!canvas.captureStream||typeof MediaRecorder==='undefined')throw Error('This browser cannot record video. PNG and WAV exports still work; try a browser with canvas recording support.');
+    if(!canvas.captureStream||typeof MediaRecorder==='undefined')return createGif('Video recording is unavailable here. ');
     const type=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp8,opus','video/mp4','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));
-    if(!type)throw Error('No supported video encoder in this browser. PNG and WAV exports still work.');
+    if(!type)return createGif('No video encoder is available here. ');
     const duration=Number(seconds.value),cfg=config(),picture=photo,strokes=ink,revision=disposed;
     busy(true);clearOutput();status.textContent='Recording locally… Keep this tab visible.';
     const state={cancelled:false,stream:null,context:null,source:null,recorder:null,timer:null,deadline:null};job=state;
@@ -129,6 +143,20 @@ export function setupMediaStudio(root) {
       if(!state.cancelled&&revision===disposed){const blob=new Blob(chunks,{type:recorder.mimeType});if(blob.size<100)throw Error('The encoder returned an empty clip');publish(blob,type.startsWith('video/mp4')?'Nexo-clip.mp4':'Nexo-clip.webm','video');status.textContent='Animated clip ready. This animates a template (or shows your picture) with optional synthesized music; it is not AI text-to-video.';}
     } finally {cleanup(state);if(job===state){job=null;busy(false);render();}}
   });
+  button('Create silent animation (GIF)','media-gif',()=>createGif());
+  async function createGif(prefix='') {
+    busy(true);clearOutput();const state={cancelled:false},revision=disposed;job=state;
+    const small=node('canvas');small.width=320;small.height=180;
+    const cfg=config(),picture=photo,parts=[gifHeader(320,180)],frames=Number(seconds.value)*8;
+    try{for(let frame=0;frame<frames;frame++){
+      if(state.cancelled||revision!==disposed)return;
+      paint(small,cfg,frame/8,picture,ink);const pixels=small.getContext('2d').getImageData(0,0,320,180).data;
+      parts.push(gifFrame(pixels,320,180,frame%2?13:12));status.textContent=prefix+'Creating silent GIF · '+Math.round((frame+1)/frames*100)+'%';
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    if(state.cancelled||revision!==disposed)return;parts.push(new Uint8Array([59]));publish(new Blob(parts,{type:'image/gif'}),'Nexo-animation.gif','img');status.textContent=prefix+'Animated GIF ready · 320×180 · silent. Download WAV separately for music.';
+    }finally{if(job===state){job=null;busy(false);render();}}
+  }
   function chooseMode(){
     const isMusic=mode.value==='music',isVideo=mode.value==='video';
     for(const e of [scene,palette,draw,color,pen,photoInput]){e.hidden=isMusic;root.querySelector('label[for="'+e.id+'"]').hidden=isMusic;}
@@ -137,7 +165,7 @@ export function setupMediaStudio(root) {
     canvas.hidden=isMusic;
     for(const id of ['media-clear-ink','media-clear-photo'])root.querySelector('#'+id).hidden=isMusic;
     root.querySelector('#media-image').hidden=mode.value!=='image';root.querySelector('#media-music').hidden=!isMusic;
-    root.querySelector('#media-video').hidden=!isVideo;stop.hidden=!isVideo;
+    root.querySelector('#media-video').hidden=!isVideo;root.querySelector('#media-gif').hidden=!isVideo;stop.hidden=!isVideo;
   }
   mode.onchange=chooseMode;chooseMode();
   function cleanup(s){clearInterval(s.timer);clearTimeout(s.deadline);try{s.source?.stop();}catch{}s.stream?.getTracks().forEach(t=>t.stop());s.destination?.stream.getTracks().forEach(t=>t.stop());s.context?.close().catch(()=>{});}
