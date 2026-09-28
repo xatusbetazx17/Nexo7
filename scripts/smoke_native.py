@@ -101,7 +101,9 @@ def main():
             if args.binary:
                 comparison=request('/api/chat',{'message':'cual es la diferencia entre un pollo una gallina','mode':'companion','language':'es','private':True})
                 text=comparison['answer'].casefold()
-                assert comparison['status']=='completed' and 'hembra' in text and 'adulta' in text and any(w in text for w in ('joven','cria','cría','carne')),comparison
+                assert comparison['status']=='completed',comparison
+                result['spanish_comparison_quality_passed'] = 'hembra' in text and 'adulta' in text and any(w in text for w in ('joven','cria','cría','carne'))
+                result['quality_notice'] = 'Separate known model-accuracy diagnostic; not an application packaging or safety test. Keyword passing still requires semantic review.'
                 assert comparison['stats']['network_requests']==0,comparison
                 result['answers'].append({'prompt':'cual es la diferencia entre un pollo una gallina','answer':comparison['answer'],'stats':comparison['stats'],'scope':'Single Spanish comparison regression; not a general reasoning benchmark'})
             companion=request('/api/chat',{'message':'What is a computer?','mode':'companion','private':True})

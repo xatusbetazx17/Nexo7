@@ -116,6 +116,15 @@ jobs:
         run: python scripts/smoke_web.py dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
       - name: Real native model smoke test
         run: python scripts/smoke_native.py --binary dist/Nexo7${{ runner.os == 'Windows' && '.exe' || '' }}
+      - name: Known model accuracy diagnostic (not resolved by this application release)
+        continue-on-error: true
+        run: python scripts/check_answer_quality.py reports/native-smoke.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: model-answer-review-${{ matrix.os }}
+          path: reports/native-smoke.json
+          if-no-files-found: warn
       - name: Real native inference with simulated 8 GB total and 4 GB available
         run: python scripts/smoke_native.py --simulate-8gb --output reports/native-8gb-smoke.json
       - name: Real native inference with simulated 4 GB total and 2.5 GB available

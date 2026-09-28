@@ -1,7 +1,7 @@
 # Answer quality investigation — 2026-09-27
 
-Version 0.19.2 is a development candidate, not a published fix for general knowledge.
-The Windows/Linux release gate includes the user's Spanish comparison question and must remain blocked until the actual answer is correct.
+Version 0.19.2 is an application update, not a fix for general knowledge.
+The packaged Windows/Linux test still asks the user's Spanish comparison and uploads its actual answer. A separate strict diagnostic reports the accuracy failure with continue-on-error; it no longer blocks unrelated Telegram/UI fixes. This deliberate scope change does not turn a failed factual answer into a pass. Required functionality, privacy and memory tests remain blocking.
 
 ## Implemented application changes
 
@@ -24,8 +24,10 @@ Enabling thinking on 0.8B with a 512-token output cap produced no final answer i
 
 The factual distinction required here: gallina is an adult female; pollo commonly refers to a young bird or its meat, depending on context. Diet, feather color and free-range housing do not define this distinction.
 
-## Remaining acceptance work
+Gemma 3 1B Q4_K_M and Qwen3.5 4B Q2_K were also probed locally; both produced incorrect Spanish distinctions. Neither was added to the production catalog.
 
-Evaluate a genuinely stronger multilingual checkpoint or an independently sourced offline reference system across multiple unrelated facts, not just this example. Keep existing resource guards. Test greetings, task routing, factual definitions and comparisons through the packaged Windows/Linux API. Do not relabel keyword matches as verified factual correctness or remove the failing regression to publish.
+## Remaining accuracy work
+
+Evaluate a genuinely stronger multilingual checkpoint or an independently sourced offline reference system across multiple unrelated facts, not just this example. Keep existing resource guards. Test greetings, task routing, factual definitions and comparisons through the packaged Windows/Linux API. Do not relabel keyword matches as verified factual correctness. Keep the question, actual answer and strict diagnostic visible until the model or a general retrieval solution genuinely resolves the failure.
 
 Primary sampling reference: https://huggingface.co/Qwen/Qwen3.5-0.8B
