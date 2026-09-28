@@ -122,7 +122,7 @@ routes('POST','/api/navi/catalog /api/navi/chips/export')
 routes('POST','/api/navi/catalog/download',('network.chips',))
 
 
-ACTIONS['companion.reply'] = ('network.companion',)
+ACTIONS['companion.reply'] = ('network.companion','chat.use')
 routes('GET', '/api/companion')
 routes('POST', '/api/companion/start', ('network.companion',))
 routes('POST', '/api/companion/stop')
