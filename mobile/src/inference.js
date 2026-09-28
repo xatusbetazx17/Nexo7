@@ -1,6 +1,6 @@
-import {Wllama} from '@wllama/wllama';
+import {Wllama,CacheManager} from '@wllama/wllama';
 import {checkDownloadSpace} from './device.js';
-import {modelCache} from './model-cache.js';
+import {modelCache,indexedModelBackend} from './model-cache.js';
 const URL_MODEL='https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/657e078c94084481950a2d555a941481f715536b/LFM2.5-350M-Q4_K_M.gguf';
 const SIZE=229312224,SHA='7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4';
 let generator=null,busy=false;
@@ -26,7 +26,7 @@ self.onmessage=async({data})=>{
    progress('Verifying model…');
    const digest=blob.size===SIZE?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),x=>x.toString(16).padStart(2,'0')).join(''):'';
    if(digest!==SHA)throw Error('Model integrity check failed. Remove downloaded models in Settings, then download again.');
-   generator=new Wllama({default:new URL('./wllama.wasm',self.location).href},{allowOffline:true,suppressNativeLog:true,logger:{debug(){},log(){},warn(){},error(){}}});
+   generator=new Wllama({default:new URL('./wllama.wasm',self.location).href},{cacheManager:new CacheManager([indexedModelBackend]),allowOffline:true,suppressNativeLog:true,logger:{debug(){},log(){},warn(){},error(){}}});
    generator.setCompat({worker:new URL('./compat/wllama.js',self.location).href,wasm:new URL('./compat/wllama.wasm',self.location).href});
    progress('Loading local model…');
    await generator.loadModel([blob],{n_ctx:2048,n_batch:128,n_ubatch:64,n_threads:1,n_gpu_layers:0,offload_kqv:false,n_parallel:1,seed:42,reasoning:false});

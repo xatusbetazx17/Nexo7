@@ -14,3 +14,14 @@ export const modelCache={
   }catch(e){for(let i=0;i<count;i++)await transaction(db,'chunks','readwrite',s=>s.delete(id+':'+i)).catch(()=>{});throw e;}finally{reader.releaseLock();db.close();}
  }
 };
+
+// Wllama otherwise constructs its own OPFS cache even when loading our verified
+// Blob. Use the same IndexedDB storage on browsers where OPFS is unavailable.
+export const indexedModelBackend = {
+ isSupported:()=>typeof indexedDB!=='undefined',
+ async read(key){const response=await modelCache.match(key);return response?response.blob():null;},
+ async write(key,stream){await modelCache.put(key,new Response(stream));},
+ async getSize(key){const db=await open();try{return (await transaction(db,'files','readonly',s=>s.get(String(key))))?.total??-1;}finally{db.close();}},
+ async list(){const db=await open();try{const keys=await transaction(db,'files','readonly',s=>s.getAllKeys());const result=[];for(const key of keys){const meta=await transaction(db,'files','readonly',s=>s.get(key));if(meta)result.push({key:String(key),size:meta.total});}return result;}finally{db.close();}},
+ async delete(key){const db=await open();try{const meta=await transaction(db,'files','readonly',s=>s.get(String(key)));await transaction(db,'files','readwrite',s=>s.delete(String(key)));if(meta)for(let i=0;i<meta.count;i++)await transaction(db,'chunks','readwrite',s=>s.delete(meta.id+':'+i));}finally{db.close();}}
+};
