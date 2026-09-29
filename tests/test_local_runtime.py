@@ -50,7 +50,7 @@ class MemoryPolicyTests(unittest.TestCase):
     def test_docker_vm_limit_controls_profile(self):
         plan = plan_local(hardware(64, 50, "nvidia"), daemon_memory=8 * GB)
         self.assertLessEqual(plan["ram_limit_bytes"], 5_200_000_000)
-        self.assertEqual(plan["profiles"][0]["model"], "qwen3.5:2b")
+        self.assertEqual(plan["profiles"][0]["model"], "qwen2.5:3b")
     def test_cpu_path_and_gpu_path_use_distinct_size_ceiling(self):
         self.assertEqual(plan_local(hardware(64, 50))["profiles"][0]["model"], "qwen3.5:4b")
         self.assertEqual(plan_local(hardware(64, 50, "nvidia"))["profiles"][0]["model"], "qwen3.5:9b")
@@ -187,8 +187,8 @@ class RuntimeGuardTests(unittest.TestCase):
              patch("nexo7.local_runtime.docker_json", return_value=[{"Id": IDENTIFIER}]), \
              patch("nexo7.local_runtime.verify_runtime"), patch("nexo7.local_runtime.fetch_json", side_effect=fake_api):
             cfg, plan = start_local("data/test.sqlite3", emit=lambda text: None)
-        self.assertEqual(downloads, ["qwen3.5:4b", "qwen3.5:2b"])
-        self.assertEqual(cfg.model, "qwen3.5:2b")
+        self.assertEqual(downloads, ["qwen3.5:4b", "qwen2.5:3b"])
+        self.assertEqual(cfg.model, "qwen2.5:3b")
         self.assertEqual(cfg.local_ram_limit_bytes, plan["ram_limit_bytes"])
 
 

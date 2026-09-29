@@ -100,6 +100,61 @@ class OllamaProvider:
         return {"role": "tool", "tool_name": call["name"], "content": json.dumps(result, ensure_ascii=False)}
 
 
+class ServerProvider:
+    """Your own model server: Ollama, llama.cpp or any OpenAI-compatible
+    /v1/chat/completions endpoint you run yourself, on your PC, your home
+    network, or a machine you rent. API key comes only from the
+    NEXO_SERVER_API_KEY environment variable, never from chat."""
+
+    def __init__(self, config):
+        self.config = config
+
+    def _endpoint(self):
+        return self.config.server_url.rstrip("/") + "/v1/chat/completions"
+
+    def complete(self, instructions, conversation, tools, model, max_tokens):
+        from .privacy import check_outbound
+        check_outbound(json.dumps(conversation, ensure_ascii=False))
+        headers = {}
+        key = os.environ.get("NEXO_SERVER_API_KEY", "")
+        if key:
+            headers["Authorization"] = "Bearer " + key
+        body = {"model": model,
+                "messages": [{"role": "system", "content": instructions}] + conversation,
+                "stream": False, "temperature": 0.2,
+                "max_tokens": min(max_tokens, self.config.max_output_tokens)}
+        if tools:
+            body["tools"] = [{"type": "function", "function": {k: v for k, v in t.items() if k not in {"type", "strict"}}}
+                             for t in tools]
+            body["parallel_tool_calls"] = False
+        try:
+            data = fetch_json(self._endpoint(), payload=body, headers=headers, timeout=self.config.timeout_seconds)
+        except TransportError as exc:
+            raise TransportError("Your model server did not answer: " + str(exc) +
+                                 ". Check that it is running and reachable, then try again.") from None
+        choices = data.get("choices", [])
+        if not choices:
+            raise TransportError("Your model server returned no answer")
+        item = choices[0]
+        message = item.get("message", {})
+        calls = [{"id": c.get("id", str(i)), "name": c.get("function", {}).get("name", ""),
+                  "arguments": c.get("function", {}).get("arguments", "{}")}
+                 for i, c in enumerate(message.get("tool_calls") or [])]
+        carry = {"role": "assistant", "content": message.get("content") or ""}
+        if message.get("tool_calls"):
+            carry["tool_calls"] = message["tool_calls"]
+        usage = data.get("usage", {})
+        return Completion(message.get("content") or "", calls, [carry],
+                          {"input_tokens": usage.get("prompt_tokens", 0),
+                           "output_tokens": usage.get("completion_tokens", 0),
+                           "cached_input_tokens": 0},
+                          item.get("finish_reason") == "length")
+
+    @staticmethod
+    def tool_result(call, result):
+        return {"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result, ensure_ascii=False)}
+
+
 class NativeProvider(OllamaProvider):
     def complete_structured(self, instructions, conversation, model, max_tokens, schema):
         if not self._slot.acquire(blocking=False):
@@ -162,4 +217,6 @@ def provider_for(config):
         return NativeProvider(config)
     if config.provider == "ollama":
         return OllamaProvider(config)
+    if config.provider == "server":
+        return ServerProvider(config)
     return None

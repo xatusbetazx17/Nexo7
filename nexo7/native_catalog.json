@@ -80,6 +80,14 @@
       },
       "vision": true,
       "license": "LFM-1.0"
+    },
+    "qwen2.5:3b": {
+      "url": "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/f302c64a2269a69fb27b2f9473b362f5bb8e78d8/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+      "sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+      "size": 1929903264,
+      "filename": "Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+      "repository": "bartowski/Qwen2.5-3B-Instruct-GGUF",
+      "revision": "f302c64a2269a69fb27b2f9473b362f5bb8e78d8"
     }
   }
 }

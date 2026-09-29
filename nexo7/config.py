@@ -13,6 +13,7 @@ class Config:
     deep_model: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_context_tokens: int = 8192
+    server_url: str = ""
     local_container_id: str = ""
     local_ram_limit_bytes: int = 12_000_000_000
     local_threads: int = 2
@@ -34,10 +35,12 @@ class Config:
     output_price_per_million: float = -1.0
 
     def __post_init__(self):
-        if self.provider not in {"demo", "openai", "ollama", "native"}:
-            raise ValueError("provider must be demo, openai, ollama or native")
+        if self.provider not in {"demo", "openai", "ollama", "native", "server"}:
+            raise ValueError("provider must be demo, openai, ollama, native or server")
         if self.provider != "demo" and not self.model.strip():
             raise ValueError("Set a real model identifier")
+        if self.provider == "server":
+            self._validate_server_url()
         import re
         if type(self.local_ram_limit_bytes) is not int or not 1_000_000_000 <= self.local_ram_limit_bytes <= 16_000_000_000:
             raise ValueError("Local RAM limit must be between 1 and 16 decimal GB")
@@ -83,6 +86,24 @@ class Config:
         if (u.scheme != "http" or u.hostname not in {"localhost", "127.0.0.1", "::1"}
                 or u.username or u.password or u.path not in {"", "/"} or u.query or u.fragment):
             raise ValueError("Ollama must use a loopback HTTP address without credentials")
+
+    def _validate_server_url(self):
+        import ipaddress
+        raw = self.server_url.strip()
+        if not raw:
+            raise ValueError("server_url is required when provider is server")
+        u = urlsplit(raw)
+        if u.scheme not in {"http", "https"} or not u.hostname or u.username or u.password or u.query or u.fragment:
+            raise ValueError("server_url must be an http(s) address without credentials, query or fragment")
+        if u.scheme == "http":
+            host = u.hostname.lower()
+            try:
+                ip = ipaddress.ip_address(host)
+                local = ip.is_loopback or ip.is_private or ip.is_link_local
+            except ValueError:
+                local = host == "localhost"
+            if not local:
+                raise ValueError("Plain HTTP servers must be on this machine or your private network (localhost, loopback, LAN). Use https:// for anything else.")
 
     def select_model(self, mode):
         if mode == "eco":

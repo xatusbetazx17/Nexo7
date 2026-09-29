@@ -7,6 +7,14 @@ fast_model = ""
 deep_model = ""
 ollama_url = "http://127.0.0.1:11434"
 ollama_context_tokens = 8192
+# Own model server (Ollama, llama.cpp, or any OpenAI-compatible
+# /v1/chat/completions endpoint you run yourself). Plain http:// is only
+# accepted on this machine or your private home network; anything across the
+# internet must use https://. Optional key comes from the NEXO_SERVER_API_KEY
+# environment variable, never from chat or this file. See docs/OWN-SERVER.md.
+# provider = "server"
+# model = "qwen2.5:14b"
+# server_url = "http://192.168.1.20:11434"
 database = "data/nexo.sqlite3"
 max_output_tokens = 800
 max_total_output_tokens = 2400

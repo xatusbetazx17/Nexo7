@@ -49,7 +49,7 @@ class AdaptiveTests(unittest.TestCase):
         hw=Hardware('Linux','x86_64',32*GB,26*GB,16,'nvidia','fixture',14*GB,16*GB,1)
         self.assertEqual(plan_local(hw)['profiles'][0]['model'],'qwen3.5:9b')
         p=plan_local(replace(hw,gpu_free_bytes=5*GB,gpu_total_bytes=6*GB))
-        self.assertEqual(p['profiles'][0]['model'],'qwen3.5:2b')
+        self.assertEqual(p['profiles'][0]['model'],'qwen2.5:3b')
         self.assertFalse(p['video_budget_enforced'])
         self.assertEqual(plan_local(replace(hw,gpu_free_bytes=GB))['backend'],'cpu')
     def test_preferences_persist_and_reject_unsafe_values(self):

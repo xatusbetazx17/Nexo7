@@ -1,3 +1,13 @@
+Nexo 7 v0.21.0 preview — efficient 3B model and your own model server
+
+- New Qwen2.5 3B chat model (quantized Q4_K_M, about 1.9 GB download) in the pinned catalog, automatic memory-based selection, and explicit model choice on all surfaces. Needs a 4 GB model budget; smaller devices automatically stay on smaller models.
+- New "server" provider: point Nexo 7 at your own Ollama, llama.cpp, or other OpenAI-compatible endpoint — your PC, your home network, or a rented GPU box. Plain HTTP only on loopback/LAN; HTTPS required across the internet; API key comes from NEXO_SERVER_API_KEY only. See docs/OWN-SERVER.md.
+- Efficiency unchanged: memory budgets, admission limits, and quantized defaults carry over; a 24 GB machine already runs everything up to the 9B local model.
+
+Limits: the 3B model is stronger than the 0.8B default but still a small local model — it is not a cloud-scale AI. The server provider sends your queries to the server address you configure; host it yourself to keep them private.
+
+---
+
 Nexo 7 v0.20.0 preview — local short-video maker across devices
 
 - New "Short video" mode in the shared Create tools (standalone browser app, desktop Windows/Linux interface, LAN companion, mobile companion).

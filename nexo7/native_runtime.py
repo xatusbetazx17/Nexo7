@@ -119,10 +119,14 @@ def native_plan(cpu_only=False, performance='balanced', model_choice='automatic'
     use_cpu = cpu_only or hw.system == 'Linux' or hw.gpu_hint != 'nvidia' or hw.gpu_index != 0
     plan = plan_local(hw, cpu_only=use_cpu, performance=performance, native=True)
     if performance == 'fast': plan['profiles'] = [p for p in plan['profiles'] if p['model'] == 'qwen3.5:0.8b']
-    if model_choice not in ('automatic','qwen2.5:1.5b','lfm2-vl:450m'):raise ValueError('Unknown model choice')
+    if model_choice not in ('automatic','qwen2.5:1.5b','qwen2.5:3b','lfm2-vl:450m'):raise ValueError('Unknown model choice')
     if model_choice == 'qwen2.5:1.5b':
         if plan['ram_limit_bytes'] < 3_000_000_000:raise ValueError('This candidate needs a 3 GB model budget plus host headroom. Keep Automatic on lower-memory devices.')
         plan['profiles'] = [dict(model=model_choice,minimum_budget=3_000_000_000,max_download=1_200_000_000,context_tokens=4096)]
+        plan['low_memory'] = True
+    if model_choice == 'qwen2.5:3b':
+        if plan['ram_limit_bytes'] < 4_000_000_000:raise ValueError('This candidate needs a 4 GB model budget plus host headroom. Keep Automatic on lower-memory devices.')
+        plan['profiles'] = [dict(model=model_choice,minimum_budget=4_000_000_000,max_download=2_200_000_000,context_tokens=4096)]
         plan['low_memory'] = True
     if model_choice == 'lfm2-vl:450m':
         plan['profiles'] = [dict(model=model_choice,minimum_budget=1_500_000_000,max_download=400_000_000,context_tokens=4096)]

@@ -115,14 +115,14 @@ function message(role, text, result, question="") {
 async function initialize(first=true) {
   try {
     const config=await api("/api/status"); $("login").hidden=true;
-    $("provider").textContent = config.provider === "demo" ? "Demo · no AI model" : `${["native","ollama"].includes(config.provider)?"Local":"Online"} · ${config.model}`;
+    $("provider").textContent = config.provider === "demo" ? "Demo · no AI model" : `${config.provider === "server" ? "Own server" : (["native","ollama"].includes(config.provider) ? "Local" : "Online")} · ${config.model}`;
     const preferences=await api("/api/preferences");
     setTheme(preferences.ui_theme||"light");if(preferences.ui_accent)setAccent(preferences.ui_accent);
     $("model-choice").value=preferences.model_choice;$("personality").value=preferences.personality;$("adapt-tone").checked=preferences.adapt_tone;$("performance").value=preferences.performance;$("reply-style").value=preferences.style;$("auto-start").checked=preferences.auto_start;$("cpu-only").checked=preferences.cpu_only;
     const language = preferences.response_language || config.response_language || "auto";
     $("language").value=language;
     $("resource-note").textContent = config.local_ram_limit_bytes ? `Native memory budget: ${(config.local_ram_limit_bytes/1e9).toFixed(1)} GB · ${config.local_backend}` : "";
-    $("privacy-note").textContent = config.provider === "openai" ? "Your queries and relevant excerpts will be sent to OpenAI. Local history is not encrypted." : "Memory and history stay on this computer, without encryption. PubMed needs an Internet connection.";
+    $("privacy-note").textContent = config.provider === "openai" ? "Your queries and relevant excerpts will be sent to OpenAI. Local history is not encrypted." : config.provider === "server" ? "Your queries and relevant excerpts go to the model server address you configured. Nothing is sent to a third-party AI company." : "Memory and history stay on this computer, without encryption. PubMed needs an Internet connection.";
     if (!config.persist_history) { $("private").checked=true; $("private").disabled=true; }
     try {
     const data=await api("/api/history?session="+encodeURIComponent(session));

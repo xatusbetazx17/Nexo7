@@ -56,7 +56,7 @@ class Store:
             values = {**self.preferences(), **updates}
             if values["performance"] not in {"fast", "balanced", "quality"} or values["style"] not in {"concise", "detailed", "accessible"}:
                 raise ValueError("Invalid preference value")
-            if values["model_choice"] not in ("automatic","qwen2.5:1.5b","lfm2-vl:450m"):
+            if values["model_choice"] not in ("automatic","qwen2.5:1.5b","qwen2.5:3b","lfm2-vl:450m"):
                 raise ValueError("Unknown model choice")
             if values["ui_theme"] not in ("light","dark"):raise ValueError("Choose light or dark appearance")
             if not isinstance(values["ui_accent"],str) or values["ui_accent"] and not re.fullmatch(r"#[0-9a-fA-F]{6}",values["ui_accent"]):raise ValueError("Choose a valid accent color")
