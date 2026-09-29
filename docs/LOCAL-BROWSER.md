@@ -38,9 +38,9 @@ Alternatively, build with `npm ci --prefix mobile --ignore-scripts` and `npm run
 
 Small-model factual accuracy is still limited. Browser execution and offline tests do not establish ChatGPT-level reasoning or the image quality shown in the video.
 
-## Creative studio (v0.19.3)
+## Creative studio (v0.20.0)
 
-Open **Create** to make template illustrations or freehand drawings (PNG), procedural instrumental tunes (WAV/MIDI), and 4–12 second animated clips (MP4/WebM when the browser supports recording). All rendering happens in the tab without a model or uploads. Optional pictures are resized and kept in memory. Keep the tab visible for recording; locking the profile clears the studio. These are bounded graphics/music tools, not neural image/video generation or vocals. The desktop and LAN companion include the same tools. The desktop's optional DreamShaper AI-image engine remains separate.
+Open **Create** to make template illustrations or freehand drawings (PNG), procedural instrumental tunes (WAV/MIDI), and 4–12 second animated clips (MP4/WebM when the browser supports recording). The new **Short video** mode turns up to 8 script beats into a vertical 360×640 short: word-count timings, one animated scene per beat, burned-in captions, microphone voiceover mixed with the instrumental soundtrack, and caption (.srt) export. All rendering happens in the tab without a model or uploads. Optional pictures are resized and kept in memory. Keep the tab visible for recording; locking the profile clears the studio. These are bounded graphics/music tools, not neural image/video generation or AI vocals. The desktop and LAN companion include the same tools. The desktop's optional DreamShaper AI-image engine remains separate.
 
 After updates, close all Nexo tabs and reopen so the waiting offline cache can activate.
 

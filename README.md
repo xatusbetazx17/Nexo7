@@ -2,7 +2,7 @@
 
 An independent local assistant with an English setup interface, multilingual chat, personal document retrieval and a OS-specific native memory controls.
 
-**Early preview · v0.19.3.** This update adds shared local illustration, instrumental music and animated-clip tools across browser and desktop versions. Small-model factual accuracy is still limited: the Spanish chicken/hen comparison diagnostic currently fails. This is reported separately from required functionality, memory-limit and security checks. [Known limitation and test evidence](docs/ANSWER-QUALITY-STATUS.md).
+**Early preview · v0.20.0.** This update adds a local short-video maker to the shared creative tools across browser and desktop versions: script beats with word-count timings, vertical 9:16 recording with microphone voiceover and burned-in captions, caption (.srt) export and a paragraph splitter. Small-model factual accuracy is still limited: the Spanish chicken/hen comparison diagnostic currently fails. This is reported separately from required functionality, memory-limit and security checks. [Known limitation and test evidence](docs/ANSWER-QUALITY-STATUS.md).
 
  Nexo is an application around an existing model. It is not official ChatGPT/GPT-7, does not contain proprietary OpenAI weights, and has no demonstrated superiority over Astra or other local models. It is not clinically validated.
 

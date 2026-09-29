@@ -33,5 +33,22 @@ module.exports=async function checkMedia(page){
  const downloaded=page.waitForEvent('download');await page.locator('#media-output a[download="Nexo-animation.gif"]').click();const gif=await downloaded;const gifBytes=require('fs').readFileSync(await gif.path());
  const result=require('child_process').spawnSync(process.env.NEXO_PYTHON||'python',['-c',"import sys,io;from PIL import Image;im=Image.open(io.BytesIO(sys.stdin.buffer.read()));assert im.size==(320,180);assert im.n_frames==32;im.seek(31);im.load()"],{input:Buffer.from(gifBytes)});assert.equal(result.status,0,result.stderr?.toString());
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ // Short-video mode: beats UI, caption export, vertical recording (or GIF fallback).
+ await page.locator('#media-mode').selectOption('shorts');
+ assert.equal(await page.locator('.shorts-beat').count(),3);
+ await page.locator('#media-shorts-srt').click();
+ await page.locator('#media-output a[download$="-short.srt"]').waitFor();
+ await page.locator('#media-voiceover').uncheck();
+ await page.locator('#media-shorts').click();
+ if(supported){
+   await page.locator('#media-output video').waitFor({timeout:90000});
+   await page.waitForFunction(()=>{const v=document.querySelector('#media-output video');return v&&v.videoWidth>0;},{},{timeout:15000});
+   assert.equal(await page.locator('#media-output video').evaluate(v=>v.videoWidth),360);
+   assert.equal(await page.locator('#media-output video').evaluate(v=>v.videoHeight),640);
+ }else{
+   await page.locator('#media-output a[download$="-short.gif"]').waitFor({timeout:90000});
+ }
+ await page.locator('#media-mode').selectOption('video');
+ assert(await page.locator('#media-video').isVisible());
  return {videoEncoded:supported};
 };
